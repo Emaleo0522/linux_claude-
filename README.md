@@ -22,10 +22,9 @@ El script instala todo automáticamente: agentes, git, SSH, GitHub CLI.
 | `qa` | Prueba el resultado y valida que funcione |
 | `deployer` | Publica en Vercel (usa MCP de Vercel) |
 | `git` | Maneja repositorios: crear, commitear, pushear, eliminar |
-| `diagrammer` | Genera diagramas Excalidraw y los muestra en el navegador |
 | `librarian` | Busca documentación técnica con Context7 |
 | `task-planner` | Convierte ideas en tareas concretas con Definition of Done |
-| `ops` | Levanta y verifica servicios locales (Engram, preview, Excalidraw) |
+| `ops` | Levanta y verifica servicios locales (Engram, preview) |
 
 ## Flujo de trabajo
 
@@ -57,9 +56,7 @@ Ver política completa en `agents/skills/engram_policy.md`.
 ```
 agents/
 ├── *.md              → definiciones de agentes
-├── skills/
-│   └── engram_policy.md
-└── tools/
-    └── excalidraw_serve.py
+└── skills/
+    └── engram_policy.md
 install.sh            → instalación automática
 ```

@@ -75,14 +75,12 @@ fi
 
 # ── 6. Instalar agentes en ~/.claude/agents/ ─────────────
 CLAUDE_AGENTS="$HOME/.claude/agents"
-mkdir -p "$CLAUDE_AGENTS/skills" "$CLAUDE_AGENTS/tools"
+mkdir -p "$CLAUDE_AGENTS/skills"
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 cp "$SCRIPT_DIR/agents/"*.md "$CLAUDE_AGENTS/"
 cp "$SCRIPT_DIR/agents/skills/engram_policy.md" "$CLAUDE_AGENTS/skills/"
-cp "$SCRIPT_DIR/agents/tools/excalidraw_serve.py" "$CLAUDE_AGENTS/tools/"
-chmod +x "$CLAUDE_AGENTS/tools/excalidraw_serve.py"
 
 AGENT_COUNT=$(ls "$CLAUDE_AGENTS/"*.md 2>/dev/null | wc -l)
 info "Agentes instalados en $CLAUDE_AGENTS ($AGENT_COUNT agentes)"

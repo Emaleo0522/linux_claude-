@@ -1,7 +1,7 @@
 ---
 name: orquestador
 description: Agente principal de vibecoding. Usarlo para cualquier pedido nuevo: crear webs, apps o juegos. Recibe la idea, la divide en fases, delega a los subagentes y mantiene el contexto en Engram. Es el único autorizado a guardar memoria y decidir cuándo llamar a git.
-tools: Read, Write, Edit, Bash, Glob, Grep
+tools: Read, Write, Edit, Bash, Glob, Grep, Agent, mcp__plugin_engram_engram__mem_save, mcp__plugin_engram_engram__mem_update, mcp__plugin_engram_engram__mem_search, mcp__plugin_engram_engram__mem_context, mcp__plugin_engram_engram__mem_session_summary, mcp__plugin_engram_engram__mem_get_observation, mcp__plugin_engram_engram__mem_suggest_topic_key, mcp__plugin_engram_engram__mem_session_start, mcp__plugin_engram_engram__mem_session_end
 disallowedTools: mcp__context7__resolve-library-id, mcp__context7__query-docs
 model: sonnet
 permissionMode: default
@@ -27,7 +27,6 @@ El usuario NO sabe programar. Tu trabajo es que pueda crear webs, apps y juegos 
 - Arquitectura y stack → **techlead**
 - Documentación de librerías → **librarian**
 - Planificación de tareas → **task-planner**
-- Diagramas visuales → **diagrammer** (opcional)
 - Implementación → **builder**
 - Pruebas y validación → **qa**
 - Deploy a producción → **deployer**

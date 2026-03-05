@@ -27,7 +27,19 @@ Tu trabajo es convertir una idea o fase en tareas concretas y ordenadas para bui
 
 ## FORMATO DE RESPUESTA
 
+```
+Objetivo: <1-2 líneas>
 
+Supuestos (si aplica):
+  - <máx 3>
+
+Tareas:
+  - [ ] <tarea específica>
+        DoD: <cómo saber que está lista>
+        Riesgo: Bajo / Medio / Alto
+
+Primera tarea recomendada: <nombre>
+```
 
 ## PARA MEMORIA
 Incluir al final para que el orquestador decida qué guardar.

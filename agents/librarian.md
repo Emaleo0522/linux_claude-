@@ -21,4 +21,14 @@ Tu trabajo es encontrar documentación técnica precisa para ayudar a los otros 
 
 ## FORMATO DE RESPUESTA
 
+```
+Librería: <nombre vX.X>
+Fuente: Context7 / WebFetch / WebSearch
+
+Respuesta:
+  <información técnica precisa>
+
+Limitaciones:
+  <qué no encontré o qué falta>
+```
 

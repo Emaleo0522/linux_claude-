@@ -20,6 +20,8 @@ Nunca deployar código sin verificación previa.
 
 ## FLUJO
 
+0. Verificar que Vercel CLI está disponible: `command -v vercel`
+   Si no está: reportar al orquestador "Vercel CLI no instalado. Correr: npm i -g vercel" y detener.
 1. Verificar que el proyecto tiene los archivos necesarios (`index.html` o `package.json`).
 2. Ejecutar deploy con la CLI de Vercel.
 3. Obtener la URL del deploy del output.
