@@ -48,8 +48,23 @@ Ver política completa en `agents/skills/engram_policy.md`.
 ## Requisitos
 
 - Linux (Ubuntu/Debian recomendado)
-- Claude Code instalado
-- Conexión a internet (para la instalación)
+- Claude Code instalado y con cuenta activa
+- Conexión a internet
+
+El script instala automáticamente lo que falta: Node.js, Vercel CLI, gh CLI.
+
+## Servicios configurados
+
+El install.sh conecta automáticamente:
+
+| Servicio | Para qué | Cómo se activa |
+|---|---|---|
+| **Engram** | Memoria persistente entre sesiones | Plugin de Claude Code (Gentleman-Programming/engram) |
+| **Context7** | Docs técnicas de librerías actualizadas | MCP via npx (@upstash/context7-mcp) |
+| **Vercel CLI** | Deploy a producción | CLI instalada + `vercel login` |
+| **GitHub CLI** | Crear repos, pushear | `gh auth login` |
+
+Después de correr install.sh, **reiniciá Claude Code** para que los MCPs (Engram y Context7) se activen.
 
 ## Estructura
 
