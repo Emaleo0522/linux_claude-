@@ -117,38 +117,45 @@ Engram le da a Claude memoria entre sesiones.
 
 ---
 
-## Paso 9: Configurar Context7 (documentación de librerías)
+## Paso 9: Configurar Context7 y Playwright en Claude Code
 
-Context7 le da a Claude acceso a docs actualizadas de librerías.
+Los subagentes (builder, qa, git, etc.) corren dentro de **Claude Code**, por lo que
+los MCPs deben estar en `~/.claude/settings.json`.
 
-Agregarlo como MCP en Claude Desktop:
-1. Ir a **Settings → Developer → Edit Config**
-2. Agregar en `mcpServers`:
-   ```json
-   "context7": {
-     "command": "npx",
-     "args": ["-y", "@upstash/context7-mcp"]
-   }
-   ```
-3. Guardar y reiniciar Claude Desktop
+En Git Bash, ejecutá este comando para actualizar tu settings.json:
+```bash
+python3 -c "
+import json, os
+path = os.path.expanduser('~/.claude/settings.json')
+with open(path) as f: d = json.load(f)
+if 'mcpServers' not in d: d['mcpServers'] = {}
+d['mcpServers']['context7'] = {
+    'command': 'C:\\\\Program Files\\\\nodejs\\\\npx.cmd',
+    'args': ['-y', '@upstash/context7-mcp']
+}
+d['mcpServers']['playwright'] = {
+    'command': 'C:\\\\Program Files\\\\nodejs\\\\npx.cmd',
+    'args': ['-y', '@playwright/mcp@latest']
+}
+with open(path, 'w') as f: json.dump(d, f, indent=2)
+print('OK — MCPs agregados a settings.json')
+"
+```
+
+Reiniciá Claude Code para que carguen.
+
+> **Nota**: Playwright descarga Chromium la primera vez que QA lo usa (~150MB).
+> Esto ocurre automáticamente, sin acción de tu parte.
 
 ---
 
-## Paso 10: Configurar Playwright MCP (testing en browser real)
+## Paso 10: Configurar MCPs en Claude Desktop (opcional)
 
-Playwright le permite a Claude abrir el navegador y probar tus apps directamente,
-incluyendo webs, apps y juegos Phaser.
+Si también usás **Claude Desktop** directamente (no solo Claude Code), podés agregar
+los mismos MCPs allí:
 
-Agregarlo como MCP en Claude Desktop:
 1. Ir a **Settings → Developer → Edit Config**
-2. Agregar en `mcpServers` (junto a Context7):
-   ```json
-   "playwright": {
-     "command": "npx",
-     "args": ["-y", "@playwright/mcp@latest"]
-   }
-   ```
-3. El bloque `mcpServers` completo debería quedar así:
+2. El bloque `mcpServers` completo:
    ```json
    "mcpServers": {
      "context7": {
@@ -161,10 +168,7 @@ Agregarlo como MCP en Claude Desktop:
      }
    }
    ```
-4. Guardar y reiniciar Claude Desktop
-
-> **Nota**: Playwright descarga Chromium la primera vez que Claude lo usa (~150MB).
-> Esto ocurre automáticamente, no requiere acción de tu parte.
+3. Guardar y reiniciar Claude Desktop
 
 ---
 
