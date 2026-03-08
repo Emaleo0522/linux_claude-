@@ -122,20 +122,25 @@ Engram le da a Claude memoria entre sesiones.
 Los subagentes (builder, qa, git, etc.) corren dentro de **Claude Code**, por lo que
 los MCPs deben estar en `~/.claude/settings.json`.
 
-En Git Bash, ejecutá este comando para actualizar tu settings.json:
+En Git Bash, primero instalá Playwright MCP globalmente y luego configurá el settings.json:
+
 ```bash
+# 1. Instalar Playwright MCP globalmente (solo la primera vez)
+npm install -g @playwright/mcp@latest
+
+# 2. Agregar los MCPs al settings.json de Claude Code
 python3 -c "
 import json, os
 path = os.path.expanduser('~/.claude/settings.json')
 with open(path) as f: d = json.load(f)
 if 'mcpServers' not in d: d['mcpServers'] = {}
+npm_path = os.path.expanduser('~\\\\AppData\\\\Roaming\\\\npm')
 d['mcpServers']['context7'] = {
     'command': 'C:\\\\Program Files\\\\nodejs\\\\npx.cmd',
     'args': ['-y', '@upstash/context7-mcp']
 }
 d['mcpServers']['playwright'] = {
-    'command': 'C:\\\\Program Files\\\\nodejs\\\\npx.cmd',
-    'args': ['-y', '@playwright/mcp@latest']
+    'command': npm_path + '\\\\playwright-mcp.cmd'
 }
 with open(path, 'w') as f: json.dump(d, f, indent=2)
 print('OK — MCPs agregados a settings.json')
