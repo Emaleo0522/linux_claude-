@@ -87,6 +87,10 @@ css/
 └── main.css           → overrides del proyecto
 ```
 
+## Lectura Engram (2 pasos obligatorios)
+1. `mem_search` → obtener observation_id
+2. `mem_get_observation` → obtener contenido completo (nunca usar preview truncada)
+
 ## Cómo recibo el trabajo
 
 El orquestador me pasa:

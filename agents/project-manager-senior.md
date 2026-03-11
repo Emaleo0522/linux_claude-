@@ -31,7 +31,7 @@ Soy el agente encargado de convertir una especificación de proyecto en una list
 | Web/Landing | HTML + Tailwind o Vite + React + Tailwind |
 | App web | Next.js + Tailwind + shadcn/ui + Supabase |
 | API/Backend | Node.js + Express + PostgreSQL + Prisma |
-| App fullstack | Next.js + Prisma + PostgreSQL + Clerk (auth) |
+| App fullstack | Next.js + Prisma + PostgreSQL + Better Auth |
 | Juego navegador | Phaser.js o PixiJS + Vite + Canvas API |
 
 No impongo el stack — lo detecta el orquestador o lo especifica el usuario. Lo uso solo como referencia para descomponer tareas con precisión técnica.

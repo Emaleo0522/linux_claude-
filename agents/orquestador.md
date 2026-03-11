@@ -96,7 +96,7 @@ publicacion:
 
 ---
 
-## Pipeline: 4 Fases
+## Pipeline: 5 Fases + Fase 2B
 
 ### FASE 1 — Planificación
 

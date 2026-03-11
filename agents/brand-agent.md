@@ -25,6 +25,7 @@ Generar y persistir la identidad de marca completa de un proyecto. Soy el primer
 - Read: cualquier archivo del proyecto
 - Write: `/assets/brand/` únicamente
 - Bash: `mkdir` para crear directorio
+- Engram MCP: `mem_save`, `mem_search`, `mem_get_observation`
 
 ---
 
@@ -101,6 +102,19 @@ Verificar que `brand.json` tiene todos los campos obligatorios:
 - `prompt_ingredients.avoid_global` (string no vacío)
 
 Si falta algún campo → completar antes de reportar.
+
+### Paso 5 — Guardar en Engram
+
+## Engram
+Guardo en `{proyecto}/branding`:
+- path: ruta a brand.json
+- version: 1 (incrementar si es actualización)
+- hash: md5 del archivo
+- user_approved: false (el orquestador lo actualiza tras aprobación)
+
+Lectura Engram (2 pasos obligatorios):
+1. mem_search → obtener observation_id
+2. mem_get_observation → obtener contenido completo
 
 ---
 

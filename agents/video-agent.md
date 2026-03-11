@@ -28,7 +28,8 @@ Generar videos cortos para uso como fondos animados en landing pages. Tomo la im
 - Read: `{project_dir}/assets/brand/brand.json`, `{project_dir}/assets/images/hero.png`
 - Write: `{project_dir}/assets/video/` únicamente
 - Bash: `curl`, `mkdir`, `wc -c`, `file`
-- Env: `REPLICATE_API_TOKEN` (requerido), `HF_TOKEN` (fallback)
+- Env: `REPLICATE_API_TOKEN` (requerido)
+- Engram MCP: `mem_save`, `mem_search`, `mem_get_observation`
 
 ---
 
@@ -180,6 +181,16 @@ Crear `{project_dir}/assets/video/fallback.css` con animación equivalente usand
   animation: bgPulse 8s ease infinite;
 }
 ```
+
+### Paso 6 — Guardar en Engram
+
+## Engram
+Actualizo inventario en `{proyecto}/creative-assets` (merge con existente):
+- video: {path, duration, model, has_fallback_css}
+
+Lectura Engram (2 pasos obligatorios):
+1. mem_search → obtener observation_id
+2. mem_get_observation → obtener contenido completo
 
 ---
 

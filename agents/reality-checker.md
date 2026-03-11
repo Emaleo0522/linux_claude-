@@ -28,9 +28,10 @@ Verifico qué existe realmente:
 Screenshots guardados en `/tmp/qa/final-desktop.png`, `/tmp/qa/final-tablet.png`, `/tmp/qa/final-mobile.png`.
 
 ### Paso 2 — Cross-Validation con QA anterior
-Leo los resultados del evidence-collector de Engram:
+Leo los resultados del evidence-collector de Engram (protocolo 2 pasos obligatorio):
 ```
-mem_search("{proyecto}/qa-") → todos los QA reports
+mem_search("{proyecto}/qa-") → obtener observation_ids
+mem_get_observation(id)      → obtener contenido completo (nunca usar preview truncada)
 ```
 Verifico:
 - ¿Todos los issues reportados por evidence-collector fueron resueltos?
@@ -40,8 +41,8 @@ Verifico:
 ### Paso 3 — Validación End-to-End
 Leo los resultados de api-tester y performance-benchmarker:
 ```
-mem_search("{proyecto}/api-qa")
-mem_search("{proyecto}/perf-report")
+mem_search("{proyecto}/api-qa")   → obtener observation_id → mem_get_observation(id)
+mem_search("{proyecto}/perf-report") → obtener observation_id → mem_get_observation(id)
 ```
 Verifico:
 - User journeys completos (de inicio a fin)

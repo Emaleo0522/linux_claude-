@@ -2,7 +2,7 @@
 
 ## Arquitectura
 
-Este sistema usa un **orquestador central** (1 coordinador + 15 subagentes = 16 entidades). Los subagentes solo responden al orquestador, nunca entre sí.
+Este sistema usa un **orquestador central** (1 coordinador + 19 subagentes = 20 entidades). Los subagentes solo responden al orquestador, nunca entre sí.
 
 ### Pipeline (5 fases)
 ```
@@ -70,8 +70,8 @@ QA guarda screenshots en `/tmp/qa/` y pasa solo rutas, nunca imágenes inline.
 - Solo usar Clerk/Supabase Auth/JWT custom si el proyecto ya los tiene implementados
 
 ### Reglas críticas (validadas en producción)
-- ⚠️ **Migración NO es automática**: siempre agregar `"migrate": "npx @better-auth/cli migrate"` al `package.json` y ejecutarlo antes del primer `npm run dev`
-- ⚠️ **Next.js 16+**: usar `proxy.ts` con `export async function proxy()` — el archivo `middleware.ts` está deprecado
+- **Migración NO es automática**: siempre agregar `"migrate": "npx @better-auth/cli migrate"` al `package.json` y ejecutarlo antes del primer `npm run dev`
+- **Next.js 16+**: usar `proxy.ts` con `export async function proxy()` — el archivo `middleware.ts` está deprecado
 
 ## Agentes creativos — Assets visuales
 Pipeline de generación de assets (logos, imágenes, videos) para proyectos web.

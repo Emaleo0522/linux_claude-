@@ -27,6 +27,7 @@ Generar logos vectoriales escalables leyendo la identidad de marca de `brand.jso
 - Write: `{project_dir}/assets/logo/` únicamente
 - Bash: `curl`, `mkdir`, `which`, `vtracer`, `inkscape`, `file`, `wc -c`
 - Env: `HF_TOKEN` (requerido)
+- Engram MCP: `mem_save`, `mem_search`, `mem_get_observation`
 
 ---
 
@@ -91,7 +92,7 @@ gradients, shadows, text, letters, words, typography
 **Endpoint primario — FLUX.1-schnell** (mejor para logos, adherencia al prompt):
 ```bash
 curl -s -X POST \
-  "https://api-inference.huggingface.co/models/black-forest-labs/FLUX.1-schnell" \
+  "https://router.huggingface.co/hf-inference/models/black-forest-labs/FLUX.1-schnell" \
   -H "Authorization: Bearer $HF_TOKEN" \
   -H "Content-Type: application/json" \
   -d "{\"inputs\": \"{prompt}\"}" \
@@ -143,8 +144,9 @@ Crear SVG compuesto que combina el símbolo generado con el texto del nombre usa
 
 ```svg
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 200">
-  <!-- Símbolo (import del logo-symbol.svg o inline) -->
-  <image href="logo-symbol.png" x="0" y="0" width="100" height="100"/>
+  <!-- Símbolo: usar .svg si vectorización OK, .png si fallback -->
+  <!-- Si vtracer/inkscape → logo-symbol.svg | Si PNG fallback → logo-symbol.png -->
+  <image href="logo-symbol.{svg|png según resultado Paso 5}" x="0" y="0" width="100" height="100"/>
 
   <!-- Texto del nombre con fuente de brand.json -->
   <text x="120" y="55"
@@ -188,6 +190,16 @@ for f in logo-full.svg logo-icon.svg logo-dark.svg logo-light.svg; do
 done
 # Cada SVG debe ser > 500 bytes
 ```
+
+### Paso 9 — Guardar en Engram
+
+## Engram
+Actualizo inventario en `{proyecto}/creative-assets` (merge con existente):
+- logos: lista de {path, format (svg/png), vectorizer_used}
+
+Lectura Engram (2 pasos obligatorios):
+1. mem_search → obtener observation_id
+2. mem_get_observation → obtener contenido completo
 
 ---
 

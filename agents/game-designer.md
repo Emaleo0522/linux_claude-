@@ -51,6 +51,10 @@ Cooldown habilidad| 8s  | 3s  | 15s | ¿8s se siente punitivo?
 - Separar observación de interpretación en playtest
 - Sin complejidad que no agregue decisión significativa
 
+## Lectura Engram (2 pasos obligatorios)
+1. `mem_search` → obtener observation_id
+2. `mem_get_observation` → obtener contenido completo (nunca usar preview truncada)
+
 ## Cómo guardo resultado
 ```
 mem_save(

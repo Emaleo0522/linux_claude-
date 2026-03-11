@@ -27,6 +27,7 @@ Generar imágenes de alta calidad para proyectos web leyendo la identidad visual
 - Write: `{project_dir}/assets/images/` únicamente
 - Bash: `curl` (APIs de imagen), `mkdir`, `file` (validar output), `wc -c` (verificar tamaño)
 - Env: `HF_TOKEN` (requerido), `REPLICATE_API_TOKEN` (fallback opcional)
+- Engram MCP: `mem_save`, `mem_search`, `mem_get_observation`
 
 ---
 
@@ -103,7 +104,7 @@ amateur photography, stock photo artifacts
 **Endpoint primario — HuggingFace FLUX.1-schnell**:
 ```bash
 curl -s -X POST \
-  "https://api-inference.huggingface.co/models/black-forest-labs/FLUX.1-schnell" \
+  "https://router.huggingface.co/hf-inference/models/black-forest-labs/FLUX.1-schnell" \
   -H "Authorization: Bearer $HF_TOKEN" \
   -H "Content-Type: application/json" \
   -d "{\"inputs\": \"{prompt_positivo}\"}" \
@@ -114,7 +115,7 @@ curl -s -X POST \
 **Endpoint fallback 1 — HuggingFace SDXL** (si rate limit o timeout):
 ```bash
 curl -s -X POST \
-  "https://api-inference.huggingface.co/models/stabilityai/stable-diffusion-xl-base-1.0" \
+  "https://router.huggingface.co/hf-inference/models/stabilityai/stable-diffusion-xl-base-1.0" \
   -H "Authorization: Bearer $HF_TOKEN" \
   -H "Content-Type: application/json" \
   -d "{\"inputs\": \"{prompt_positivo}\"}" \
@@ -124,7 +125,7 @@ curl -s -X POST \
 
 **Endpoint fallback 2 — Pollinations.ai** (sin token, límite relajado):
 ```bash
-ENCODED_PROMPT=$(echo "{prompt_positivo}" | sed 's/ /%20/g' | sed 's/,/%2C/g')
+ENCODED_PROMPT=$(python3 -c "import urllib.parse; print(urllib.parse.quote('$PROMPT'))")
 curl -s "https://image.pollinations.ai/prompt/{ENCODED_PROMPT}?width=1920&height=1080&nologo=true" \
   --output "{project_dir}/assets/images/{asset_type}.png" \
   --max-time 120
@@ -148,6 +149,16 @@ file "{project_dir}/assets/images/{asset_type}.png"
 ### Paso 6 — Generar variante mobile (si `hero_and_mobile` o `all`)
 
 Usar mismo prompt con dimensiones 768x1024 y añadir "vertical composition, portrait orientation" al prompt.
+
+### Paso 7 — Guardar en Engram
+
+## Engram
+Guardo inventario en `{proyecto}/creative-assets` (merge con existente si ya hay datos):
+- images: lista de {path, size_bytes, api_used}
+
+Lectura Engram (2 pasos obligatorios):
+1. mem_search → obtener observation_id
+2. mem_get_observation → obtener contenido completo
 
 ---
 
