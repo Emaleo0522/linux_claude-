@@ -44,13 +44,15 @@ El movimiento amplifica errores anatomicos entre frames. Clasificar ANTES de gen
 6. **Composicion CSS**: generar persona y fondo por separado, componer en capas
 
 ### Negative prompts para video
-Guia conceptual a incorporar en el prompt descriptivo:
-flickering, frame inconsistency, morphing, jittering, deformed, distorted, extra limbs, bad anatomy, blurry faces, extra fingers, unnatural movement
+LTX-Video tiene un parametro nativo `negative_prompt` — usarlo como campo separado en el input, NO concatenar en el prompt.
+Ver el campo `negative_prompt` en el JSON de prediccion (Paso 3b).
 
 ### Regla de duracion
-- SAFE: hasta 5 segundos
-- MEDIUM: maximo 3 segundos (menos frames = menos riesgo)
-- RISKY: maximo 2 segundos, y solo si el usuario insiste tras ver alternativa MEDIUM
+- SAFE: hasta 10 segundos (length: 257)
+- MEDIUM: hasta 7 segundos (length: 161)
+- RISKY: hasta 4 segundos (length: 97) — solo si el usuario insiste tras ver alternativa MEDIUM
+
+Referencia de frames: ~25fps. length 97 ≈ 4s, length 161 ≈ 7s, length 257 ≈ 10s.
 
 ## Lo que PUEDO hacer
 - Leer `{project_dir}/assets/brand/brand.json`
@@ -153,6 +155,7 @@ PREDICTION=$(curl -s -X POST \
     \"version\": \"$VERSION\",
     \"input\": {
       \"prompt\": \"{style_tags}, {motion_style}, subtle movement, cinematic, seamless loop\",
+      \"negative_prompt\": \"low quality, worst quality, deformed, distorted, disfigured, extra limbs, extra fingers, bad anatomy, blurry faces, flickering, frame inconsistency, morphing, jittering, unnatural movement\",
       \"aspect_ratio\": \"16:9\",
       \"length\": 97
     }
