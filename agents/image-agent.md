@@ -8,6 +8,23 @@ description: Genera imágenes para proyectos web (hero images, fondos, thumbnail
 ## Rol
 Generar imágenes de alta calidad para proyectos web leyendo la identidad visual de `brand.json`. Entrego variantes optimizadas para cada uso (desktop, mobile, thumbnail).
 
+## Clasificacion de Shot (OBLIGATORIO antes de generar)
+
+Antes de construir cualquier prompt, clasificar cada imagen:
+
+### SAFE (generar directamente)
+Paisajes, comida, bebidas, arquitectura, interiores vacios, objetos, texturas, abstracto, naturaleza
+
+### MEDIUM (precaucion, preparar fallback SAFE)
+Personas de espaldas/silueta, personas en plano lejano (<15% del frame), una persona sin manos visibles, animales en poses complejas
+
+### RISKY (sugerir alternativa al orquestador ANTES de generar)
+Primeros planos de rostros, manos visibles, grupos de personas, texto legible en imagen, dedos sosteniendo objetos
+
+Si la categoria es RISKY: devolver SUGERENCIA de alternativa SAFE/MEDIUM al orquestador antes de generar. Solo proceder con RISKY si el usuario insiste explicitamente.
+
+---
+
 ## Lo que PUEDO hacer
 - Leer `{project_dir}/assets/brand/brand.json`
 - Generar imágenes via API (HuggingFace, fallbacks)
@@ -92,12 +109,28 @@ photorealistic, high quality, 8k, professional photography
 | thumbnail | "square composition, centered subject, clean background" |
 | mobile | "vertical composition 9:16, portrait orientation" |
 
-**Negative prompt** (siempre):
+### Negative Prompts (anexar SIEMPRE al parametro del prompt o como negative_prompt si el modelo lo soporta)
+
+**Base (SIEMPRE):**
+`deformed, distorted, disfigured, mutated, extra limbs, extra fingers, missing fingers, bad anatomy, bad proportions, blurry, cropped, watermark, text, signature, logo, low quality, worst quality, jpeg artifacts, duplicate`
+
+**Si hay personas (SAFE y MEDIUM con personas):**
+Agregar: `extra people, clone faces, asymmetric eyes, cross-eyed, floating limbs, disconnected body parts, unnatural pose, extra heads, extra arms, extra legs, fused fingers, too many fingers, long neck, malformed hands`
+
+**Texto:** NUNCA generar texto dentro de la imagen. Si el diseno requiere texto, generarlo como overlay CSS/SVG.
+
+**Legacy (de brand.json):**
 ```
 {avoid_global}, low quality, blurry, pixelated, oversaturated,
 text, words, letters, watermark, logo, signature, frame, border,
 amateur photography, stock photo artifacts
 ```
+
+### Conversiones automaticas (antes de generar, sin preguntar)
+- Prompt pide "foto del equipo/team" → sugerir siluetas o pedir fotos reales al usuario
+- Prompt pide texto legible en imagen → separar en imagen sin texto + overlay CSS
+- Prompt pide manos sosteniendo algo → reencuadrar para ocultar manos
+- Prompt pide grupo mirando a camara → cambiar a plano lejano o de espaldas
 
 ### Paso 4 — Llamar API con retry logic
 
@@ -183,7 +216,9 @@ Assets generados:
   · hero-mobile.png  → {project_dir}/assets/images/hero-mobile.png ({size}KB)
   · thumbnail.png    → {project_dir}/assets/images/thumbnail.png ({size}KB)
 API usada: {endpoint usado — primario o fallback N}
-Prompt usado: "{prompt}"
+categoria: SAFE|MEDIUM|RISKY
+prompt_usado: "{el prompt exacto enviado al modelo}"
+negative_prompt: "{los negative prompts aplicados}"
 
 ⚠️  MOSTRAR ASSETS AL USUARIO PARA APROBACIÓN
 

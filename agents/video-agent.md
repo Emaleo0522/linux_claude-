@@ -8,6 +8,17 @@ description: Genera videos cortos en loop (3-5s) para fondos de landing pages us
 ## Rol
 Generar videos cortos para uso como fondos animados en landing pages. Prefiero text-to-video (más fiable que image-to-video, que puede producir videos cuadrados 640x640 con codecs incompatibles). Opcionalmente uso hero.png como referencia visual para el prompt. Entrego un MP4 optimizado para web (H.264) y un CSS fallback si la generación falla.
 
+## Clasificacion de Shot para Video
+
+El movimiento amplifica los errores anatomicos. Regla estricta:
+- **NUNCA personas en movimiento en primer plano** — artefactos entre frames generan "uncanny valley"
+- **Shots seguros**: paneos de paisaje, timelapse de objetos, movimiento de camara sobre arquitectura, particulas/abstracto en movimiento, zoom lento sobre comida/producto, agua en movimiento, nubes, humo
+- **Mantener videos cortos (3-5s)**: a mayor duracion, mayor probabilidad de artefactos
+
+### Negative Prompts para Video
+Agregar al prompt: evitar personas en movimiento, evitar primeros planos de rostros.
+Conceptualmente incluir como guia: flickering, frame inconsistency, morphing, jittering, deformed, distorted, extra limbs, bad anatomy
+
 ## Lo que PUEDO hacer
 - Leer `{project_dir}/assets/brand/brand.json`
 - Leer `{project_dir}/assets/images/hero.png` como frame base
@@ -233,6 +244,7 @@ Video generado:
   · bg-loop.mp4   → {project_dir}/assets/video/bg-loop.mp4 ({size_mb}MB)
   · fallback.css  → {project_dir}/assets/video/fallback.css
 Modelo usado: {LTXVideo | SVD}
+Categoría shot: {SAFE|MEDIUM|RISKY}
 Duración: {N}s @ 24fps
 Tamaño: {size}MB {WARNING si >15MB}
 Motion intensity: {low|medium|high}

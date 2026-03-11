@@ -73,6 +73,13 @@ Extraer de `brand.json`:
 
 ### Paso 3 — Construir prompt de logo
 
+### Reglas de generacion de logos
+- El simbolo/icono se genera con IA
+- El texto del nombre de marca SIEMPRE se renderiza por separado con la tipografia del brand.json — NUNCA se genera con IA
+- Negative prompts para logo: "text, letters, words, typography, watermark, blurry, pixelated, complex details, photorealistic"
+- Agregar al prompt: "icon only, no text, clean vector style, simple shapes, flat design, solid background"
+- Si el icono no es limpio despues de 3 intentos: proponer logo tipografico puro (solo CSS/SVG texto, sin imagen generada)
+
 **Estrategia**: el símbolo/ícono se genera con IA. El texto del nombre se añade como elemento SVG nativo (tipografía limpia, siempre legible).
 
 **Prompt para el símbolo**:

@@ -167,10 +167,8 @@ Ejecutar en paralelo a Fase 2 o antes de Fase 3, según cuándo se necesiten los
    - Guarda en: {project_dir}/assets/video/
    - Devuelve: STATUS + rutas (bg-loop.mp4 y/o fallback.css)
 
-5. PAUSA — Mostrar assets al usuario para aprobación:
-   "Logo generado en {project_dir}/assets/logo/ — ¿Apruebas?"
-   "Hero image en {project_dir}/assets/images/hero.png — ¿Apruebas?"
-   → Si rechaza alguno: delegar el agente correspondiente con ajuste al brief
+5. PAUSA — Presentar assets al usuario para aprobación (ver protocolo abajo)
+   → Si rechaza alguno: seguir protocolo de reintentos (máx 3 por imagen)
 
 6. Guardar en Engram {proyecto}/creative-assets:
    {
@@ -186,6 +184,37 @@ Ejecutar en paralelo a Fase 2 o antes de Fase 3, según cuándo se necesiten los
 
 **Si brand.json ya existe con user_approved: true** → saltar pasos 1-2, usar el existente.
 Solo verificar via `{proyecto}/branding` en Engram si el hash cambió (brand actualizado).
+
+### Protocolo de revision de assets generados
+
+Despues de que los agentes creativos entregan assets:
+
+**Paso: Presentar assets al usuario**
+Mostrar TODAS las imagenes/videos generados en formato:
+
+```
+ASSETS GENERADOS — [nombre proyecto]
+
+1. Hero image — [descripcion] ([SAFE/MEDIUM/RISKY]) ... [mostrar]
+2. [siguiente imagen] — [descripcion] ([categoria]) ... [mostrar]
+...
+
+Opciones:
+  a) Aprobar todas
+  b) Aprobar algunas, rechazar otras (indicar numeros)
+  c) Rechazar todas y regenerar
+```
+
+**Si hay rechazos:**
+- Reintento 1: ajustar prompt con feedback del usuario + negative prompts reforzados
+- Reintento 2: cambiar composicion (ej: quitar personas, cambiar angulo)
+- Reintento 3: proponer alternativa completamente diferente:
+  * Cambiar de fotorrealista a ilustracion
+  * Cambiar de personas a ambiente vacio
+  * Generar version minimalista/abstracta (SAFE garantizado)
+  * Usar placeholder con nota para reemplazo manual
+
+Maximo 3 intentos por imagen. Despues del tercero, ofrecer saltar y continuar.
 
 ---
 
@@ -236,6 +265,9 @@ Para **cada tarea** de la lista, en orden:
    d) Aceptar: documentar limitación y avanzar
    → Pide decisión al usuario, actualiza DAG State
 ```
+
+### QA de assets creativos
+evidence-collector verifica assets para artefactos obvios (extremidades de mas, objetos flotando). Esto es complementario a la revision del usuario — la decision estetica final SIEMPRE es del usuario.
 
 **Reportes de progreso** — cada 3 tareas completadas:
 ```
