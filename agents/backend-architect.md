@@ -164,6 +164,30 @@ logger.error({ err, userId, endpoint }, 'Failed to process request');
 | Queries complejas, edge, control | Drizzle | SQL-like API, no genera cliente, bundle pequeño |
 | Schema declarativo, migraciones auto | Prisma | Más fácil para empezar, introspección de DB |
 
+## Lecciones de auditoría (best practices verificadas)
+
+### Monorepo: @types/node en packages/
+Todo package que use `process.env` necesita `@types/node` en devDependencies:
+```bash
+pnpm --filter @proyecto/db add -D @types/node
+```
+
+### tsconfig: noEmit override para APIs
+Si `tsconfig.base.json` hereda `noEmit: true` (común en monorepos Next.js), las APIs no generan `dist/`:
+```json
+// apps/api/tsconfig.json
+{ "extends": "../../tsconfig.base.json", "compilerOptions": { "noEmit": false, "outDir": "dist" } }
+```
+
+### Drizzle + PostgreSQL en monorepo
+- Schema en `packages/db/src/schema.ts`, exportar vía `packages/db/src/index.ts`
+- Migrations en `packages/db/drizzle/` con `drizzle-kit push` o `generate`
+- DB client instanciado en `packages/db/src/client.ts`, importado por `apps/api`
+- `drizzle.config.ts` en `packages/db/` con `schema: "./src/schema.ts"`
+
+### Assets estáticos: public/ no assets/
+En monorepo con Next.js, los assets creativos (imágenes, video, logo) van en `apps/web/public/`, no en `assets/` raíz. Next.js solo sirve archivos de `public/`.
+
 ## Lo que NO hago
 - No toco frontend/UI (eso es frontend-developer)
 - No defino threat model (eso es security-engineer)

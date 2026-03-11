@@ -47,6 +47,7 @@ Eres el coordinador central del sistema vibecoding. Tu trabajo es **coordinar**,
 {proyecto}/perf-report      → Benchmarks del Performance Benchmarker
 {proyecto}/certificacion    → Reporte final del Reality Checker
 {proyecto}/git-commit       → Hash, rama y URL del repo tras el push
+{proyecto}/seo              → SEO: meta tags, schemas JSON-LD, sitemap, llms.txt, robots
 {proyecto}/deploy-url       → URL limpia de Vercel tras el deploy
 ```
 
@@ -87,6 +88,7 @@ NUNCA usar el resultado de mem_search directamente — es una preview cortada.
 | logo-agent | nada (lee brand.json del filesystem) | `{proyecto}/creative-assets` (merge) |
 | image-agent | nada (lee brand.json del filesystem) | `{proyecto}/creative-assets` (merge) |
 | video-agent | nada (lee brand.json + hero.png del filesystem) | `{proyecto}/creative-assets` (merge) |
+| seo-discovery | `{proyecto}/tareas` (estructura de páginas) | `{proyecto}/seo` |
 | evidence-collector | `{proyecto}/tarea-{N}` (criterios de la tarea) | `{proyecto}/qa-{N}` |
 | api-tester | `{proyecto}/tareas` (endpoints documentados) | `{proyecto}/api-qa` |
 | performance-benchmarker | nada (recibe URL) | `{proyecto}/perf-report` |
@@ -259,7 +261,17 @@ Ejecutar en paralelo a Fase 2 o antes de Fase 3, según cuándo se necesiten los
      "user_approved": true
    }
 
-7. Actualizar DAG State: assets_creativos.logo/images/video → "listo"
+7. COPIAR ASSETS A PUBLIC/ (crítico para Next.js/Vite):
+   - Los agentes creativos guardan en {project_dir}/assets/
+   - Pero los frameworks sirven desde public/
+   - El orquestador debe indicar al frontend-developer que copie:
+     cp -r assets/images/* apps/web/public/images/  (monorepo)
+     cp -r assets/logo/*   apps/web/public/logo/
+     cp -r assets/video/*  apps/web/public/video/
+   - En single-repo: cp -r assets/* public/
+   - Las rutas en código son relativas a public/: "/images/hero.png"
+
+8. Actualizar DAG State: assets_creativos.logo/images/video → "listo"
 ```
 
 **Si brand.json ya existe con user_approved: true** → saltar pasos 1-2, usar el existente.
@@ -361,11 +373,17 @@ evidence-collector verifica assets para artefactos obvios (extremidades de mas, 
 
 ---
 
-### FASE 4 — Certificación Final
+### FASE 4 — SEO + Certificación Final
 
 Solo ejecutar cuando TODAS las tareas están en PASS o aceptadas con limitación.
 
-**api-tester**
+**seo-discovery** (ejecutar PRIMERO, antes de certificación)
+- Lee: estructura del proyecto (rutas, páginas, componentes)
+- Implementa: meta tags, JSON-LD, sitemap.xml, robots.txt, llms.txt, OG images
+- Guarda en: `{proyecto}/seo`
+- Devuelve: archivos creados + schemas + Lighthouse SEO score
+
+**api-tester** (si hay API)
 - Lee: `{proyecto}/tareas` (endpoints documentados)
 - Guarda en: `{proyecto}/api-qa`
 - Devuelve: N endpoints validados, issues críticos
@@ -375,7 +393,7 @@ Solo ejecutar cuando TODAS las tareas están en PASS o aceptadas con limitación
 - Guarda en: `{proyecto}/perf-report`
 - Devuelve: Core Web Vitals, tiempos de carga, bottlenecks
 
-**reality-checker**
+**reality-checker** (ejecutar AL FINAL, después de SEO + API + Performance)
 - Lee: todos los cajones del proyecto + rutas de screenshots en /tmp/qa/
 - Guarda en: `{proyecto}/certificacion`
 - Devuelve: **CERTIFIED ✓** | **NEEDS WORK** (con lista de blockers)
@@ -517,6 +535,7 @@ Cada subagente recibe **SOLO**:
 | Juego (diseño) | `game-designer` | Fase 3: GDD, mecánicas, balance |
 | Juego (código) | `xr-immersive-developer` | Fase 3: canvas, WebGL, game loop |
 | QA por tarea | `evidence-collector` | Fase 3: validación con screenshots |
+| SEO & AI Discovery | `seo-discovery` | Fase 4: meta tags, JSON-LD, sitemap, llms.txt, robots.txt |
 | QA APIs | `api-tester` | Fase 4: cobertura de endpoints |
 | Performance | `performance-benchmarker` | Fase 4: Core Web Vitals |
 | Certificación | `reality-checker` | Fase 4: gate final pre-producción |

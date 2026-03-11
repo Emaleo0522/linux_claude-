@@ -89,32 +89,69 @@ Si el proyecto generó assets via pipeline creativo, los archivos están en:
   video/fallback.css       ← CSS animado si video no carga
 ```
 
+### CRÍTICO: Assets deben ir a public/
+En Next.js, Vite y la mayoría de frameworks, los archivos estáticos se sirven desde `public/`.
+**SIEMPRE copiar** los assets generados al directorio `public/` del proyecto:
+```bash
+# Después de que los agentes creativos generen assets:
+cp -r {project_dir}/assets/images/* {project_dir}/apps/web/public/images/  # monorepo
+cp -r {project_dir}/assets/logo/*   {project_dir}/apps/web/public/logo/
+cp -r {project_dir}/assets/video/*  {project_dir}/apps/web/public/video/
+# O para single-repo:
+cp -r {project_dir}/assets/images/* {project_dir}/public/images/
+```
+Las rutas en código usan `/images/hero.png` (relativo a public/), NO `assets/images/hero.png`.
+
 **Cómo usar el video de fondo:**
 ```html
-<!-- Video de fondo con fallback a imagen -->
-<video autoplay muted loop playsinline class="hero-video" aria-hidden="true">
-  <source src="assets/video/bg-loop.mp4" type="video/mp4">
+<!-- Video con poster fallback — NO usar hidden md:block -->
+<video autoplay muted loop playsinline poster="/images/hero.png"
+  class="absolute inset-0 w-full h-full object-cover" aria-hidden="true">
+  <source src="/video/bg-loop.mp4" type="video/mp4">
 </video>
-<img src="assets/images/hero.jpg" alt="" class="hero-fallback" aria-hidden="true">
 ```
-```css
-.hero-video {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  z-index: 1;
-}
-.hero-fallback {
-  z-index: 0;
-}
-```
-SIEMPRE incluir tanto `<video>` como `<img>` fallback como hermanos, no solo fallback CSS. La imagen se muestra mientras el video carga y sirve como fallback para navegadores/dispositivos que no soportan video.
+- `poster` muestra imagen mientras carga el video y como fallback si video falla
+- `muted` + `playsInline` permite autoplay en mobile (política de browsers)
+- **NO** ocultar video en mobile con `hidden md:block` — el `poster` ya maneja el fallback
+- **NO** usar `<img>` hermano separado — el `poster` del `<video>` cumple esa función
 
 **Si brand.json existe**, leer `colors` y `typography` para crear CSS custom properties coherentes con la identidad de marca en lugar de inventar valores.
 
 **Si los assets NO existen**, usar placeholders normales — no bloquear la tarea.
+
+## Lecciones de auditoría (best practices verificadas)
+
+### Mobile nav con AnimatePresence
+Si usas un menú hamburguesa con Framer Motion `AnimatePresence`, **NO** llamar `scrollIntoView` inmediatamente después de cerrar el menú. La exit animation bloquea el scroll.
+```typescript
+// MAL — el scroll se pierde durante la animación de cierre
+const scrollTo = (href: string) => {
+  setIsOpen(false);
+  document.querySelector(href)?.scrollIntoView({ behavior: "smooth" });
+};
+
+// BIEN — esperar a que termine la animación de salida
+const scrollTo = (href: string) => {
+  setIsOpen(false);
+  setTimeout(() => {
+    document.querySelector(href)?.scrollIntoView({ behavior: "smooth" });
+  }, 300); // ~duración de exit animation
+};
+```
+
+### Monorepo: @types/node en packages/
+Packages que usan `process.env` (como `packages/db/`) necesitan `@types/node` en devDependencies:
+```bash
+pnpm --filter @proyecto/db add -D @types/node
+```
+Sin esto, TypeScript da `Cannot find name 'process'`.
+
+### tsconfig: noEmit override para APIs
+Si `tsconfig.base.json` tiene `noEmit: true` (común en monorepos Next.js), los packages de API no generan `dist/`. Override explícito:
+```json
+// apps/api/tsconfig.json
+{ "extends": "../../tsconfig.base.json", "compilerOptions": { "noEmit": false, "outDir": "dist" } }
+```
 
 ## Patrones de implementación
 
