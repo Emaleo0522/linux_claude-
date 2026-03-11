@@ -274,6 +274,17 @@ Ejecutar en paralelo a Fase 2 o antes de Fase 3, según cuándo se necesiten los
 8. Actualizar DAG State: assets_creativos.logo/images/video → "listo"
 ```
 
+**Estrategia de merge para creative-assets:**
+Cada agente creativo actualiza SOLO su sección del cajón:
+- logo-agent → `{ logos: [...] }`
+- image-agent → `{ images: [...] }`
+- video-agent → `{ video: {...} }`
+Como logo-agent e image-agent corren en PARALELO, cada uno hace:
+1. `mem_search("{proyecto}/creative-assets")` → leer existente
+2. Merge su sección con el contenido existente
+3. `mem_save` con contenido mergeado
+Si el cajón no existe, crear con solo su sección.
+
 **Si brand.json ya existe con user_approved: true** → saltar pasos 1-2, usar el existente.
 Solo verificar via `{proyecto}/branding` en Engram si el hash cambió (brand actualizado).
 
@@ -343,6 +354,11 @@ Para **cada tarea** de la lista, en orden:
    Guarda resultado en Engram: {proyecto}/qa-{N}
    Devuelve: PASS | FAIL + rutas screenshots + lista de issues (si FAIL)"
 
+**Umbral PASS/FAIL:**
+- Rating B- o superior → PASS
+- Rating C+ o inferior → FAIL (requiere reintento)
+- 0 errores en consola es OBLIGATORIO para PASS
+
 6. Si PASS:
    - Actualiza DAG State: tarea N → completada
    - Continúa con tarea N+1
@@ -394,7 +410,7 @@ Solo ejecutar cuando TODAS las tareas están en PASS o aceptadas con limitación
 - Devuelve: Core Web Vitals, tiempos de carga, bottlenecks
 
 **reality-checker** (ejecutar AL FINAL, después de SEO + API + Performance)
-- Lee: todos los cajones del proyecto + rutas de screenshots en /tmp/qa/
+- Lee: `{proyecto}/qa-*`, `{proyecto}/seo`, `{proyecto}/api-qa`, `{proyecto}/perf-report` + screenshots en /tmp/qa/
 - Guarda en: `{proyecto}/certificacion`
 - Devuelve: **CERTIFIED ✓** | **NEEDS WORK** (con lista de blockers)
 

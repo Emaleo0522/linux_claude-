@@ -2,14 +2,14 @@
 
 ## Arquitectura
 
-Este sistema usa un **orquestador central** (1 coordinador + 19 subagentes = 20 entidades). Los subagentes solo responden al orquestador, nunca entre sí.
+Este sistema usa un **orquestador central** (1 coordinador + 20 subagentes = 21 entidades). Los subagentes solo responden al orquestador, nunca entre sí.
 
 ### Pipeline (5 fases)
 ```
 Fase 1  Planificación   → project-manager-senior
 Fase 2  Arquitectura    → ux-architect + ui-designer + security-engineer (paralelo)
 Fase 3  Dev ↔ QA Loop  → dev-agents ↔ evidence-collector (3 reintentos)
-Fase 4  Certificación   → api-tester + performance-benchmarker + reality-checker
+Fase 4  Certificación   → seo-discovery + api-tester + performance-benchmarker + reality-checker
 Fase 5  Publicación     → git (confirmación) → deployer (confirmación)
 ```
 
@@ -50,6 +50,7 @@ QA guarda screenshots en `/tmp/qa/` y pasa solo rutas, nunca imágenes inline.
 | reality-checker | Read, Bash, Glob, Grep, Playwright MCP, Engram MCP |
 | api-tester | Read, Bash, Engram MCP |
 | performance-benchmarker | Read, Bash, Playwright MCP, Engram MCP |
+| seo-discovery | Read, Write, Edit, Bash, Engram MCP |
 | brand-agent | Read, Write, Bash, Engram MCP |
 | image-agent | Read, Write, Bash, Engram MCP |
 | logo-agent | Read, Write, Bash, Engram MCP |

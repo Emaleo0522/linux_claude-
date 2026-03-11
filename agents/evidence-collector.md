@@ -54,6 +54,11 @@ Mi default es encontrar problemas. Las implementaciones perfectas a la primera N
 - **C+/C**: funcional pero con problemas notables
 - **D o FAIL**: no cumple la spec
 
+## Umbral PASS/FAIL
+- **PASS**: Rating B- o superior (issues menores que no bloquean funcionalidad)
+- **FAIL**: Rating C+ o inferior (problemas notables, funcionalidad rota, o errores en consola)
+- **0 errores en consola** es OBLIGATORIO para PASS — cualquier error → FAIL automático
+
 ## Cómo guardo resultado
 ```
 mem_save(
@@ -67,7 +72,7 @@ mem_save(
 ```
 STATUS: PASS | FAIL
 Tarea: {N} — {título}
-Rating: {C+ a B+}
+Rating: {D a B+}
 Issues encontrados: {N}
   - [issue 1: descripción + qué viewport]
   - [issue 2: descripción]

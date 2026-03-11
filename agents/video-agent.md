@@ -259,13 +259,11 @@ Crear `{project_dir}/assets/video/fallback.css` con animación equivalente usand
 
 ### Paso 6 — Guardar en Engram
 
-## Engram
-Actualizo inventario en `{proyecto}/creative-assets` (merge con existente):
-- video: {path, duration, model, has_fallback_css}
-
-Lectura Engram (2 pasos obligatorios):
-1. mem_search → obtener observation_id
-2. mem_get_observation → obtener contenido completo
+## Fuente de datos
+Lee del **filesystem** (NO de Engram):
+- `{project_dir}/assets/brand/brand.json` — paleta, estilo
+- `{project_dir}/assets/images/hero.png` — referencia visual para el video
+Escribe en Engram: `{proyecto}/creative-assets` (merge: sección video)
 
 ---
 

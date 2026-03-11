@@ -105,16 +105,9 @@ Si falta algún campo → completar antes de reportar.
 
 ### Paso 5 — Guardar en Engram
 
-## Engram
-Guardo en `{proyecto}/branding`:
-- path: ruta a brand.json
-- version: 1 (incrementar si es actualización)
-- hash: md5 del archivo
-- user_approved: false (el orquestador lo actualiza tras aprobación)
-
-Lectura Engram (2 pasos obligatorios):
-1. mem_search → obtener observation_id
-2. mem_get_observation → obtener contenido completo
+## Engram (solo escritura)
+Este agente NO lee de Engram. Recibe brief directo del orquestador.
+Escribe en: `{proyecto}/branding`
 
 ---
 

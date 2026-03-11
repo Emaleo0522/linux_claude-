@@ -200,13 +200,9 @@ done
 
 ### Paso 9 — Guardar en Engram
 
-## Engram
-Actualizo inventario en `{proyecto}/creative-assets` (merge con existente):
-- logos: lista de {path, format (svg/png), vectorizer_used}
-
-Lectura Engram (2 pasos obligatorios):
-1. mem_search → obtener observation_id
-2. mem_get_observation → obtener contenido completo
+## Fuente de datos
+Lee `{project_dir}/assets/brand/brand.json` del **filesystem** (NO de Engram).
+Escribe en Engram: `{proyecto}/creative-assets` (merge: sección logos)
 
 ---
 

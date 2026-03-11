@@ -1,6 +1,6 @@
 # Claude Vibecoding v2.1 — Sistema Multi-Agente
 
-Sistema de **20 agentes especializados + Better Auth reference** para crear apps, webs y juegos sin saber programar.
+Sistema de **21 agentes especializados + Better Auth reference** para crear apps, webs y juegos sin saber programar.
 Pipeline profesional de 5 fases (+ pipeline creativo): planificacion, arquitectura, assets creativos, desarrollo con QA, certificacion y deploy.
 
 Compatible con **Linux (Claude Code)** y **Windows (Claude Desktop)**.
@@ -11,7 +11,7 @@ Compatible con **Linux (Claude Code)** y **Windows (Claude Desktop)**.
 
 | v1 (anterior) | v2 (v2.0) | v2.1 (actual) |
 |---|---|---|
-| 9 agentes generales | 16 agentes especializados | **20 agentes** (16 original + 4 creativos) |
+| 9 agentes generales | 16 agentes especializados | **21 agentes** (16 original + 4 creativos + 1 SEO) |
 | Pipeline lineal | Pipeline de 5 fases con QA loop | Pipeline de 5 fases + **Fase 2B creativa** |
 | Sin QA visual | Screenshots con Playwright MCP | Screenshots con Playwright MCP |
 | Sin memoria | Engram MCP (memoria persistente) | Engram MCP (memoria persistente) |
@@ -96,6 +96,7 @@ FASE 3 — Desarrollo con QA Loop
   |
   v
 FASE 4 — Certificacion Final
+  seo-discovery         -> SEO audit, meta tags, structured data, sitemap
   api-tester           -> endpoints, seguridad, performance P95
   performance-benchmarker -> Core Web Vitals, Lighthouse
   reality-checker       -> gate final (default: NEEDS WORK)
@@ -108,7 +109,7 @@ FASE 5 — Publicacion (con confirmacion)
 
 ---
 
-## 20 Agentes incluidos
+## 21 Agentes incluidos
 
 | Fase | Agente | Rol |
 |------|--------|-----|
@@ -126,6 +127,7 @@ FASE 5 — Publicacion (con confirmacion)
 | 3 | `game-designer` | GDD: mecanicas, loops, economia, balance |
 | 3 | `xr-immersive-developer` | Phaser.js, PixiJS, Canvas API, WebGL |
 | 3 QA | `evidence-collector` | QA visual con Playwright MCP, screenshots |
+| 4 | `seo-discovery` | SEO audit, meta tags, structured data, sitemap |
 | 4 | `api-tester` | Cobertura endpoints, OWASP API Top 10, P95 |
 | 4 | `performance-benchmarker` | Core Web Vitals, Lighthouse, bundle analysis |
 | 4 | `reality-checker` | Gate final pre-produccion |
@@ -262,6 +264,7 @@ agents/
 |-- image-agent.md              <- NEW: generacion de imagenes (FLUX.1)
 |-- logo-agent.md               <- NEW: generacion de logos SVG (FLUX.1 + vtracer)
 |-- video-agent.md              <- NEW: generacion de videos (LTXVideo / CSS fallback)
+|-- seo-discovery.md            <- NEW: SEO audit y optimizacion
 |-- better-auth-reference.md    <- referencia Better Auth para autenticacion
 |-- skills/
 install/

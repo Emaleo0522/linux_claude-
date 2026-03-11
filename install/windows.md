@@ -6,7 +6,7 @@ Esta guia te lleva paso a paso desde cero hasta tener el sistema completo funcio
 
 ## Lo que vas a instalar
 
-- **20 agentes de Claude + 1 referencia**: los especialistas del sistema (orquestador, PM, arquitectos, devs, QA, agentes creativos, etc.) + `better-auth-reference.md` (guia de autenticacion)
+- **21 agentes de Claude + 1 referencia**: los especialistas del sistema (orquestador, PM, arquitectos, devs, QA, SEO, agentes creativos, etc.) + `better-auth-reference.md` (guia de autenticacion)
 - **CLAUDE.md global**: le dice a Claude como coordinar el pipeline de 5 fases
 - **MCPs**: Engram (memoria), Context7 (docs), Playwright (QA visual)
 - **Node.js + npm**: para levantar previews locales
@@ -71,14 +71,14 @@ git config --global init.defaultBranch main
 
 ---
 
-## Paso 6: Copiar los 16 agentes
+## Paso 6: Copiar los 21 agentes
 
 En Git Bash, desde la carpeta donde clonaste este repo:
 ```bash
 # Crear la carpeta de agentes
 mkdir -p ~/.claude/agents/skills
 
-# Copiar los 16 agentes
+# Copiar los 21 agentes
 cp agents/*.md ~/.claude/agents/
 
 # Copiar skills si hay
@@ -88,7 +88,7 @@ cp agents/skills/*.md ~/.claude/agents/skills/ 2>/dev/null
 ls ~/.claude/agents/
 ```
 
-Deberias ver 21 archivos .md: los 20 agentes (`orquestador.md`, `project-manager-senior.md`, `frontend-developer.md`, etc.) + `better-auth-reference.md`.
+Deberias ver 22 archivos .md: los 21 agentes (`orquestador.md`, `project-manager-senior.md`, `frontend-developer.md`, `seo-discovery.md`, etc.) + `better-auth-reference.md`.
 
 ---
 
@@ -187,7 +187,7 @@ Edita `~/.claude/launch.json` y cambia `"mi-proyecto"` por el nombre de tu proye
 
 En Git Bash:
 ```bash
-# Agentes instalados (deben ser 17)
+# Agentes instalados (deben ser 22)
 ls ~/.claude/agents/*.md | wc -l
 
 # CLAUDE.md global
@@ -222,7 +222,7 @@ El sistema se encarga del resto:
 1. Planifica las tareas (project-manager-senior)
 2. Crea la arquitectura (ux-architect + ui-designer + security-engineer)
 3. Implementa con QA visual (dev-agents + evidence-collector)
-4. Certifica (api-tester + performance-benchmarker + reality-checker)
+4. Certifica (seo-discovery + api-tester + performance-benchmarker + reality-checker)
 5. Publica (git + deployer) — con tu confirmacion
 
 ---
@@ -232,8 +232,8 @@ El sistema se encarga del resto:
 **Claude no reconoce los agentes**
 -> Reinicia Claude Desktop. Los agentes se cargan al iniciar.
 
-**No aparecen los 20 agentes**
--> Verifica con `ls ~/.claude/agents/*.md | wc -l`. Debe ser 21.
+**No aparecen los 21 agentes**
+-> Verifica con `ls ~/.claude/agents/*.md | wc -l`. Debe ser 22.
 
 **MCPs no aparecen en Claude Desktop**
 -> Verifica que `claude_desktop_config.json` tenga JSON valido y reinicia. Verificar rutas absolutas.
@@ -258,7 +258,7 @@ El sistema se encarga del resto:
 |-- agents/
 |   |-- orquestador.md
 |   |-- project-manager-senior.md
-|   |-- ... (16 agentes)
+|   |-- ... (21 agentes)
 |   |-- better-auth-reference.md
 %APPDATA%\Claude\
 |-- claude_desktop_config.json                   <- MCPs (Engram, Context7, Playwright)

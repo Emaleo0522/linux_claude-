@@ -38,6 +38,7 @@
       "mcp__plugin_engram_engram__mem_session_end",
       "mcp__plugin_engram_engram__mem_suggest_topic_key",
       "mcp__plugin_engram_engram__mem_capture_passive",
+      "mcp__plugin_engram_engram__mem_save_prompt",
       "mcp__playwright__browser_navigate",
       "mcp__playwright__browser_snapshot",
       "mcp__playwright__browser_take_screenshot",

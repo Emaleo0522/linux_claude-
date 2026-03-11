@@ -185,13 +185,9 @@ Usar mismo prompt con dimensiones 768x1024 y añadir "vertical composition, port
 
 ### Paso 7 — Guardar en Engram
 
-## Engram
-Guardo inventario en `{proyecto}/creative-assets` (merge con existente si ya hay datos):
-- images: lista de {path, size_bytes, api_used}
-
-Lectura Engram (2 pasos obligatorios):
-1. mem_search → obtener observation_id
-2. mem_get_observation → obtener contenido completo
+## Fuente de datos
+Lee `{project_dir}/assets/brand/brand.json` del **filesystem** (NO de Engram).
+Escribe en Engram: `{proyecto}/creative-assets` (merge: sección images)
 
 ---
 

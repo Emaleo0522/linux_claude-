@@ -7,6 +7,11 @@ description: Mide Core Web Vitals, tiempos de carga, bottlenecks y load testing.
 
 Soy el especialista en performance. Mido Core Web Vitals, identifico bottlenecks y verifico que el proyecto cumple los targets de velocidad.
 
+## Entrada del orquestador
+- URL del proyecto (local http://localhost:PORT o deployada)
+- Nombre del proyecto
+- No requiere lecturas de Engram — recibe todo del orquestador
+
 ## Lo que mido
 
 ### 1. Core Web Vitals

@@ -1,7 +1,7 @@
 #!/bin/bash
 # ============================================================
 # Claude Code — Vibecoding Agent System v2
-# 20 agentes + 1 referencia (Better Auth) | Pipeline de 5 fases
+# 21 agentes + 1 referencia (Better Auth) | Pipeline de 5 fases
 # Instalacion automatica para Linux / Claude Code
 # ============================================================
 
@@ -20,7 +20,7 @@ error() { echo -e "${RED}[X]${NC} $1"; exit 1; }
 echo ""
 echo -e "${CYAN}============================================${NC}"
 echo -e "${CYAN}  Claude Code — Vibecoding Agent System v2${NC}"
-echo -e "${CYAN}  20 agentes + Better Auth ref | Pipeline de 5 fases${NC}"
+echo -e "${CYAN}  21 agentes + Better Auth ref | Pipeline de 5 fases${NC}"
 echo -e "${CYAN}  Instalacion automatica (Linux)${NC}"
 echo -e "${CYAN}============================================${NC}"
 echo ""
@@ -99,7 +99,7 @@ else
   info "Clave SSH existente: $SSH_KEY"
 fi
 
-# -- 8. Instalar 20 agentes + better-auth-reference en ~/.claude/agents/ --
+# -- 8. Instalar 21 agentes + better-auth-reference en ~/.claude/agents/ --
 CLAUDE_AGENTS="$HOME/.claude/agents"
 mkdir -p "$CLAUDE_AGENTS/skills"
 
@@ -173,7 +173,7 @@ if [[ -f "$LOCAL_TEMPLATE" ]]; then
     warn "settings.local.json existente respaldado en $CLAUDE_LOCAL.bak"
   fi
   cp "$LOCAL_TEMPLATE" "$CLAUDE_LOCAL"
-  info "settings.local.json instalado (permisos para 20 agentes)"
+  info "settings.local.json instalado (permisos para 21 agentes)"
 else
   warn "No se encontro templates/settings.local.json — saltando"
 fi
@@ -234,12 +234,13 @@ echo ""
 echo "Para empezar, abri Claude Code y escribi:"
 echo "  @orquestador quiero crear [tu idea]"
 echo ""
-echo "Agentes disponibles (16 + better-auth-reference):"
+echo "Agentes disponibles (21 + better-auth-reference):"
 echo "  Fase 1: project-manager-senior"
 echo "  Fase 2: ux-architect, ui-designer, security-engineer"
+echo "  Fase 2B: brand-agent, image-agent, logo-agent, video-agent"
 echo "  Fase 3: frontend-developer, backend-architect, rapid-prototyper,"
 echo "          game-designer, xr-immersive-developer"
 echo "  Fase 3 QA: evidence-collector"
-echo "  Fase 4: api-tester, performance-benchmarker, reality-checker"
+echo "  Fase 4: seo-discovery, api-tester, performance-benchmarker, reality-checker"
 echo "  Fase 5: git, deployer"
 echo ""
