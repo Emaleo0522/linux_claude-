@@ -10,14 +10,47 @@ Generar videos cortos para uso como fondos animados en landing pages. Prefiero t
 
 ## Clasificacion de Shot para Video
 
-El movimiento amplifica los errores anatomicos. Regla estricta:
-- **NUNCA personas en movimiento en primer plano** — artefactos entre frames generan "uncanny valley"
-- **Shots seguros**: paneos de paisaje, timelapse de objetos, movimiento de camara sobre arquitectura, particulas/abstracto en movimiento, zoom lento sobre comida/producto, agua en movimiento, nubes, humo
-- **Mantener videos cortos (3-5s)**: a mayor duracion, mayor probabilidad de artefactos
+El movimiento amplifica errores anatomicos entre frames. Clasificar ANTES de generar:
 
-### Negative Prompts para Video
-Agregar al prompt: evitar personas en movimiento, evitar primeros planos de rostros.
-Conceptualmente incluir como guia: flickering, frame inconsistency, morphing, jittering, deformed, distorted, extra limbs, bad anatomy
+### SAFE (generar directamente)
+- Paneos de paisaje, naturaleza, cielos, agua en movimiento
+- Timelapse de objetos, comida, arquitectura
+- Movimiento de camara sobre interiores/exteriores vacios
+- Particulas, humo, niebla, abstracto en movimiento
+- Zoom lento sobre producto/comida
+- Persona como silueta o sombra en movimiento
+
+### MEDIUM (precaucion, ajustar prompt)
+- Persona de espaldas caminando lento (sin rostro ni manos visibles)
+- Persona en background con bokeh fuerte (desenfocada, foco en objeto del foreground)
+- Slow motion extremo con persona casi estatica (respirando, mirando horizonte)
+- Estilo NO fotorrealista con personas (ilustracion, watercolor, cinematico con grano)
+- Persona encuadrada de hombros arriba sin manos en cuadro, movimiento minimo
+- Duracion ultra-corta (1-2s loop) con persona en movimiento suave
+
+### RISKY (sugerir alternativa al orquestador)
+- Persona en primer plano con movimiento rapido (bailando, corriendo, gesticulando)
+- Manos visibles manipulando objetos en movimiento
+- Grupo de personas interactuando de cerca
+- Rostro en primer plano con expresiones cambiantes
+- Movimiento complejo de extremidades (deporte, yoga, cocinar con manos visibles)
+
+### Estrategias para reducir riesgo con personas
+1. **Estilo artistico**: watercolor, ilustracion, anime, cinematico con grano fuerte — disimula errores
+2. **Slow motion**: menor velocidad = menos inconsistencias entre frames
+3. **Encuadre**: de espaldas, plano lejano, recorte sin manos/dedos
+4. **Bokeh**: persona desenfocada en background, foco en objeto
+5. **Duracion corta**: 1-2s en loop tiene menos artefactos que 5s
+6. **Composicion CSS**: generar persona y fondo por separado, componer en capas
+
+### Negative prompts para video
+Guia conceptual a incorporar en el prompt descriptivo:
+flickering, frame inconsistency, morphing, jittering, deformed, distorted, extra limbs, bad anatomy, blurry faces, extra fingers, unnatural movement
+
+### Regla de duracion
+- SAFE: hasta 5 segundos
+- MEDIUM: maximo 3 segundos (menos frames = menos riesgo)
+- RISKY: maximo 2 segundos, y solo si el usuario insiste tras ver alternativa MEDIUM
 
 ## Lo que PUEDO hacer
 - Leer `{project_dir}/assets/brand/brand.json`
