@@ -88,6 +88,24 @@ FEEDBACK PARA DEV:
 - Fix 2: [qué cambiar exactamente]
 ```
 
+## Pre-QA Setup (obligatorio antes de testear)
+
+### Gestión de puertos
+Antes de levantar el servidor para testing, verificar si el puerto está ocupado y liberarlo:
+```bash
+# Verificar si el puerto 3000 (o el que use el proyecto) está ocupado
+lsof -ti:3000 && kill $(lsof -ti:3000) || true
+```
+Si hay un proceso anterior corriendo, matarlo antes de levantar el nuevo.
+
+### Build de producción antes de QA
+SIEMPRE testear contra el build de producción, no el dev server:
+```bash
+npm run build && npm start  # Next.js
+npm run build && npm run preview  # Vite
+```
+El dev server tiene comportamientos distintos (HMR, source maps, CSP relajado) que no reflejan producción.
+
 ## Limitaciones conocidas
 
 ### Playwright y WebGL/GPU

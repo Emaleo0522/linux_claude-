@@ -122,5 +122,26 @@ Pipeline de generación de assets (logos, imágenes, videos) para proyectos web.
 - `HF_TOKEN` — HuggingFace (registro gratis en hf.co) — para image-agent y logo-agent
 - `REPLICATE_API_TOKEN` — Replicate (registro gratis, free credits) — para video-agent
 
+## Best Practices Cross-Cutting (validadas en producción)
+
+### SEO-Frontend Sync
+- FAQ visible en HTML DEBE coincidir con FAQPage JSON-LD (Google penaliza divergencia)
+- AggregateRating/Reviews JSON-LD solo con datos de testimonios REALES, nunca inventados
+- `@vercel/og` es el método preferido para OG images dinámicos en Next.js (no Pillow/canvas)
+- Páginas con SEO dinámico (colecciones, productos) → Server Component + `generateMetadata`
+
+### Performance Web (obligatorio en todos los proyectos)
+- Preconnect + dns-prefetch para dominios externos (Unsplash, Google Fonts, CDNs)
+- `manifest.json` básico siempre (PWA-ready, mejora Lighthouse)
+- `theme-color` meta tag para mobile browsers
+- Google Search Console verification tag como placeholder (listo para reemplazar)
+
+### QA & Certificación
+- Siempre testear contra **build de producción** (`npm run build && npm start`), no dev server
+- Matar procesos en puerto antes de levantar servidor de test (`lsof -ti:PORT && kill ...`)
+- SEO Score mínimo 85/100 para certificación (reality-checker lo valida)
+- Links internos: todos deben retornar HTTP 200 (verificar con sitemap.xml)
+- JSON-LD: todos los bloques deben ser parseables (validar con `python3 -m json.tool`)
+
 ## Herramientas de diseño
 - **Figma/FigJam**: Solo usar cuando el usuario comparte una URL de Figma o lo pide explícitamente

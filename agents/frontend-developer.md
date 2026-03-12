@@ -119,6 +119,78 @@ Las rutas en código usan `/images/hero.png` (relativo a public/), NO `assets/im
 
 **Si los assets NO existen**, usar placeholders normales — no bloquear la tarea.
 
+## SEO-Frontend Integration (best practices verificadas en producción)
+
+### FAQ visible + FAQPage JSON-LD deben coincidir
+Si el proyecto tiene contenido FAQ, la sección FAQ visible en el HTML DEBE tener el mismo contenido que el FAQPage JSON-LD schema. Google penaliza si el structured data no coincide con el contenido visible.
+```tsx
+// El componente FAQ y el JSON-LD usan los MISMOS datos
+const faqItems = [
+  { question: "¿Pregunta real?", answer: "Respuesta real." },
+];
+// Sección visible
+<FAQ items={faqItems} />
+// JSON-LD (mismo array)
+<JsonLd data={{ "@type": "FAQPage", mainEntity: faqItems.map(q => ({
+  "@type": "Question", name: q.question,
+  acceptedAnswer: { "@type": "Answer", text: q.answer }
+}))}} />
+```
+
+### AggregateRating + Reviews desde testimonios existentes
+Si el proyecto tiene sección de testimonios, generar JSON-LD Review + AggregateRating con los datos reales (nombres, texto, rating). NO inventar reviews.
+
+### Preconnect para recursos externos (obligatorio)
+Si el proyecto carga recursos de dominios externos (imágenes, fonts, APIs), agregar preconnect en `<head>`:
+```tsx
+// En layout.tsx — agregar ANTES de que el browser los necesite
+<link rel="preconnect" href="https://images.unsplash.com" />
+<link rel="dns-prefetch" href="https://images.unsplash.com" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+```
+Detectar qué dominios externos usa el proyecto y agregar preconnect para cada uno.
+
+### manifest.json básico (siempre en proyectos web)
+Crear `public/manifest.json` con datos del proyecto:
+```json
+{
+  "name": "Nombre del Proyecto",
+  "short_name": "Nombre",
+  "theme_color": "#hexcolor",
+  "background_color": "#hexcolor",
+  "display": "standalone",
+  "start_url": "/",
+  "icons": [{ "src": "/logo/logo-icon.svg", "sizes": "any", "type": "image/svg+xml" }]
+}
+```
+Linkear en layout.tsx: `<link rel="manifest" href="/manifest.json" />`
+
+### OG Images dinámicos con @vercel/og (preferido)
+Para proyectos Next.js, generar OG images dinámicos por página usando `@vercel/og` (Edge Runtime):
+```tsx
+// src/app/api/og/route.tsx
+import { ImageResponse } from '@vercel/og';
+export async function GET(request: Request) {
+  const { searchParams } = new URL(request.url);
+  const title = searchParams.get('title') || 'Default Title';
+  return new ImageResponse(/* JSX con branding */);
+}
+```
+Cada página apunta a `/api/og?title=...` en su metadata openGraph.images. NO usar Pillow ni canvas externos.
+
+### Server Component + generateMetadata (Next.js App Router)
+Páginas que necesitan SEO dinámico (colecciones, productos, blog posts) DEBEN ser Server Components con `generateMetadata`:
+```tsx
+// page.tsx — Server Component (sin "use client")
+export async function generateMetadata({ params }): Promise<Metadata> {
+  return { title: `${params.category} — Proyecto`, openGraph: { ... } };
+}
+export default function Page({ params }) {
+  return <ClientContent category={params.category} />;
+}
+```
+Extraer la lógica interactiva a un Client Component separado (`ComponentContent.tsx`).
+
 ## Lecciones de auditoría (best practices verificadas)
 
 ### Mobile nav con AnimatePresence

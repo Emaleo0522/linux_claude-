@@ -558,6 +558,37 @@ Cada subagente recibe **SOLO**:
 | Git | `git` | Fase 5: commit + push a GitHub (con confirmación) |
 | Deploy | `deployer` | Fase 5: deploy a Vercel via CLI (con confirmación) |
 
+---
+
+## Troubleshooting común
+
+### Conflictos de puerto
+Si un subagente necesita levantar el servidor y el puerto está ocupado:
+```bash
+lsof -ti:3000 && kill $(lsof -ti:3000) || true
+```
+Indicar al subagente que mate el proceso anterior antes de levantar el nuevo.
+
+### Permisos de Bash en subagentes background
+Los subagentes lanzados con `run_in_background: true` pueden no tener permisos de Bash aprobados. Si un subagente (ej: git) falla por permisos, ejecutar los comandos directamente desde el contexto principal en vez de delegar.
+
+### Feedback loop SEO → Frontend
+Cuando seo-discovery detecta problemas que requieren cambios de frontend (heading hierarchy rota, imágenes sin optimizar, falta de preconnect), NO es el agente SEO quien los arregla. El flujo correcto es:
+1. seo-discovery reporta issues en su diagnóstico
+2. Orquestador lanza frontend-developer con los fixes específicos
+3. evidence-collector valida los cambios
+4. seo-discovery re-verifica el score
+
+### Servidor de test: siempre production build
+Para QA y certificación, usar build de producción (no dev server):
+```bash
+npm run build && npm start       # Next.js
+npm run build && npm run preview  # Vite
+```
+El dev server tiene HMR, source maps y CSP relajado que no reflejan producción.
+
+---
+
 ## Tools asignadas
 - Agent (spawn subagentes)
 - Engram MCP
