@@ -437,9 +437,9 @@ Resumen: {N} tareas completadas | {issues} issues menores documentados
 #### Si el usuario elige "s" o "g" — Git
 
 Delega a **git**:
-- Recibe: nombre del proyecto + rama + mensaje de commit sugerido
-- Hace: `git add` de archivos relevantes + `git commit` + `git push`
-- Devuelve: STATUS + URL del repo + hash del commit
+- Recibe: nombre del proyecto + rama (`main` siempre) + mensaje de commit sugerido
+- Hace: verifica branch es `main` (renombra si es `master`) + `git add` + `git commit` + `git push` + setea default branch en GitHub
+- Devuelve: STATUS + URL del repo + hash del commit + **info para deployer** (repo URL, branch, primer push sí/no)
 - Guarda en Engram: `{proyecto}/git-commit`
 
 Muestra al usuario:
@@ -447,6 +447,7 @@ Muestra al usuario:
 ✓ Commit subido
 Repo: {url-github}
 Commit: {hash} — "{mensaje}"
+Branch: main (default)
 ```
 
 #### Si el usuario eligió "s" — Vercel (solo después del git exitoso)
@@ -460,10 +461,13 @@ Proyecto: [nombre] | Equipo: emaleo0522-9669
 ```
 
 Si confirma, delega a **deployer**:
-- Recibe: directorio del proyecto + nombre
-- Ejecuta: `vercel deploy --prod` via CLI
-- Devuelve: URL limpia del proyecto (no URL de deploy único)
+- Recibe: directorio del proyecto + nombre + **info del git** (repo URL, branch, primer push)
+- Si es primer deploy: `vercel deploy --prod` + `vercel git connect` (activa auto-deploy)
+- Si ya tiene Git Integration: verifica que el auto-deploy se disparó correctamente
+- Devuelve: URL limpia del proyecto + estado de Git Integration + auto-deploy activo/no
 - Guarda en Engram: `{proyecto}/deploy-url`
+
+**Handoff git→deployer**: el orquestador pasa la info que git devolvió directamente al deployer. Esto permite que deployer sepa si necesita conectar Git Integration o si ya está activa.
 
 Muestra al usuario:
 ```
