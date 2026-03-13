@@ -138,15 +138,15 @@ Pega este contenido (reemplaza `{TU_USUARIO}` con tu nombre de usuario de Window
 {
   "mcpServers": {
     "engram": {
-      "command": "C:\Users\{TU_USUARIO}\bin\engram.exe",
+      "command": "C:\\Users\\{TU_USUARIO}\\bin\\engram.exe",
       "args": ["mcp", "--tools=agent"]
     },
     "context7": {
-      "command": "C:\Program Files\nodejs\npx.cmd",
+      "command": "C:\\Program Files\\nodejs\\npx.cmd",
       "args": ["-y", "@upstash/context7-mcp"]
     },
     "playwright": {
-      "command": "C:\Program Files\nodejs\npx.cmd",
+      "command": "C:\\Program Files\\nodejs\\npx.cmd",
       "args": ["playwright-mcp"]
     }
   }

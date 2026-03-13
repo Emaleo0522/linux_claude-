@@ -25,10 +25,13 @@ Los subagentes devuelven al orquestador **solo resúmenes cortos** (STATUS + arc
 QA guarda screenshots en `/tmp/qa/` y pasa solo rutas, nunca imágenes inline.
 > **Windows**: `/tmp/` funciona en bash (Git Bash lo mapea al temp de Windows). Sin cambios necesarios.
 
-### Engram (memoria persistente)
+### Engram (memoria persistente — protege el contexto)
 - **Topic keys**: `{proyecto}/{tipo}` (ej: `mi-app/tareas`, `mi-app/qa-3`)
 - **Lectura siempre en 2 pasos**: `mem_search` → `mem_get_observation` (nunca usar preview truncada directamente)
-- **DAG State**: el orquestador guarda `{proyecto}/estado` después de cada fase para recuperación post-compactación
+- **DAG State**: el orquestador guarda `{proyecto}/estado` después de cada fase (incluye stack, estructura, progreso)
+- **Guardar completo, leer selectivo**: subagentes solo leen los cajones que necesitan, nunca todo
+- **No duplicar en contexto**: si la info está en Engram, pasar solo la ruta al cajón, no el contenido
+- **Retomar sin inventar**: al reanudar post-compactación, `{proyecto}/estado` tiene todo para continuar
 
 ## Herramientas por agente
 
@@ -46,9 +49,9 @@ QA guarda screenshots en `/tmp/qa/` y pasa solo rutas, nunca imágenes inline.
 | xr-immersive-developer | Read, Write, Edit, Bash, **Preview MCP**, Engram MCP |
 | evidence-collector | Read, Bash, Playwright MCP, Engram MCP |
 | reality-checker | Read, Bash, Glob, Grep, Playwright MCP, Engram MCP |
+| seo-discovery | Read, Write, Edit, Bash, Engram MCP |
 | api-tester | Read, Bash, Engram MCP |
 | performance-benchmarker | Read, Bash, Playwright MCP, Engram MCP |
-| seo-discovery | Read, Write, Edit, Bash, Engram MCP |
 | brand-agent | Read, Write, Bash, Engram MCP |
 | image-agent | Read, Write, Bash, Engram MCP |
 | logo-agent | Read, Write, Bash, Engram MCP |
@@ -64,16 +67,7 @@ QA guarda screenshots en `/tmp/qa/` y pasa solo rutas, nunca imágenes inline.
 - Solo **deployer** despliega a Vercel
 - git y deployer actúan **solo con confirmación del usuario**
 - Cada tarea dev pasa por **evidence-collector** antes de avanzar (máx 3 reintentos)
-
-## Autenticación estándar — Better Auth
-- **Better Auth** es el sistema de auth por defecto para todos los proyectos nuevos
-- Referencia completa: `~/.claude/agents/better-auth-reference.md`
-- Agentes que lo usan: backend-architect (server), frontend-developer (client), rapid-prototyper (full-stack)
-- Solo usar Clerk/Supabase Auth/JWT custom si el proyecto ya los tiene implementados
-
-### Reglas críticas (validadas en producción)
-- **Migración NO es automática**: siempre agregar `"migrate": "npx @better-auth/cli migrate"` al `package.json` y ejecutarlo antes del primer `npm run dev`
-- **Next.js 16+**: usar `proxy.ts` con `export async function proxy()` — el archivo `middleware.ts` está deprecado
+- **El orquestador NO activa git hasta que evidence-collector retorna PASS** — nunca saltear QA antes de push, aunque el tiempo apremia. Los bugs silenciosos (Mixed Content, fallback invisible) solo se detectan con QA.
 
 ## Overrides Windows — Diferencias con Linux/Claude Code
 
@@ -81,7 +75,7 @@ QA guarda screenshots en `/tmp/qa/` y pasa solo rutas, nunca imágenes inline.
 
 ### Servidores de desarrollo (agentes: frontend-developer, backend-architect, rapid-prototyper, xr-immersive-developer)
 
-**NUNCA** arrancar servidores con `npm run dev` via Bash directamente.  
+**NUNCA** arrancar servidores con `npm run dev` via Bash directamente.
 **SIEMPRE** usar `preview_start` del Claude Preview MCP.
 
 Pasos obligatorios:
@@ -120,30 +114,37 @@ cd nombre-proyecto && npm run build
 - Usar **Next.js 15 o 16** (no 14)
 - Next.js 16+: `proxy.ts` en raíz del proyecto (no `middleware.ts`)
 
-## Best Practices Cross-Cutting (validadas en producción)
+## Stack adaptable por proyecto
 
-### SEO-Frontend Sync
-- FAQ visible en HTML DEBE coincidir con FAQPage JSON-LD (Google penaliza divergencia)
-- AggregateRating/Reviews JSON-LD solo con datos de testimonios REALES, nunca inventados
-- `@vercel/og` es el método preferido para OG images dinámicos en Next.js (no Pillow/canvas)
-- Páginas con SEO dinámico (colecciones, productos) → Server Component + `generateMetadata`
+El orquestador decide el stack en Fase 1 basándose en los requisitos. No hay stack fijo — se adapta:
 
-### Performance Web (obligatorio en todos los proyectos)
-- Preconnect + dns-prefetch para dominios externos (Unsplash, Google Fonts, CDNs)
-- `manifest.json` básico siempre (PWA-ready, mejora Lighthouse)
-- `theme-color` meta tag para mobile browsers
-- Google Search Console verification tag como placeholder (listo para reemplazar)
+| Capa | Opciones disponibles | Preferido |
+|------|---------------------|-----------|
+| Frontend | Next.js, SvelteKit, Nuxt, Astro, Vite+React | Next.js (apps), Vite+React (landing) |
+| Backend | Hono, Express, Fastify | Hono (edge-ready, liviano) |
+| DB | PostgreSQL, SQLite, Supabase | PostgreSQL (prod), Supabase (MVP) |
+| ORM | Drizzle, Prisma | Drizzle (type-safe, edge) |
+| API type-safe | tRPC, oRPC, ts-rest | tRPC (si frontend+backend TS) |
+| Validación | Zod | Siempre |
+| State mgmt | Zustand, Jotai, Pinia | Zustand (React) |
+| Data fetching | TanStack Query | Siempre en apps con API |
+| Forms | react-hook-form + Zod | Siempre en apps con forms |
+| Jobs/Background | BullMQ, Inngest | BullMQ (si Redis), Inngest (serverless) |
+| Email | React Email + Resend | Siempre que haya transaccional |
+| Estructura | Single-repo, Monorepo (apps/+packages/) | Monorepo si frontend+backend separados |
+| Animación | Framer Motion (React), GSAP (complejo), CSS transitions (simple) | Framer Motion |
+| Data Viz | Recharts (React), Chart.js (vanilla), D3.js (custom) | Recharts |
+| Linting | ESLint + Stylelint | Siempre |
 
-### QA & Certificación
-- Siempre testear contra **build de producción** (`npm run build && npm start`), no dev server
-- Matar procesos en puerto antes de levantar servidor de test (`lsof -ti:PORT && kill ...`)
-  > **Windows**: usar `netstat -ano | findstr :PORT` + `taskkill /PID <pid> /F` en CMD
-- SEO Score mínimo 85/100 para certificación (reality-checker lo valida)
-- Links internos: todos deben retornar HTTP 200 (verificar con sitemap.xml)
-- JSON-LD: todos los bloques deben ser parseables (validar con `python3 -m json.tool`)
+## Autenticación estándar — Better Auth
+- **Better Auth** es el sistema de auth por defecto para todos los proyectos nuevos
+- Referencia completa: `~/.claude/agents/better-auth-reference.md`
+- Agentes que lo usan: backend-architect (server), frontend-developer (client), rapid-prototyper (full-stack)
+- Solo usar Clerk/Supabase Auth/JWT custom si el proyecto ya los tiene implementados
 
-## Herramientas de diseño
-- **Figma/FigJam**: Solo usar cuando el usuario comparte una URL de Figma o lo pide explícitamente
+### Reglas críticas (validadas en producción)
+- **Migración NO es automática**: siempre agregar `"migrate": "npx @better-auth/cli migrate"` al `package.json` y ejecutarlo antes del primer `npm run dev`
+- **Next.js 16+**: usar `proxy.ts` con `export async function proxy()` — el archivo `middleware.ts` está deprecado
 
 ## Agentes creativos — Assets visuales
 Pipeline de generación de assets (logos, imágenes, videos) para proyectos web.
@@ -170,3 +171,95 @@ Pipeline de generación de assets (logos, imágenes, videos) para proyectos web.
 ### Variables de entorno requeridas
 - `HF_TOKEN` — HuggingFace (registro gratis en hf.co) — para image-agent y logo-agent
 - `REPLICATE_API_TOKEN` — Replicate (registro gratis, free credits) — para video-agent
+
+## Best Practices Cross-Cutting (validadas en producción)
+
+### SEO-Frontend Sync
+- FAQ visible en HTML DEBE coincidir con FAQPage JSON-LD (Google penaliza divergencia)
+- AggregateRating/Reviews JSON-LD solo con datos de testimonios REALES, nunca inventados
+- `@vercel/og` es el método preferido para OG images dinámicos en Next.js (no Pillow/canvas)
+- Páginas con SEO dinámico (colecciones, productos) → Server Component + `generateMetadata`
+- **`llms.txt` + `llms-full.txt` para AI search**: sitios que quieren visibilidad en ChatGPT, Perplexity, Claude deben incluir estos archivos en la raíz. `llms.txt` = descripción concisa + catálogo + contacto. `llms-full.txt` = FAQ completa + descripciones detalladas de productos/servicios. Son como `robots.txt` pero para LLMs.
+- **`robots.txt` con AI crawlers explícitos**: agregar `User-agent: GPTBot`, `Google-Extended`, `anthropic-ai`, `CCBot`, `PerplexityBot`, `Applebot-Extended` con `Allow: /` — los bots respetan esto y es señal de que el sitio quiere ser indexado por IAs
+
+### Performance Web (obligatorio en todos los proyectos)
+- Preconnect + dns-prefetch para dominios externos (Unsplash, Google Fonts, CDNs)
+- **Preconnect al backend propio también**: si hay API calls a un origen externo (PocketBase, Express, etc.), agregar `<link rel="preconnect" href="https://mi-backend.com">` — ahorra el DNS lookup en el primer fetch
+- `manifest.json` básico siempre (PWA-ready, mejora Lighthouse)
+- `theme-color` meta tag para mobile browsers
+- Google Search Console verification tag como placeholder (listo para reemplazar)
+- **`<link rel="preload" as="image">` para el LCP element**: si la imagen más grande del viewport está en CSS o tiene `loading="auto"`, el browser la descubre tarde. Identificar el LCP y agregarlo como preload explícito en `<head>`
+- **PNG grandes como background → WebP obligatorio**: imágenes PNG usadas como `background-image` en CSS pueden superar 1MB fácilmente. Convertir a WebP (ahorro típico >90%). La imagen no aparece en el HTML, el browser la descubre al parsear CSS — doble penalización.
+
+### Vercel — Sitios Estáticos
+- **`Cache-Control: max-age=0` es el default de Vercel** para todos los assets estáticos — el browser re-valida en cada visita. Para añadir browser caching, crear `vercel.json` con headers explícitos: `max-age=604800` para `/assets/**`, `max-age=3600` para `/js/**` y `/css/**`
+- **Security headers via `vercel.json`**: Vercel no agrega X-Frame-Options, X-Content-Type-Options, Referrer-Policy ni Permissions-Policy por defecto. Agregarlos en `vercel.json` bajo `"source": "/(.*)"`. Plantilla mínima:
+  ```json
+  { "headers": [{ "source": "/(.*)", "headers": [
+    { "key": "X-Content-Type-Options", "value": "nosniff" },
+    { "key": "X-Frame-Options", "value": "SAMEORIGIN" },
+    { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" },
+    { "key": "Permissions-Policy", "value": "camera=(), microphone=(), geolocation=()" }
+  ]}]}
+  ```
+- **Admin panel en sitio estático**: agregar en `vercel.json` un header `X-Robots-Tag: noindex, nofollow` + `Cache-Control: no-store` para la ruta `/admin.html` — evita que Google indexe el panel y que browsers cacheen la sesión
+
+### PocketBase (validado en producción)
+- **Boolean `required: true` rompe toggles**: Go trata `false` como zero value → falla validación. Campos booleanos que se van a alternar entre `true`/`false` NUNCA deben tener `required: true` en el schema.
+- **listRule/viewRule deben diferenciar admin vs público**: si el admin panel necesita ver ítems ocultos, usar `published = true || @request.auth.collectionName = "admin_collection"`. Sin esto, el admin queda ciego a los registros ocultados.
+- **Siempre exponer `errBody.data` en errores de API**: el `message` top-level es genérico ("Failed to update record."). El detalle real (qué campo falla, qué código de validación) está en `errBody.data`. Loguear ambos al debuggear.
+- **Superadmin auth cambió en v0.23+**: el endpoint `/api/admins/auth-with-password` devuelve 404 en versiones nuevas. Usar `/api/collections/_superusers/auth-with-password` con el mismo body `{identity, password}`.
+- **Reglas de colección son independientes por operación**: create/list/update/delete pueden tener reglas distintas. Una colección puede permitir create a usuarios pero tener update en null (solo admin). Verificar las 4 reglas al debuggear 400/403.
+
+### CSS Patterns (validados en producción)
+- **`::after` para background images**: mejor que un div extra. El pseudo-elemento va con `position: absolute; inset: 0; z-index: 0; pointer-events: none`. Los hijos del contenedor necesitan `position: relative; z-index: 1`.
+- **`max()` para secciones full-width con contenido centrado**: `padding: Xpx max(24px, calc((100vw - 1200px) / 2))` — en pantallas anchas centra el contenido, en mobile mantiene mínimo de 24px. Reemplaza el patrón `max-width + margin: auto` sin perder responsividad.
+- **`translateX` en `position: fixed` puede fijar el scroll horizontal**: al animar un toast/modal hacia afuera del viewport con `translateX(400px)`, el browser puede crear scroll horizontal y quedar stuck en esa posición. Usar `translateY` (vertical) para estas animaciones.
+- **Clases genéricas colisionan entre admin y sitio público**: si `admin.html` e `index.html` comparten clase `.stat-number`, un `querySelectorAll('.stat-number')` en el admin encuentra los elementos equivocados. Usar IDs específicos o clases prefijadas (`admin-stat-number`) para elementos exclusivos del panel.
+
+### Accesibilidad (obligatorio en todos los proyectos)
+- **axe-core en QA**: evidence-collector y reality-checker inyectan axe-core 4.10.0 desde CDN en el navegador durante testing con Playwright. 0 violaciones critical/serious para PASS.
+- **eslint-plugin-jsx-a11y**: siempre incluir en proyectos React/Next.js — atrapa errores de a11y en build time
+- **Stylelint**: ejecutar `stylelint "**/*.css"` en proyectos con CSS custom. Reglas mínimas: `no-descending-specificity`, `declaration-block-no-duplicate-properties`, `no-duplicate-selectors`
+- **Skip-nav link**: toda app con navbar debe tener `<a href="#main-content" class="skip-nav">Skip to content</a>` como primer hijo de `<body>`
+- **Focus trap en modales**: todo modal/drawer debe atrapar el foco con `focus-trap-react` o equivalente
+
+### Bundle Size Gates (performance)
+- **bundlewatch**: configurar en `package.json` con límites por bundle. Gate obligatorio en Fase 4 si el proyecto tiene build JS.
+- Límites recomendados: main bundle < 250KB gzip, vendor < 150KB gzip, páginas individuales < 50KB gzip
+
+### QA & Certificación
+- Siempre testear contra **build de producción** (`npm run build && npm start`), no dev server
+- Matar procesos en puerto antes de levantar servidor de test
+  > **Windows**: usar `netstat -ano | findstr :PORT` + `taskkill /PID <pid> /F` en CMD
+  > **Linux**: `lsof -ti:PORT | xargs kill -9`
+- SEO Score mínimo 85/100 para certificación (reality-checker lo valida)
+- Links internos: todos deben retornar HTTP 200 (verificar con sitemap.xml)
+- JSON-LD: todos los bloques deben ser parseables (validar con `python3 -m json.tool`)
+- **Mixed Content check obligatorio**: si el frontend va a HTTPS (Vercel, Netlify, etc.), verificar SIEMPRE que el backend también tiene HTTPS antes de pushear. El error es silencioso — la app cae al fallback sin mostrar nada en la UI.
+
+### DevOps VPS (validado en producción con Oracle Cloud)
+
+#### Mixed Content HTTPS — static site HTTPS + backend HTTP
+Browsers bloquean TODAS las requests HTTP desde páginas HTTPS. Afecta `fetch()`, `img src`, `video src`, `XMLHttpRequest`.
+
+**Soluciones (de más simple a más permanente)**:
+1. **nginx + Let's Encrypt** (requiere puertos 80/443 accesibles + dominio): Permanente, sin dependencias externas. Usar `sslip.io` si no hay dominio propio: `161-153-203-83.sslip.io` resuelve a `161.153.203.83`.
+2. **Cloudflare Quick Tunnel** (sin cuenta ni dominio): `cloudflared tunnel --url http://localhost:PORT` → URL `*.trycloudflare.com`. Cambio en cada restart — solo para fix temporal.
+3. **Cloudflare Named Tunnel** (requiere cuenta + dominio): Permanente, conecta outbound, no necesita puertos abiertos en el firewall.
+
+#### Oracle Cloud Free Tier — Dos capas de firewall independientes
+Oracle tiene DOS firewalls que **ambos** deben permitir el puerto:
+- **Capa 1 — UFW** (dentro de la VM, configurable vía SSH): `sudo ufw allow 80/tcp`
+- **Capa 2 — VCN Security List** (nivel de red, solo en Oracle Cloud console): Networking → VCNs → Security Lists → Add Ingress Rule → CIDR `0.0.0.0/0`, TCP, puerto
+- **Diagnóstico**: si `ufw allow` no sirve → es VCN. Test: `curl http://IP:PORT` desde fuera — si da 000 (timeout), es VCN; si da error de conexión, es UFW.
+- **Workaround sin tocar VCN**: Cloudflare Tunnel (conecta outbound, no necesita inbound ports)
+
+#### nginx como reverse proxy + Let's Encrypt
+```bash
+sudo apt-get install -y nginx certbot python3-certbot-nginx
+sudo certbot --nginx -d MI-DOMINIO.sslip.io --non-interactive --agree-tos -m email@example.com
+```
+
+## Herramientas de diseño
+- **Figma/FigJam**: Solo usar cuando el usuario comparte una URL de Figma o lo pide explícitamente
