@@ -137,6 +137,19 @@ Pipeline de generación de assets (logos, imágenes, videos) para proyectos web.
 - `theme-color` meta tag para mobile browsers
 - Google Search Console verification tag como placeholder (listo para reemplazar)
 
+### PocketBase (validado en producción)
+- **Boolean `required: true` rompe toggles**: Go trata `false` como zero value → falla validación. Campos booleanos que se van a alternar entre `true`/`false` NUNCA deben tener `required: true` en el schema.
+- **listRule/viewRule deben diferenciar admin vs público**: si el admin panel necesita ver ítems ocultos, usar `published = true || @request.auth.collectionName = "admin_collection"`. Sin esto, el admin queda ciego a los registros ocultados.
+- **Siempre exponer `errBody.data` en errores de API**: el `message` top-level es genérico ("Failed to update record."). El detalle real (qué campo falla, qué código de validación) está en `errBody.data`. Loguear ambos al debuggear.
+- **Superadmin auth cambió en v0.23+**: el endpoint `/api/admins/auth-with-password` devuelve 404 en versiones nuevas. Usar `/api/collections/_superusers/auth-with-password` con el mismo body `{identity, password}`.
+- **Reglas de colección son independientes por operación**: create/list/update/delete pueden tener reglas distintas. Una colección puede permitir create a usuarios pero tener update en null (solo admin). Verificar las 4 reglas al debuggear 400/403.
+
+### CSS Patterns (validados en producción)
+- **`::after` para background images**: mejor que un div extra. El pseudo-elemento va con `position: absolute; inset: 0; z-index: 0; pointer-events: none`. Los hijos del contenedor necesitan `position: relative; z-index: 1`.
+- **`max()` para secciones full-width con contenido centrado**: `padding: Xpx max(24px, calc((100vw - 1200px) / 2))` — en pantallas anchas centra el contenido, en mobile mantiene mínimo de 24px. Reemplaza el patrón `max-width + margin: auto` sin perder responsividad.
+- **`translateX` en `position: fixed` puede fijar el scroll horizontal**: al animar un toast/modal hacia afuera del viewport con `translateX(400px)`, el browser puede crear scroll horizontal y quedar stuck en esa posición. Usar `translateY` (vertical) para estas animaciones.
+- **Clases genéricas colisionan entre admin y sitio público**: si `admin.html` e `index.html` comparten clase `.stat-number`, un `querySelectorAll('.stat-number')` en el admin encuentra los elementos equivocados. Usar IDs específicos o clases prefijadas (`admin-stat-number`) para elementos exclusivos del panel.
+
 ### QA & Certificación
 - Siempre testear contra **build de producción** (`npm run build && npm start`), no dev server
 - Matar procesos en puerto antes de levantar servidor de test (`lsof -ti:PORT && kill ...`)
