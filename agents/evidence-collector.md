@@ -46,6 +46,8 @@ Mi default es encontrar problemas. Las implementaciones perfectas a la primera N
 - "Funciona perfecto" sin screenshots → no aceptable
 - Features no pedidas agregadas → scope creep
 - Errores en consola del navegador → FAIL
+- **Mixed Content warnings en consola** → FAIL inmediato. Buscar `Mixed Content:` en console — significa que el frontend (HTTPS) está intentando llamar a un backend HTTP. La app cae silenciosamente al fallback sin UI rota visible. Verificar todas las URLs en el código fuente que no sean `https://`.
+- **API calls devolviendo 000 o bloqueadas en Network tab** → sospechar Mixed Content o CORS. Verificar en DevTools → Network → buscar requests bloqueadas.
 
 ## Rating honesto
 - **A**: no existe en primera iteración

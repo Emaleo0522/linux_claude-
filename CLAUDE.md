@@ -66,6 +66,7 @@ QA guarda screenshots en `/tmp/qa/` y pasa solo rutas, nunca imágenes inline.
 - Solo **deployer** despliega a Vercel
 - git y deployer actúan **solo con confirmación del usuario**
 - Cada tarea dev pasa por **evidence-collector** antes de avanzar (máx 3 reintentos)
+- **El orquestador NO activa git hasta que evidence-collector retorna PASS** — nunca saltear QA antes de push, aunque el tiempo apremia. Los bugs silenciosos (Mixed Content, fallback invisible) solo se detectan con QA.
 
 ## Stack adaptable por proyecto
 
@@ -142,6 +143,30 @@ Pipeline de generación de assets (logos, imágenes, videos) para proyectos web.
 - SEO Score mínimo 85/100 para certificación (reality-checker lo valida)
 - Links internos: todos deben retornar HTTP 200 (verificar con sitemap.xml)
 - JSON-LD: todos los bloques deben ser parseables (validar con `python3 -m json.tool`)
+- **Mixed Content check obligatorio**: si el frontend va a HTTPS (Vercel, Netlify, etc.), verificar SIEMPRE que el backend también tiene HTTPS antes de pushear. El error es silencioso — la app cae al fallback sin mostrar nada en la UI.
+
+### DevOps VPS (validado en producción con Oracle Cloud)
+
+#### Mixed Content HTTPS — static site HTTPS + backend HTTP
+Browsers bloquean TODAS las requests HTTP desde páginas HTTPS. Afecta `fetch()`, `img src`, `video src`, `XMLHttpRequest`.
+
+**Soluciones (de más simple a más permanente)**:
+1. **nginx + Let's Encrypt** (requiere puertos 80/443 accesibles + dominio): Permanente, sin dependencias externas. Usar `sslip.io` si no hay dominio propio: `161-153-203-83.sslip.io` resuelve a `161.153.203.83`.
+2. **Cloudflare Quick Tunnel** (sin cuenta ni dominio): `cloudflared tunnel --url http://localhost:PORT` → URL `*.trycloudflare.com`. Cambio en cada restart — solo para fix temporal.
+3. **Cloudflare Named Tunnel** (requiere cuenta + dominio): Permanente, conecta outbound, no necesita puertos abiertos en el firewall.
+
+#### Oracle Cloud Free Tier — Dos capas de firewall independientes
+Oracle tiene DOS firewalls que **ambos** deben permitir el puerto:
+- **Capa 1 — UFW** (dentro de la VM, configurable vía SSH): `sudo ufw allow 80/tcp`
+- **Capa 2 — VCN Security List** (nivel de red, solo en Oracle Cloud console): Networking → VCNs → Security Lists → Add Ingress Rule → CIDR `0.0.0.0/0`, TCP, puerto
+- **Diagnóstico**: si `ufw allow` no sirve → es VCN. Test: `curl http://IP:PORT` desde fuera — si da 000 (timeout), es VCN; si da error de conexión, es UFW.
+- **Workaround sin tocar VCN**: Cloudflare Tunnel (conecta outbound, no necesita inbound ports)
+
+#### nginx como reverse proxy + Let's Encrypt
+```bash
+sudo apt-get install -y nginx certbot python3-certbot-nginx
+sudo certbot --nginx -d MI-DOMINIO.sslip.io --non-interactive --agree-tos -m email@example.com
+```
 
 ## Herramientas de diseño
 - **Figma/FigJam**: Solo usar cuando el usuario comparte una URL de Figma o lo pide explícitamente
