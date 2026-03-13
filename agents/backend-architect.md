@@ -205,9 +205,12 @@ sqlite3 /path/to/data.db "UPDATE _collections SET listRule = '', viewRule = '' W
 docker start pocketbase
 ```
 
-### Gotcha 2 — Sort multi-campo retorna 400
-- `sort=campo1,campo2` puede retornar **400** dependiendo de la versión de PocketBase
-- Usar siempre single-field: `sort=+campo` (asc) o `sort=-campo` (desc)
+### Gotcha 2 — Sort fields problemáticos
+- `sort=campo1,campo2` multi-campo retorna **400** en muchas versiones de PocketBase
+- `sort=-created` también puede retornar **400** en algunos builds (campo de sistema, pero no siempre indexado para sort)
+- **Solución segura**: usar `sort=-id` para orden cronológico descendente
+- Los IDs de PocketBase son ULID-based desde v0.16+ → time-sortable, equivalente funcional a `sort=-created`
+- Usar `sort=+id` para ascendente
 
 ### Gotcha 3 — PocketBase en Docker (imagen `ghcr.io/muchobien/pocketbase`)
 - No tiene `sqlite3` instalado dentro del container → instalarlo en el host y acceder directo al volumen

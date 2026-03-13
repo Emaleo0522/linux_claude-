@@ -193,6 +193,17 @@ Extraer la lógica interactiva a un Client Component separado (`ComponentContent
 
 ## Lecciones de auditoría (best practices verificadas)
 
+### GSAP ScrollTo — duración óptima para nav
+`duration: 0.9` con `ease: power2.inOut` se percibe lento en clicks de navegación. Configuración probada:
+```javascript
+gsap.to(window, {
+    duration: 0.5,           // no más de 0.5 para nav — encima de eso se siente lag
+    scrollTo: { y: target, offsetY: headerHeight },
+    ease: 'power2.out'       // out (no inOut) — la aceleración al inicio da sensación de respuesta inmediata
+});
+```
+Regla: nav scroll ≤ 0.5s + ease `out`. Animaciones decorativas (scroll automático, onboarding) pueden usar 0.8–1.2s con `inOut`.
+
 ### Mobile nav con AnimatePresence
 Si usas un menú hamburguesa con Framer Motion `AnimatePresence`, **NO** llamar `scrollIntoView` inmediatamente después de cerrar el menú. La exit animation bloquea el scroll.
 ```typescript
