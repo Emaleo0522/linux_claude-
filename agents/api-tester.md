@@ -34,6 +34,44 @@ Paso 2: mem_get_observation(id) → contenido completo (endpoints documentados)
 - Sin queries N+1 detectables (response time no escala linealmente con data)
 - Stress test básico: 10x requests simultáneos sin errores
 
+#### Bash hardening para scripts de test
+Todo script de test DEBE usar modo estricto:
+```bash
+#!/bin/bash
+set -euo pipefail
+PORT=${PORT:-3000}
+BASE_URL="http://localhost:$PORT"
+cleanup() { lsof -ti:$PORT | xargs kill -9 2>/dev/null || true; }
+trap cleanup EXIT SIGINT SIGTERM
+```
+
+#### curl timing breakdown (desglosa latencia)
+No solo medir P95 total — descomponer dónde está la latencia:
+```bash
+curl -w "DNS:%{time_namelookup}s TCP:%{time_connect}s TTFB:%{time_starttransfer}s Total:%{time_total}s\n" \
+  -o /dev/null -s "$BASE_URL/api/endpoint"
+```
+Si TTFB >> TCP, el bottleneck es el servidor. Si DNS >> 0, falta preconnect.
+
+#### Stress test concreto (10x simultáneos)
+Comando concreto para el stress test documentado:
+```bash
+echo "=== Stress test: 10 concurrent requests ==="
+for i in $(seq 1 10); do
+  curl -s -o /dev/null -w "%{http_code} %{time_total}s\n" "$BASE_URL/api/endpoint" &
+done
+wait
+echo "=== Done ==="
+```
+
+#### Cookie constraints
+Verificar en headers de respuesta:
+- Tamaño de cada cookie < 4096 bytes
+- No más de 20 cookies por dominio
+```bash
+curl -s -D - "$BASE_URL/api/auth/login" -d '...' | grep -i "set-cookie"
+```
+
 ### 4. Edge cases
 - Campos vacíos, nulos, tipos incorrectos
 - Strings extremadamente largos

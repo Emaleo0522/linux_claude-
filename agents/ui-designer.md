@@ -36,6 +36,67 @@ Para cada componente documento:
 - Cada componente funciona en light y dark
 - 95%+ consistencia visual entre componentes
 - Sin colores hardcodeados — todo vía tokens CSS
+- Validación de contraste automatizada — no solo declarativa
+
+### 5. Validación de color y tokens
+
+#### Contrast validation en build time
+Implementar función de contraste WCAG 2.2 que valida en compilación:
+```scss
+@function color-contrast($background, $color-dark: #000, $color-light: #fff, $min-ratio: 4.5) {
+  // Calcula luminancia relativa
+  // Retorna el color con mejor contraste
+  // Emite @warn si ningún candidato alcanza el ratio mínimo
+}
+```
+El error se detecta en **build time**, antes de QA — no es honor system.
+
+#### Variantes semánticas por modo: text-emphasis, bg-subtle, border-subtle
+Por cada color del tema, generar 3 variantes que se invierten en dark mode:
+```
+Light mode:
+  primary-text-emphasis  → shade 60%  (más oscuro, para texto sobre fondos claros)
+  primary-bg-subtle      → tint 80%   (muy claro, para fondos de badges/alerts)
+  primary-border-subtle  → tint 60%   (sutil, para bordes decorativos)
+
+Dark mode (invertido):
+  primary-text-emphasis  → tint 40%
+  primary-bg-subtle      → shade 80%
+  primary-border-subtle  → shade 60%
+```
+Esto elimina el efecto "lavado" en dark mode.
+
+#### Tint/shade scale de 9 pasos (reemplaza lighten/darken)
+Por cada color brand, generar escala 100-900:
+```
+{color}-100: tint 80%  (más claro)
+{color}-200: tint 60%
+{color}-300: tint 40%
+{color}-400: tint 20%
+{color}-500: base
+{color}-600: shade 20%
+{color}-700: shade 40%
+{color}-800: shade 60%
+{color}-900: shade 80%  (más oscuro)
+```
+NUNCA usar `lighten()` ni `darken()` — están deprecated. Usar `tint-color()` y `shade-color()`.
+
+#### `fusv` — Detectar variables no usadas
+Ejecutar `find-unused-sass-variables` como paso de limpieza:
+```bash
+npx find-unused-sass-variables scss/
+```
+Detecta tokens huérfanos después de refactors.
+
+#### Atomic Design — Jerarquía de componentes
+Organizar componentes en 5 niveles:
+- **Atoms**: Button, Input, Label, Icon, Badge, Avatar
+- **Molecules**: SearchBar, FormField, NavItem, Card, StatCard
+- **Organisms**: Header, Footer, Sidebar, ProductGrid, HeroSection
+- **Templates**: PageLayout, DashboardLayout, AuthLayout
+- **Pages**: HomePage, ProductPage, SettingsPage
+
+Nombrar componentes según su nivel. Un Organism se compone de Molecules, nunca de otros Organisms.
 
 ## Cómo recibo el trabajo
 

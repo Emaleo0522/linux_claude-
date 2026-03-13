@@ -95,10 +95,15 @@ En Next.js, Vite y la mayoría de frameworks, los archivos estáticos se sirven 
 ```bash
 # Después de que los agentes creativos generen assets:
 cp -r {project_dir}/assets/images/* {project_dir}/apps/web/public/images/  # monorepo
-cp -r {project_dir}/assets/logo/*   {project_dir}/apps/web/public/logo/
+cp -r {project_dir}/assets/logo/logo-*.svg {project_dir}/apps/web/public/logo/
 cp -r {project_dir}/assets/video/*  {project_dir}/apps/web/public/video/
+# Favicons van a public/ RAÍZ (no public/logo/) — browsers los buscan ahí
+cp {project_dir}/assets/logo/favicon.* {project_dir}/apps/web/public/
+cp {project_dir}/assets/logo/apple-touch-icon.png {project_dir}/apps/web/public/
 # O para single-repo:
 cp -r {project_dir}/assets/images/* {project_dir}/public/images/
+cp {project_dir}/assets/logo/favicon.* {project_dir}/public/
+cp {project_dir}/assets/logo/apple-touch-icon.png {project_dir}/public/
 ```
 Las rutas en código usan `/images/hero.png` (relativo a public/), NO `assets/images/hero.png`.
 
@@ -289,6 +294,91 @@ const { data } = trpc.getUser.useQuery({ id: '123' });
 | Animaciones simples | CSS transitions / Tailwind animate | JS animations (innecesario) |
 | Animaciones complejas (mount/unmount, layout) | Framer Motion | CSS (limitado para mount/unmount) |
 | Listas infinitas | TanStack Query + useInfiniteQuery | Pagination manual con offset |
+
+## Reglas de calidad obligatorias
+
+### Links externos: `rel="noopener noreferrer"`
+Todo `<a>` con `target="_blank"` DEBE llevar `rel="noopener noreferrer"`:
+```html
+<a href="https://external.com" target="_blank" rel="noopener noreferrer">Link</a>
+```
+Previene tab-nabbing (el sitio externo puede modificar `window.opener`).
+
+### `<img>` con width/height explícitos (CLS prevention)
+Todo `<img>` lleva `width` y `height` (o `fill` en `next/image`) para evitar layout shift:
+```html
+<!-- HTML -->
+<img src="/hero.webp" width="1200" height="630" alt="Hero" loading="lazy">
+<!-- Next.js -->
+<Image src="/hero.webp" width={1200} height={630} alt="Hero" />
+<!-- O con fill para responsive -->
+<Image src="/hero.webp" fill alt="Hero" className="object-cover" />
+```
+
+### `<html lang="xx" dir="ltr">` en layout
+Siempre setear `lang` (idioma del proyecto) y `dir` en el `<html>`:
+```tsx
+// app/layout.tsx
+export default function RootLayout({ children }) {
+  return <html lang="es" dir="ltr">...</html>;
+}
+```
+
+### `<noscript>` fallback en layout
+Agregar fallback para usuarios sin JavaScript:
+```html
+<noscript>Este sitio requiere JavaScript para funcionar correctamente.</noscript>
+```
+
+### `<link rel="prefetch">` para navegación probable
+Agregar prefetch para las 2-3 páginas más probables desde el homepage:
+```html
+<link rel="prefetch" href="/productos" />
+<link rel="prefetch" href="/contacto" />
+```
+
+### Apple Web App meta tags
+Siempre incluir en `<head>` para PWA-ready en iOS:
+```html
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+```
+
+### Adblocker-safe class names
+Evitar class names que matchean filtros de adblockers comunes:
+- NO: `.ad-banner`, `.ad-container`, `.sponsored`, `.promo-section`, `.advertisement`
+- SÍ: `.hero-banner`, `.featured-section`, `.highlight-card`
+
+### SRI hashes en scripts CDN
+Todo `<script>` de CDN externo lleva `integrity` + `crossorigin`:
+```html
+<script src="https://cdn.example.com/lib.js"
+        integrity="sha384-abc123..."
+        crossorigin="anonymous"></script>
+```
+
+### Focus trap en modals/drawers
+Todo modal, dialog o drawer implementa focus trapping:
+```javascript
+const focusableSelector = [
+  'a[href]', 'button:not([disabled])', 'input:not([disabled])',
+  'textarea:not([disabled])', 'select:not([disabled])',
+  '[tabindex]:not([tabindex="-1"])'
+].join(',');
+// Ciclar Tab/Shift+Tab dentro del contenedor
+```
+Verificar que Tab no escape del modal hacia elementos del fondo.
+
+### Skip navigation link (WCAG 2.4.1)
+Primer elemento del `<body>` es un link "Skip to content":
+```html
+<a href="#main-content" class="sr-only focus:not-sr-only focus:absolute focus:z-50 focus:p-4">
+  Skip to content
+</a>
+<!-- ... nav ... -->
+<main id="main-content">...</main>
+```
 
 ## Lo que NO hago
 - No decido arquitectura (eso es ux-architect)

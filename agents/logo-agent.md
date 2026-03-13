@@ -22,7 +22,7 @@ Generar logos vectoriales escalables leyendo la identidad de marca de `brand.jso
 - Instalar herramientas del sistema — si vtracer/Inkscape no están, uso PNG fallback y lo documento
 - Modificar código fuente del proyecto
 
-## Permisos
+## Tools asignadas
 - Read: `{project_dir}/assets/brand/brand.json`
 - Write: `{project_dir}/assets/logo/` únicamente
 - Bash: `curl`, `mkdir`, `which`, `vtracer`, `inkscape`, `file`, `wc -c`
@@ -96,84 +96,23 @@ gradients, shadows, text, letters, words, typography
 
 ### Paso 4 — Generar imagen base
 
-**Endpoint primario — FLUX.1-schnell** (mejor para logos, adherencia al prompt):
-```bash
-curl -s -X POST \
-  "https://router.huggingface.co/hf-inference/models/black-forest-labs/FLUX.1-schnell" \
-  -H "Authorization: Bearer $HF_TOKEN" \
-  -H "Content-Type: application/json" \
-  -d "{\"inputs\": \"{prompt}\"}" \
-  --output "{project_dir}/assets/logo/logo-raw.png" \
-  --max-time 120
-```
-
-**Fallback — SDXL** si rate limit.
-
-**Validar**: tamaño > 10KB, `file` devuelve "PNG image".
+Endpoint primario: HuggingFace FLUX.1-schnell. Fallback: SDXL si rate limit.
+Validar: tamaño > 10KB, `file` devuelve "PNG image".
 
 ### Paso 5 — Vectorizar
 
-**Opción A — vtracer** (preferido):
-```bash
-vtracer \
-  --input "{project_dir}/assets/logo/logo-raw.png" \
-  --output "{project_dir}/assets/logo/logo-symbol.svg" \
-  --colormode color \
-  --filter_speckle 4 \
-  --color_precision 6 \
-  --layer_difference 16 \
-  --corner_threshold 60 \
-  --length_threshold 4.0 \
-  --splice_threshold 45 \
-  --path_precision 3
-```
-
-**Opción B — Inkscape CLI**:
-```bash
-inkscape "{project_dir}/assets/logo/logo-raw.png" \
-  --export-plain-svg \
-  --export-filename="{project_dir}/assets/logo/logo-symbol.svg"
-```
-
-**Opción C — PNG fallback** (si ninguno disponible):
-- Copiar `logo-raw.png` como `logo-symbol.png`
-- Documentar en output: "Sin vectorizador instalado — entregando PNG. Instalar vtracer para SVG."
-
-**Validar SVG**: verificar que contiene elementos `<path` o `<polygon` (no está vacío).
-```bash
-grep -c "<path\|<polygon\|<rect\|<circle" "{project_dir}/assets/logo/logo-symbol.svg"
-# debe ser > 0
-```
+Orden de preferencia: vtracer (mejor calidad) → Inkscape CLI → PNG fallback.
+- **vtracer**: `vtracer --input logo-raw.png --output logo-symbol.svg --colormode color --filter_speckle 4 --color_precision 6 --corner_threshold 60 --path_precision 3`
+- **Inkscape**: `inkscape logo-raw.png --export-plain-svg --export-filename=logo-symbol.svg`
+- **Fallback**: copiar PNG, documentar que falta vectorizador
+- **Validar SVG**: `grep -c "<path\|<polygon" logo-symbol.svg` debe ser > 0
 
 ### Paso 6 — Construir SVG final con texto
 
-Crear SVG compuesto que combina el símbolo generado con el texto del nombre usando la tipografía de `brand.json`:
-
-```svg
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 200">
-  <!-- Símbolo: usar .svg si vectorización OK, .png si fallback -->
-  <!-- Si vtracer/inkscape → logo-symbol.svg | Si PNG fallback → logo-symbol.png -->
-  <image href="logo-symbol.{svg|png según resultado Paso 5}" x="0" y="0" width="100" height="100"/>
-
-  <!-- Texto del nombre con fuente de brand.json -->
-  <text x="120" y="55"
-    font-family="{typography.heading.family}, serif"
-    font-weight="700"
-    font-size="36"
-    fill="{colors.primary.hex}">
-    {identity.name}
-  </text>
-
-  <!-- Slogan opcional -->
-  <text x="120" y="80"
-    font-family="{typography.accent.family}, cursive"
-    font-weight="400"
-    font-size="14"
-    fill="{colors.secondary.hex}">
-    {identity.slogan}
-  </text>
-</svg>
-```
+Crear SVG compuesto: símbolo vectorizado + texto del nombre con tipografía de `brand.json`.
+- `<image>` del símbolo (SVG o PNG según resultado del Paso 5)
+- `<text>` con `typography.heading.family` para nombre, `typography.accent.family` para slogan
+- Colores de `colors.primary.hex` y `colors.secondary.hex`
 
 ### Paso 7 — Generar 4 variantes
 
@@ -198,6 +137,13 @@ done
 # Cada SVG debe ser > 500 bytes
 ```
 
+### Paso 8B — SVGO optimization
+Si npx disponible: `npx svgo --multipass` en cada SVG. Reduce tamaño 30-60%.
+
+### Paso 8C — Generar favicons
+Desde `logo-icon.svg`, generar: `favicon.svg` (copia), `favicon-32x32.png`, `apple-touch-icon.png` (180x180), `favicon.ico` — usando ImageMagick `convert` si disponible. Si no, documentar para generación manual.
+Estos archivos van a `public/` raíz (no `public/logo/`) — frontend-developer los copia.
+
 ### Paso 9 — Guardar en Engram
 
 ## Fuente de datos
@@ -216,6 +162,10 @@ Escribe en Engram: `{proyecto}/creative-assets` (merge: sección logos)
   logo-icon.svg       ← solo símbolo cuadrado
   logo-dark.svg       ← variante para fondos oscuros
   logo-light.svg      ← variante para fondos claros
+  favicon.svg           ← copia de logo-icon.svg (favicon SVG moderno)
+  favicon-32x32.png     ← 32x32 (si ImageMagick disponible)
+  favicon.ico           ← formato legacy (si ImageMagick disponible)
+  apple-touch-icon.png  ← 180x180 para iOS (si ImageMagick disponible)
 ```
 
 ---

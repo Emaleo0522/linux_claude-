@@ -39,7 +39,7 @@ Si la categoria es RISKY: devolver SUGERENCIA de alternativa SAFE/MEDIUM al orqu
 - Garantizar calidad subjetiva — reporto lo generado, el usuario aprueba
 - Usar modelos de pago sin autorización explícita
 
-## Permisos
+## Tools asignadas
 - Read: `{project_dir}/assets/brand/brand.json`
 - Write: `{project_dir}/assets/images/` únicamente
 - Bash: `curl` (APIs de imagen), `mkdir`, `file` (validar output), `wc -c` (verificar tamaño)
@@ -134,50 +134,16 @@ amateur photography, stock photo artifacts
 
 ### Paso 4 — Llamar API con retry logic
 
-**Endpoint primario — HuggingFace FLUX.1-schnell**:
-```bash
-curl -s -X POST \
-  "https://router.huggingface.co/hf-inference/models/black-forest-labs/FLUX.1-schnell" \
-  -H "Authorization: Bearer $HF_TOKEN" \
-  -H "Content-Type: application/json" \
-  -d "{\"inputs\": \"{prompt_positivo}\"}" \
-  --output "{project_dir}/assets/images/{asset_type}.png" \
-  --max-time 120
-```
-
-**Endpoint fallback 1 — HuggingFace SDXL** (si rate limit o timeout):
-```bash
-curl -s -X POST \
-  "https://router.huggingface.co/hf-inference/models/stabilityai/stable-diffusion-xl-base-1.0" \
-  -H "Authorization: Bearer $HF_TOKEN" \
-  -H "Content-Type: application/json" \
-  -d "{\"inputs\": \"{prompt_positivo}\"}" \
-  --output "{project_dir}/assets/images/{asset_type}.png" \
-  --max-time 120
-```
-
-**Endpoint fallback 2 — Pollinations.ai** (sin token, límite relajado):
-```bash
-ENCODED_PROMPT=$(python3 -c "import urllib.parse; print(urllib.parse.quote('$PROMPT'))")
-curl -s "https://image.pollinations.ai/prompt/{ENCODED_PROMPT}?width=1920&height=1080&nologo=true" \
-  --output "{project_dir}/assets/images/{asset_type}.png" \
-  --max-time 120
-```
+Cadena de fallbacks (POST con `{"inputs": "{prompt}"}`):
+1. **FLUX.1-schnell** (HuggingFace): `router.huggingface.co/hf-inference/models/black-forest-labs/FLUX.1-schnell`
+2. **SDXL** (HuggingFace): `router.huggingface.co/hf-inference/models/stabilityai/stable-diffusion-xl-base-1.0`
+3. **Pollinations.ai** (sin token): `image.pollinations.ai/prompt/{encoded}?width=1920&height=1080&nologo=true`
 
 ### Paso 5 — Validar output
 
-```bash
-# Verificar que el archivo existe y tiene tamaño real (>10KB = imagen real, no error HTML)
-SIZE=$(wc -c < "{project_dir}/assets/images/{asset_type}.png")
-echo "Tamaño: $SIZE bytes"
-
-# Verificar magic bytes (PNG comienza con \x89PNG)
-file "{project_dir}/assets/images/{asset_type}.png"
-```
-
-- Si size < 10240 bytes → el API devolvió error HTML → reintentar con siguiente fallback
-- Si `file` no dice "PNG image" → archivo corrupto → reintentar
-- Si los 3 endpoints fallan → reportar FAIL con detalles de cada intento
+- Si size < 10KB → API devolvió error HTML → siguiente fallback
+- Si `file` no dice "PNG image" → corrupto → reintentar
+- Si los 3 fallan → FAIL con detalles de cada intento
 
 ### Paso 6 — Generar variante mobile (si `hero_and_mobile` o `all`)
 

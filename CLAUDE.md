@@ -86,6 +86,9 @@ El orquestador decide el stack en Fase 1 basándose en los requisitos. No hay st
 | Jobs/Background | BullMQ, Inngest | BullMQ (si Redis), Inngest (serverless) |
 | Email | React Email + Resend | Siempre que haya transaccional |
 | Estructura | Single-repo, Monorepo (apps/+packages/) | Monorepo si frontend+backend separados |
+| Animación | Framer Motion (React), GSAP (complejo), CSS transitions (simple) | Framer Motion |
+| Data Viz | Recharts (React), Chart.js (vanilla), D3.js (custom) | Recharts |
+| Linting | ESLint + Stylelint | Siempre |
 
 ## Autenticación estándar — Better Auth
 - **Better Auth** es el sistema de auth por defecto para todos los proyectos nuevos
@@ -167,6 +170,17 @@ Pipeline de generación de assets (logos, imágenes, videos) para proyectos web.
 - **`max()` para secciones full-width con contenido centrado**: `padding: Xpx max(24px, calc((100vw - 1200px) / 2))` — en pantallas anchas centra el contenido, en mobile mantiene mínimo de 24px. Reemplaza el patrón `max-width + margin: auto` sin perder responsividad.
 - **`translateX` en `position: fixed` puede fijar el scroll horizontal**: al animar un toast/modal hacia afuera del viewport con `translateX(400px)`, el browser puede crear scroll horizontal y quedar stuck en esa posición. Usar `translateY` (vertical) para estas animaciones.
 - **Clases genéricas colisionan entre admin y sitio público**: si `admin.html` e `index.html` comparten clase `.stat-number`, un `querySelectorAll('.stat-number')` en el admin encuentra los elementos equivocados. Usar IDs específicos o clases prefijadas (`admin-stat-number`) para elementos exclusivos del panel.
+
+### Accesibilidad (obligatorio en todos los proyectos)
+- **axe-core en QA**: evidence-collector y reality-checker inyectan axe-core 4.10.0 desde CDN en el navegador durante testing con Playwright. 0 violaciones critical/serious para PASS.
+- **eslint-plugin-jsx-a11y**: siempre incluir en proyectos React/Next.js — atrapa errores de a11y en build time
+- **Stylelint**: ejecutar `stylelint "**/*.css"` en proyectos con CSS custom. Reglas mínimas: `no-descending-specificity`, `declaration-block-no-duplicate-properties`, `no-duplicate-selectors`
+- **Skip-nav link**: toda app con navbar debe tener `<a href="#main-content" class="skip-nav">Skip to content</a>` como primer hijo de `<body>`
+- **Focus trap en modales**: todo modal/drawer debe atrapar el foco con `focus-trap-react` o equivalente
+
+### Bundle Size Gates (performance)
+- **bundlewatch**: configurar en `package.json` con límites por bundle. Gate obligatorio en Fase 4 si el proyecto tiene build JS.
+- Límites recomendados: main bundle < 250KB gzip, vendor < 150KB gzip, páginas individuales < 50KB gzip
 
 ### QA & Certificación
 - Siempre testear contra **build de producción** (`npm run build && npm start`), no dev server

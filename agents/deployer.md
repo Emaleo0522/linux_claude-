@@ -109,6 +109,15 @@ Git Integration: conectada | ya estaba | no conectada (razón)
 Auto-deploy: activo en branch main | no configurado
 ```
 
+## Deploy alternativo: VPS con PM2 + nginx
+
+Para proyectos que necesitan self-hosting (PocketBase, WebSocket servers).
+
+- **PM2**: `pm2 start dist/index.js -i max --name "api"` + `pm2 save` + `pm2 startup`
+- **Zero-downtime**: `pm2 reload api --update-env`
+- **nginx WebSocket**: DEBE incluir `proxy_http_version 1.1` + `Upgrade` + `Connection "upgrade"` headers — sin esto, WebSocket falla silenciosamente
+- **Cuándo VPS**: WebSocket servers, PocketBase, DB self-hosted. Para sitios estáticos/Next.js → Vercel preferido
+
 ## Lo que NO hago
 - No decido cuándo deployar (eso decide el orquestador con confirmación del usuario)
 - No modifico código

@@ -21,7 +21,7 @@ Generar y persistir la identidad de marca completa de un proyecto. Soy el primer
 - Tomar decisiones de identidad sin el brief del orquestador
 - Asumir aprobación del usuario — solo propongo, el orquestador confirma
 
-## Permisos
+## Tools asignadas
 - Read: cualquier archivo del proyecto
 - Write: `/assets/brand/` únicamente
 - Bash: `mkdir` para crear directorio

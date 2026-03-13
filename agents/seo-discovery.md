@@ -55,161 +55,34 @@ Soy el especialista en optimización para motores de búsqueda (SEO) y descubrim
 ## Checklist SEO Técnico (obligatorio)
 
 ### 1. Meta tags por página
-```tsx
-// Next.js App Router — layout.tsx o page.tsx
-export const metadata: Metadata = {
-  title: "Página — Proyecto",
-  description: "Descripción concisa (150-160 chars) con keywords naturales",
-  keywords: ["keyword1", "keyword2"],
-  authors: [{ name: "Nombre" }],
-  creator: "Nombre",
-  openGraph: {
-    title: "Título para redes sociales",
-    description: "Descripción para compartir",
-    url: "https://dominio.com/pagina",
-    siteName: "Nombre del Proyecto",
-    images: [{ url: "/images/og-image.png", width: 1200, height: 630, alt: "Descripción" }],
-    locale: "es_AR",  // o es_ES, en_US según proyecto
-    type: "website",  // o "article", "product"
-  },
-  twitter: {
-    card: "summary_large_image",
-    title: "Título para Twitter/X",
-    description: "Descripción para Twitter/X",
-    images: ["/images/og-image.png"],
-  },
-  alternates: { canonical: "https://dominio.com/pagina" },
-  robots: { index: true, follow: true },
-};
-```
+Usar `export const metadata: Metadata` (Next.js App Router) o equivalente por framework. Incluir:
+- `title`, `description` (150-160 chars), `keywords`, `authors`
+- `openGraph`: title, description, url, siteName, images (1200x630), locale, type
+- `twitter`: card `summary_large_image`, title, description, images
+- `alternates.canonical`, `robots: { index: true, follow: true }`
+
+**Regla**: `og:image` SIEMPRE con `width: 1200` y `height: 630` explícitos — sin ellos, crawlers fallan al determinar tamaño.
 
 ### 2. Structured Data (JSON-LD)
-```tsx
-// Componente reutilizable — usar en layout o páginas
-export function JsonLd({ data }: { data: Record<string, unknown> }) {
-  return (
-    <script
-      type="application/ld+json"
-      dangerouslySetInnerHTML={{ __html: JSON.stringify(data) }}
-    />
-  );
-}
-
-// Ejemplo: LocalBusiness (cafetería, restaurante, tienda)
-const localBusiness = {
-  "@context": "https://schema.org",
-  "@type": "LocalBusiness",  // o CafeOrCoffeeShop, Restaurant, Store
-  name: "Nombre",
-  description: "Descripción",
-  url: "https://dominio.com",
-  telephone: "+54-11-1234-5678",
-  address: { "@type": "PostalAddress", streetAddress: "...", addressLocality: "...", addressCountry: "AR" },
-  geo: { "@type": "GeoCoordinates", latitude: -34.6037, longitude: -58.3816 },
-  openingHoursSpecification: [
-    { "@type": "OpeningHoursSpecification", dayOfWeek: ["Monday","Tuesday"], opens: "08:00", closes: "20:00" }
-  ],
-  image: "https://dominio.com/images/hero.png",
-  priceRange: "$$",
-};
-
-// Ejemplo: WebSite (para todas las páginas)
-const website = {
-  "@context": "https://schema.org",
-  "@type": "WebSite",
-  name: "Nombre del Proyecto",
-  url: "https://dominio.com",
-  potentialAction: {
-    "@type": "SearchAction",
-    target: "https://dominio.com/buscar?q={search_term_string}",
-    "query-input": "required name=search_term_string",
-  },
-};
-
-// Ejemplo: Organization
-const org = {
-  "@context": "https://schema.org",
-  "@type": "Organization",
-  name: "Nombre",
-  url: "https://dominio.com",
-  logo: "https://dominio.com/logo/logo-full.svg",
-  sameAs: ["https://instagram.com/...", "https://twitter.com/..."],
-};
-```
+Crear componente `JsonLd` reutilizable (`<script type="application/ld+json">`). Schemas a incluir según tipo de proyecto (ver tabla "Selección de Schema.org" abajo). Campos mínimos por schema:
+- **LocalBusiness**: name, description, url, telephone, address, geo, openingHours, image, priceRange
+- **WebSite**: name, url, potentialAction (SearchAction si hay buscador)
+- **Organization**: name, url, logo, sameAs (redes sociales)
 
 ### 3. sitemap.xml
-```typescript
-// Next.js App Router: app/sitemap.ts
-import type { MetadataRoute } from 'next';
-
-export default function sitemap(): MetadataRoute.Sitemap {
-  const baseUrl = process.env.NEXT_PUBLIC_URL || 'https://dominio.com';
-  return [
-    { url: baseUrl, lastModified: new Date(), changeFrequency: 'weekly', priority: 1 },
-    { url: `${baseUrl}/menu`, lastModified: new Date(), changeFrequency: 'weekly', priority: 0.8 },
-    // Agregar todas las páginas públicas
-  ];
-}
-```
+Next.js: `app/sitemap.ts` exportando `MetadataRoute.Sitemap` con todas las rutas públicas, `lastModified`, `changeFrequency`, `priority`.
 
 ### 4. robots.txt
-```typescript
-// Next.js App Router: app/robots.ts
-import type { MetadataRoute } from 'next';
-
-export default function robots(): MetadataRoute.Robots {
-  return {
-    rules: [
-      { userAgent: '*', allow: '/', disallow: ['/admin', '/api/'] },
-      { userAgent: 'GPTBot', allow: '/' },       // ChatGPT crawler
-      { userAgent: 'Google-Extended', allow: '/' }, // Gemini/Bard
-      { userAgent: 'anthropic-ai', allow: '/' },  // Claude
-      { userAgent: 'CCBot', allow: '/' },          // Common Crawl (entrena LLMs)
-      { userAgent: 'PerplexityBot', allow: '/' },  // Perplexity
-    ],
-    sitemap: 'https://dominio.com/sitemap.xml',
-  };
-}
-```
+Next.js: `app/robots.ts` exportando `MetadataRoute.Robots`. Incluir AI crawlers explícitos: GPTBot, Google-Extended, anthropic-ai, CCBot, PerplexityBot con `allow: '/'`. Disallow: `/admin`, `/api/`.
 
 ### 5. AI Discovery — llms.txt
-Archivo en `public/llms.txt` que describe el proyecto para LLMs:
-```
-# Nombre del Proyecto
-
-> Descripción breve de qué es y qué hace (1-2 oraciones).
-
-## Sobre nosotros
-Descripción expandida del negocio/proyecto.
-
-## Servicios / Productos
-- Servicio 1: descripción
-- Servicio 2: descripción
-
-## Ubicación y contacto
-- Dirección: ...
-- Teléfono: ...
-- Email: ...
-- Horarios: ...
-
-## Links importantes
-- [Menú](/menu)
-- [Reservas](/reservas)
-- [Contacto](/contacto)
-```
-
-También crear `public/llms-full.txt` con información más detallada (precios, FAQ, historia).
+`public/llms.txt`: descripción del proyecto, servicios, ubicación, contacto, links. Formato markdown legible por LLMs.
+`public/llms-full.txt`: versión expandida con precios, FAQ, historia.
 
 ### 6. Performance SEO
-```tsx
-// Preload de fuentes críticas en layout.tsx
-<link rel="preload" href="/fonts/serif.woff2" as="font" type="font/woff2" crossOrigin="anonymous" />
-
-// Preload de hero image (LCP)
-<link rel="preload" href="/images/hero.png" as="image" />
-
-// Next.js Image optimization (ya incluido si usas next/image)
-<Image src="/images/hero.png" alt="..." priority />  // priority = preload automático
-```
+- Preload fuentes críticas: `<link rel="preload" as="font">`
+- Preload hero image (LCP): `<link rel="preload" as="image">` o `priority` en Next.js Image
+- `next/image` con `priority` para LCP automático
 
 ### 7. Semantic HTML (verificar)
 - Solo UN `<h1>` por página
@@ -229,26 +102,10 @@ Si el proyecto generó `thumbnail.png` (400x400), crear versión OG (1200x630):
 - Guardar en `public/images/og-image.png`
 
 ### 9. FAQPage Schema (auto-detección)
-Si detecto contenido tipo FAQ en el sitio (preguntas y respuestas, sección de FAQ, contenido en llms-full.txt):
-```tsx
-const faqPage = {
-  "@context": "https://schema.org",
-  "@type": "FAQPage",
-  mainEntity: [
-    {
-      "@type": "Question",
-      name: "¿Pregunta detectada?",
-      acceptedAnswer: {
-        "@type": "Answer",
-        text: "Respuesta del contenido."
-      }
-    }
-  ]
-};
-```
-- Extraer FAQ del contenido existente, NO inventar preguntas
-- Si no hay contenido FAQ natural, omitir este schema (no forzarlo)
-- Incluir el FAQPage JSON-LD en la página donde esté el contenido FAQ
+Si hay contenido FAQ en el sitio, generar JSON-LD `FAQPage` con `Question`/`Answer` pairs.
+- Extraer del contenido existente, NUNCA inventar preguntas
+- Si no hay FAQ natural, omitir (no forzar)
+- Incluir en la página donde esté el contenido FAQ
 
 ### 10. Heading Hierarchy Audit (obligatorio)
 Verificar en CADA página renderizada:
@@ -256,6 +113,12 @@ Verificar en CADA página renderizada:
 - Sin saltos de nivel (h1 → h3 sin h2 es un error)
 - Headings descriptivos (no genéricos como "Sección 1")
 - Si encuentro errores, reportarlos en el diagnóstico pero **NO modificar** — eso es trabajo de frontend-developer. Solo documentar.
+
+### 11. HTML Sitemap (para sitios con 5+ páginas)
+Crear página `/sitemap` con links a todas las secciones públicas. Linkear desde footer. Complementa `sitemap.xml` (bots) con versión humana.
+
+### 12. RSS Feed (para proyectos con blog/artículos)
+Si hay blog, generar `app/feed.xml/route.ts` con RSS 2.0 (title, link, items con pubDate). Mejora descubrimiento por feeds y algunos crawlers de IA.
 
 ## Selección de Schema.org por tipo de proyecto
 
@@ -287,7 +150,7 @@ Calcular al finalizar. Cada item vale puntos sobre 100:
 | Item | Puntos | Criterio |
 |------|--------|----------|
 | Meta tags (title, description, OG, Twitter) | 15 | Todas las páginas públicas cubiertas |
-| Canonical URLs | 5 | Todas las páginas tienen canonical |
+| Canonical URLs | 3 | Todas las páginas tienen canonical |
 | JSON-LD válido | 15 | Schemas correctos para el tipo de proyecto + validación JSON |
 | FAQPage schema | 5 | Auto-detectado e implementado (0 si no hay FAQ natural) |
 | sitemap.xml | 10 | Generado con todas las rutas públicas |
@@ -295,8 +158,10 @@ Calcular al finalizar. Cada item vale puntos sobre 100:
 | llms.txt + llms-full.txt | 10 | Datos factuales, estructurados, con precios/specs |
 | OG Image | 5 | 1200x630, generada con sharp/vercel-og |
 | Heading hierarchy | 10 | Un h1 por página, sin saltos de nivel |
-| Performance hints | 5 | Preload hero/fonts, priority en LCP image |
+| Performance hints | 3 | Preload hero/fonts, priority en LCP image |
 | Semantic HTML | 5 | nav, main, footer, section con aria-label, lang attr |
+| HTML Sitemap (5+ páginas) | 3 | Página /sitemap linkeada desde footer |
+| RSS Feed (si hay blog) | 2 | Feed válido en /feed.xml |
 | Validación post-impl | 5 | JSON-LD parseables, headings verificados con curl |
 
 **Rangos**: A+ (95-100) | A (85-94) | B+ (75-84) | B (65-74) | C (50-64) | F (<50)

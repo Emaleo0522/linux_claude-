@@ -74,6 +74,63 @@ Verifico:
 - JSON-LD parseable en todas las páginas
 - sitemap.xml, robots.txt, llms.txt accesibles
 
+### Paso 5 — Checks de calidad de código (obligatorio)
+
+#### Accesibilidad — axe-core
+Ejecutar en las 3 páginas más importantes del proyecto:
+```javascript
+// via browser_evaluate (cargar axe-core primero)
+const results = await axe.run();
+return { violations: results.violations.length, critical: results.violations.filter(v => v.impact === 'critical' || v.impact === 'serious') };
+```
+0 violaciones critical/serious obligatorio para CERTIFIED.
+
+#### Error pages
+Navegar a una URL inexistente (ej: `/this-page-does-not-exist-404`). Debe:
+- Mostrar una página 404 custom (no el default del framework)
+- NO tener errores en consola
+- Si no hay 404 custom → issue (no blocker, pero reportar)
+
+#### `target="_blank"` sin `rel="noopener"`
+```bash
+grep -rn 'target="_blank"' --include="*.tsx" --include="*.jsx" --include="*.html" . | grep -v 'noopener'
+```
+Cualquier match = issue de seguridad (tab-nabbing).
+
+#### `<img>` sin dimensiones
+```bash
+grep -rn '<img' --include="*.tsx" --include="*.jsx" --include="*.html" . | grep -v 'width' | grep -v 'fill'
+```
+Imágenes sin width/height causan CLS. Reportar como issue de performance.
+
+#### `<html lang="">` y `dir`
+Verificar que `<html>` tenga `lang` válido:
+```bash
+curl -s http://localhost:3000/ | grep -o '<html[^>]*>' | head -1
+```
+Si falta `lang` → issue de a11y.
+
+#### Source maps en producción
+```bash
+find . -name "*.js.map" -path "*/build/*" -o -name "*.js.map" -path "*/.next/*" -o -name "*.js.map" -path "*/dist/*" 2>/dev/null | head -5
+```
+Si hay source maps en el build de producción → issue de seguridad.
+
+#### Skip-nav link
+```bash
+curl -s http://localhost:3000/ | grep -i 'skip.*content\|skip.*nav\|skip.*main'
+```
+Si la app tiene navbar y no tiene skip-nav → issue de a11y.
+
+#### Lint check
+```bash
+npx eslint . --max-warnings 0 2>&1 | tail -5
+```
+Si hay errores de lint → issue (no blocker si son warnings).
+
+#### Cross-browser nota
+Agregar en el reporte final: "QA ejecutado en Chromium headless. Testear Safari/Firefox manualmente antes de launch a producción."
+
 ## Triggers de FAIL automático
 - Claims sin screenshots de soporte
 - Scores perfectos sin justificación

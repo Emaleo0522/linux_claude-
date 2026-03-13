@@ -20,19 +20,22 @@ Nunca empezar a implementar sin establecer primero el sistema de diseño. Un des
   --bg-secondary: [spec];
   --text-primary: [spec];
   --text-secondary: [spec];
+  --text-tertiary: [spec];
+  --text-emphasis: [spec];
+  --bg-tertiary: [spec];
   --border-color: [spec];
   --color-primary: [spec];
   --color-primary-dark: [spec];
 
-  /* Tipografía */
+  /* Tipografía — fluida con clamp() */
   --text-xs: 0.75rem;
   --text-sm: 0.875rem;
-  --text-base: 1rem;
-  --text-lg: 1.125rem;
-  --text-xl: 1.25rem;
-  --text-2xl: 1.5rem;
-  --text-3xl: 1.875rem;
-  --text-4xl: 2.25rem;
+  --text-base: clamp(0.875rem, 0.8rem + 0.25vw, 1rem);
+  --text-lg:   clamp(1rem, 0.9rem + 0.35vw, 1.125rem);
+  --text-xl:   clamp(1.125rem, 1rem + 0.5vw, 1.25rem);
+  --text-2xl:  clamp(1.25rem, 1.1rem + 0.75vw, 1.5rem);
+  --text-3xl:  clamp(1.5rem, 1.2rem + 1vw, 1.875rem);
+  --text-4xl:  clamp(1.75rem, 1.3rem + 1.5vw, 2.25rem);
 
   /* Espaciado (base 4px) */
   --space-1: 0.25rem;
@@ -51,15 +54,20 @@ Nunca empezar a implementar sin establecer primero el sistema de diseño. Un des
 }
 
 [data-theme="dark"] {
+  color-scheme: dark;
   --bg-primary: [spec-dark];
   --bg-secondary: [spec-dark];
+  --bg-tertiary: [spec-dark];
   --text-primary: [spec-dark];
   --text-secondary: [spec-dark];
+  --text-tertiary: [spec-dark];
+  --text-emphasis: [spec-dark];
   --border-color: [spec-dark];
 }
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
+    color-scheme: dark;
     --bg-primary: [spec-dark];
     --bg-secondary: [spec-dark];
     --text-primary: [spec-dark];
@@ -86,6 +94,43 @@ css/
 ├── components.css     → componentes base
 └── main.css           → overrides del proyecto
 ```
+
+### 5. Reglas de arquitectura CSS
+
+#### Naming convention: `$component-state-property-size`
+Todas las variables CSS siguen la fórmula `$component-state-property-size`:
+```
+--btn-hover-bg        (componente-estado-propiedad)
+--nav-link-disabled-color
+--modal-content-box-shadow-xs
+--input-focus-border-color
+```
+Nombres predecibles y buscables. Nunca variables arbitrarias.
+
+#### Three-layer body colors (profundidad semántica)
+Definir 3 capas para texto (`--body-color`, `--body-secondary-color`, `--body-tertiary-color`, `--body-emphasis-color`) y fondo (`--body-bg`, `--body-secondary-bg`, `--body-tertiary-bg`). Elimina grises hardcodeados.
+
+#### RGB companion variables
+Cada color token tiene twin `-rgb` para alpha compositing: `rgba(var(--primary-rgb), 0.5)`.
+
+#### Z-index named scale (centralizado)
+Escala fija: `--z-dropdown: 1000` hasta `--z-toast: 1090` (incrementos de 10-15). Nunca z-index numéricos directos.
+
+#### `color-scheme: dark` en bloque dark mode
+Siempre incluir — hace que scrollbars, inputs nativos y UI del sistema cambien.
+
+#### Color mode: `data` vs `media-query`
+- `data` → toggle manual con `[data-theme="dark"]` (default)
+- `media-query` → sigue preferencia del OS con `prefers-color-scheme`
+
+#### `!default` en variables Sass
+Toda variable Sass lleva `!default` para ser overrideable.
+
+#### Safari focus fix
+Incluir `:where(button):focus:not(:focus-visible) { outline: 0; }` en reset.
+
+#### Tipografía fluida con `clamp()`
+Ya incluida en sección 1. Nunca usar `rem` fijos para títulos.
 
 ## Lectura Engram (2 pasos obligatorios)
 1. `mem_search` → obtener observation_id

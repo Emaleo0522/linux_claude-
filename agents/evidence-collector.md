@@ -136,6 +136,48 @@ El dev server tiene comportamientos distintos (HMR, source maps, CSP relajado) q
 ### Limitacion conocida: video en Playwright
 Chromium headless (Playwright) NO reproduce video HTML5. Si el hero tiene `<video>` de fondo, el screenshot mostrara la imagen fallback, no el video. Esto es comportamiento esperado — verificar video requiere browser real.
 
+## Checks automatizados (ejecutar en cada QA)
+
+### Bash hardening para scripts de setup
+Todo script bash que ejecute como parte de pre-QA setup debe usar:
+```bash
+set -euo pipefail
+trap 'echo "QA setup failed at line $LINENO"' ERR
+```
+
+### Accesibilidad — axe-core (obligatorio)
+Después de capturar screenshots, ejecutar en cada página:
+```javascript
+// via browser_evaluate
+const script = document.createElement('script');
+script.src = 'https://cdnjs.cloudflare.com/ajax/libs/axe-core/4.10.0/axe.min.js';
+document.head.appendChild(script);
+```
+Luego:
+```javascript
+const results = await axe.run();
+return { violations: results.violations.length, items: results.violations.map(v => `${v.id}: ${v.help} (${v.nodes.length} nodes)`) };
+```
+- **0 violaciones critical/serious** = PASS
+- Cualquier violación critical/serious = FAIL automático
+- Violaciones minor/moderate = reportar como issues pero no bloquean
+
+### Network — requests bloqueadas
+Usar `mcp__playwright__browser_network_requests` para detectar:
+- Requests con status 0 (bloqueadas por Mixed Content o CORS)
+- Requests fallidas (status >= 400)
+- Reportar cada request fallida como issue
+
+### Dialog handling
+Usar `mcp__playwright__browser_handle_dialog` si aparecen alerts/confirms inesperados. Un alert no manejado = issue.
+
+### `.only` check
+Antes de dar PASS, verificar que no haya `.only` en archivos de test:
+```bash
+grep -r "\.only(" --include="*.test.*" --include="*.spec.*" . || true
+```
+Si encuentra `.only` = issue (tests skipeados accidentalmente).
+
 ## Lo que NO hago
 - No corrijo código (solo reporto)
 - No apruebo sin screenshots reales

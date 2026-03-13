@@ -79,7 +79,7 @@ Referencia de frames: ~25fps. length 97 ≈ 4s, length 161 ≈ 7s, length 257 �
 - Modificar código fuente del proyecto
 - Escribir fuera de `{project_dir}/assets/video/`
 
-## Permisos
+## Tools asignadas
 - Read: `{project_dir}/assets/brand/brand.json`, `{project_dir}/assets/images/hero.png`
 - Write: `{project_dir}/assets/video/` únicamente
 - Bash: `curl`, `mkdir`, `wc -c`, `file`, `python3`, `ffmpeg` (opcional)
@@ -140,96 +140,23 @@ Extraer de `brand.json`:
 | energetic, modern, tech | dynamic transitions, particle effects | 80-100 |
 | playful, creative | organic movement, floating elements | 60-80 |
 
-### Paso 3 — Obtener version ID y llamar Replicate API (text-to-video)
+### Paso 3 — Llamar Replicate API (text-to-video)
 
-**IMPORTANTE: NO hardcodear version IDs** — las versiones se retiran periódicamente.
+**Modelo primario: LTXVideo** (text-to-video, más fiable que image-to-video)
+1. Fetch dinámico del version ID: `GET /v1/models/lightricks/ltx-video` → `latest_version.id` (NUNCA hardcodear — se retiran)
+2. Crear predicción: `POST /v1/predictions` con `version`, `prompt`, `negative_prompt`, `aspect_ratio: "16:9"`, `length: 97`
+3. Polling cada 10s hasta `status: succeeded` (máx 5 min)
+4. Descargar video a `{project_dir}/assets/video/bg-loop.mp4`
 
-```bash
-# Paso 3a — Obtener la última version ID del modelo
-VERSION=$(curl -s -H "Authorization: Token $REPLICATE_API_TOKEN" \
-  "https://api.replicate.com/v1/models/lightricks/ltx-video" | \
-  python3 -c "import sys,json; print(json.load(sys.stdin)['latest_version']['id'])")
-echo "Version ID: $VERSION"
-```
+**Parámetros críticos**: usar `length` (NO `num_frames`), usar `aspect_ratio` (NO width/height — causan 422)
+**Fallback**: Stable Video Diffusion si LTXVideo falla
 
-**Modelo primario — LTXVideo** (text-to-video, más fiable que image-to-video):
-```bash
-# Paso 3b — Iniciar predicción
-# NOTA: Usar `length` (NO `num_frames`), usar `aspect_ratio` (NO width/height — causan 422)
-PREDICTION=$(curl -s -X POST \
-  "https://api.replicate.com/v1/predictions" \
-  -H "Authorization: Token $REPLICATE_API_TOKEN" \
-  -H "Content-Type: application/json" \
-  -d "{
-    \"version\": \"$VERSION\",
-    \"input\": {
-      \"prompt\": \"{style_tags}, {motion_style}, subtle movement, cinematic, seamless loop\",
-      \"negative_prompt\": \"low quality, worst quality, deformed, distorted, disfigured, extra limbs, extra fingers, bad anatomy, blurry faces, flickering, frame inconsistency, morphing, jittering, unnatural movement, text, subtitles, captions, letters, words, watermark, logo, writing, credits, title\",
-      \"aspect_ratio\": \"16:9\",
-      \"length\": 97
-    }
-  }")
+### Paso 4 — Validar video
 
-PREDICTION_ID=$(echo $PREDICTION | grep -o '"id":"[^"]*"' | head -1 | cut -d'"' -f4)
-echo "Predicción iniciada: $PREDICTION_ID"
-```
-
-```bash
-# Paso 3b — Polling hasta completar (máx 5 minutos)
-for i in $(seq 1 30); do
-  sleep 10
-  STATUS=$(curl -s \
-    "https://api.replicate.com/v1/predictions/$PREDICTION_ID" \
-    -H "Authorization: Token $REPLICATE_API_TOKEN")
-
-  STATE=$(echo $STATUS | grep -o '"status":"[^"]*"' | cut -d'"' -f4)
-  echo "Intento $i/30 — Estado: $STATE"
-
-  if [ "$STATE" = "succeeded" ]; then
-    VIDEO_URL=$(echo $STATUS | grep -o '"output":"[^"]*"' | cut -d'"' -f4)
-    break
-  elif [ "$STATE" = "failed" ]; then
-    echo "FAIL: $(echo $STATUS | grep -o '"error":"[^"]*"' | cut -d'"' -f4)"
-    break
-  fi
-done
-```
-
-```bash
-# Paso 3c — Descargar video
-curl -s "$VIDEO_URL" --output "{project_dir}/assets/video/bg-loop.mp4" --max-time 120
-```
-
-**Fallback — Stable Video Diffusion** (si LTXVideo falla):
-```bash
-# Mismo proceso con modelo SVD
-# version: "a9758cbfbd5f3c2094457d996681af52552901b2c5084e3e0d5e97a1d3a29985"
-```
-
-### Paso 4 — Validar video (tamaño + codec)
-
-```bash
-SIZE=$(wc -c < "{project_dir}/assets/video/bg-loop.mp4")
-echo "Tamaño: $SIZE bytes"
-
-# Verificar que es un archivo MP4 real
-file "{project_dir}/assets/video/bg-loop.mp4"
-
-# Verificar codec es H.264 (compatible con todos los navegadores)
-python3 -c "
-with open('{project_dir}/assets/video/bg-loop.mp4','rb') as f:
-    data=f.read(1024)
-    if b'avc1' in data: print('CODEC: H.264 OK')
-    elif b'av01' in data: print('WARNING: AV1 - soporte limitado en navegadores')
-    elif b'hev1' in data or b'hvc1' in data: print('WARNING: HEVC - soporte limitado en navegadores')
-    else: print('WARNING: codec desconocido')
-"
-```
-
-- Si `SIZE` < 50000 bytes → archivo corrupto o error → reintentar o usar fallback CSS
-- Si `SIZE` > 15728640 bytes (15MB) → warning: demasiado pesado para web, documentar
-- Si `file` no devuelve "ISO Media" o "MP4" → archivo inválido
-- Si codec NO es H.264 (avc1) → re-encodear con ffmpeg (ver Notas de produccion)
+- Verificar `file` devuelve "ISO Media" o "MP4"
+- Verificar codec H.264 (`avc1` en primeros 1024 bytes) — si AV1/HEVC, re-encodear con `ffmpeg -c:v libx264`
+- Si `SIZE` < 50KB → corrupto → reintentar
+- Si `SIZE` > 15MB → warning para web, documentar
 
 ### Paso 5 — Generar CSS fallback (siempre, independiente del éxito del video)
 
@@ -329,53 +256,11 @@ ACCIÓN REQUERIDA: {instrucción}
 
 ---
 
-## Notas de produccion (lecciones de testing real)
+## Notas de produccion
 
-### Generacion secuencial (NUNCA en paralelo)
-- Replicate rechaza peticiones concurrentes en cuentas con poco credito (devuelve `id: null`)
-- **Siempre generar videos de a uno**: lanzar prediction, esperar a que complete, luego lanzar la siguiente
-- Mientras un video se genera (~40-90s), el agente puede trabajar en otra cosa (preparar HTML, CSS, etc.)
-- Costo estimado: ~$0.03-0.10 por video dependiendo de la duracion
-
-### Parametros correctos de LTX-Video
-- **Usar `length`** (ej: 97), NO `num_frames` — este ultimo no existe en la API actual
-- **Usar `aspect_ratio: "16:9"`**, NO `width`/`height` — width/height causan errores 422
-- **Version ID**: NUNCA hardcodear — las versiones se retiran. Siempre fetch dinamico (Paso 3a)
-- **Text-to-video > image-to-video**: image-to-video con base64 produce videos cuadrados 640x640 con codecs problematicos. Text-to-video es mas fiable
-
-### Re-encoding con ffmpeg (si codec no es H.264)
-Si la validacion de codec detecta AV1 o HEVC, re-encodear para maxima compatibilidad:
-```bash
-ffmpeg -i bg-loop.mp4 -c:v libx264 -profile:v baseline -pix_fmt yuv420p -movflags +faststart bg-loop-web.mp4
-mv bg-loop-web.mp4 bg-loop.mp4
-```
-Esto es opcional — requiere ffmpeg instalado. Si no esta disponible, documentar el warning y continuar.
-
-### Playwright y video
-Chromium headless (Playwright MCP) NO puede reproducir video. El evidence-collector vera la imagen fallback, no el video. Esto es comportamiento esperado, NO un bug. No reintentar QA visual por esto.
-
-### Resultados del stress test (2026-03-11)
-3 videos generados con LTX-Video para validar tiers:
-
-| Tier | Prompt | Resultado | Problema |
-|------|--------|-----------|----------|
-| RISKY 4s | Barista sirviendo latte, manos en primer plano | FALLO | Liquido vertido fuera de la taza — error de coherencia espacial |
-| MEDIUM 7s | Persona de espaldas caminando en cafeteria | PERFECTO | Sin errores detectados |
-| SAFE 10s | Paneo lento cafeteria vacia | CASI PERFECTO | Texto fantasma/subtitulos borrosos en parte inferior |
-
-**Conclusiones:**
-- La clasificacion SAFE/MEDIUM/RISKY se valida correctamente
-- MEDIUM es el sweet spot: permite personas si se encuadra bien
-- RISKY con liquidos + manos = error garantizado de coherencia espacial
-- El negative prompt anti-texto es OBLIGATORIO para evitar subtitulos fantasma
-- SAFE funciona excelente para ambientes y paneos
-
-### HTML integration
-El elemento `<video>` DEBE tener un `<img>` fallback como sibling (no solo CSS fallback):
-```html
-<video autoplay muted loop playsinline class="hero-video">
-  <source src="assets/video/bg-loop.mp4" type="video/mp4">
-</video>
-<img src="assets/images/hero.jpg" alt="" class="hero-fallback">
-```
-Esto garantiza que dispositivos sin autoplay o navegadores sin soporte del codec muestren algo visual.
+- **Generación secuencial**: Replicate rechaza peticiones concurrentes en cuentas free (devuelve `id: null`). Generar de a uno.
+- **Text-to-video > image-to-video**: image-to-video con base64 produce videos cuadrados 640x640. Text-to-video es más fiable.
+- **Costo**: ~$0.03-0.10 por video
+- **Playwright NO reproduce video**: evidence-collector verá la imagen fallback — esto es esperado, no reintentar QA por esto.
+- **Re-encoding**: si codec no es H.264, usar `ffmpeg -c:v libx264 -profile:v baseline -pix_fmt yuv420p -movflags +faststart`
+- **Clasificación SAFE/MEDIUM/RISKY validada**: RISKY con líquidos + manos = error garantizado. MEDIUM es el sweet spot para personas.

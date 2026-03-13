@@ -134,6 +134,9 @@ certificacion:
   api_tester: "obs-id"
   performance: "obs-id"
   reality_checker: "pendiente | obs-id"
+  a11y_violations: 0              # axe-core critical/serious (0 = PASS)
+  bundle_size_pass: true           # bundlewatch gate (opcional, solo si hay build JS)
+  lint_pass: true                  # eslint/stylelint gate
 publicacion:
   git_commit: "pendiente | obs-id"
   deploy_url: "pendiente | obs-id"
@@ -266,9 +269,12 @@ Ejecutar en paralelo a Fase 2 o antes de Fase 3, según cuándo se necesiten los
    - Pero los frameworks sirven desde public/
    - El orquestador debe indicar al frontend-developer que copie:
      cp -r assets/images/* apps/web/public/images/  (monorepo)
-     cp -r assets/logo/*   apps/web/public/logo/
+     cp -r assets/logo/logo-*.svg apps/web/public/logo/
+     cp assets/logo/favicon.* apps/web/public/          (favicons a raíz)
+     cp assets/logo/apple-touch-icon.png apps/web/public/
      cp -r assets/video/*  apps/web/public/video/
-   - En single-repo: cp -r assets/* public/
+   - En single-repo: misma lógica pero con public/ directo
+   - IMPORTANTE: favicons van a public/ RAÍZ, no public/logo/ — browsers los buscan ahí
    - Las rutas en código son relativas a public/: "/images/hero.png"
 
 8. Actualizar DAG State: assets_creativos.logo/images/video → "listo"
@@ -564,32 +570,11 @@ Cada subagente recibe **SOLO**:
 
 ---
 
-## Troubleshooting común
+## Troubleshooting
 
-### Conflictos de puerto
-Si un subagente necesita levantar el servidor y el puerto está ocupado:
-```bash
-lsof -ti:3000 && kill $(lsof -ti:3000) || true
-```
-Indicar al subagente que mate el proceso anterior antes de levantar el nuevo.
-
-### Permisos de Bash en subagentes background
-Los subagentes lanzados con `run_in_background: true` pueden no tener permisos de Bash aprobados. Si un subagente (ej: git) falla por permisos, ejecutar los comandos directamente desde el contexto principal en vez de delegar.
-
-### Feedback loop SEO → Frontend
-Cuando seo-discovery detecta problemas que requieren cambios de frontend (heading hierarchy rota, imágenes sin optimizar, falta de preconnect), NO es el agente SEO quien los arregla. El flujo correcto es:
-1. seo-discovery reporta issues en su diagnóstico
-2. Orquestador lanza frontend-developer con los fixes específicos
-3. evidence-collector valida los cambios
-4. seo-discovery re-verifica el score
-
-### Servidor de test: siempre production build
-Para QA y certificación, usar build de producción (no dev server):
-```bash
-npm run build && npm start       # Next.js
-npm run build && npm run preview  # Vite
-```
-El dev server tiene HMR, source maps y CSP relajado que no reflejan producción.
+- **Puerto ocupado**: indicar al subagente `lsof -ti:PORT && kill $(lsof -ti:PORT) || true`
+- **Permisos Bash en background**: si subagente falla por permisos, ejecutar desde contexto principal
+- **SEO → Frontend loop**: seo-discovery reporta issues → orquestador lanza frontend-developer → evidence-collector valida → seo-discovery re-verifica
 
 ---
 
