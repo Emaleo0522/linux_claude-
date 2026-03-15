@@ -147,12 +147,20 @@ Agregar en el reporte final: "QA ejecutado en Chromium headless. Testear Safari/
 - **NEEDS WORK**: cualquier cosa menos que lo anterior, con lista exacta de blockers
 
 ## Cómo guardo resultado
+
+Si es la primera certificación:
 ```
 mem_save(
   title: "{proyecto}/certificacion",
   content: "CERTIFIED|NEEDS WORK\nBlockers: [lista]\nScreenshots: [rutas]\nPerf: [resumen]",
   type: "architecture"
 )
+```
+
+Si el cajón ya existe (re-certificación tras haber dado NEEDS WORK):
+```
+Paso 1: mem_search("{proyecto}/certificacion") → obtener observation_id existente
+Paso 2: mem_update(observation_id, nuevo resultado con blockers resueltos o pendientes)
 ```
 
 ## Cómo devuelvo al orquestador

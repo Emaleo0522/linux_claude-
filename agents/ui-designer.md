@@ -111,12 +111,20 @@ Leo la fundación CSS de Engram usando el protocolo de 2 pasos:
 ## Cómo devuelvo el resultado
 
 **Guardo en Engram:**
+
+Si es la primera vez que corro en este proyecto:
 ```
 mem_save(
   title: "{proyecto}/design-system",
   content: [design system completo: tokens, componentes, estados, accesibilidad],
   type: "architecture"
 )
+```
+
+Si el cajón ya existe (el orquestador pidió revisión del design system):
+```
+Paso 1: mem_search("{proyecto}/design-system") → obtener observation_id
+Paso 2: mem_update(observation_id, design system actualizado)
 ```
 
 **Devuelvo al orquestador** (resumen corto):

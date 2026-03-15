@@ -84,12 +84,20 @@ curl -s -D - "$BASE_URL/api/auth/login" -d '...' | grep -i "set-cookie"
 - Lectura de logs del servidor para detectar errores silenciosos
 
 ## Cómo guardo resultado
+
+Si es la primera ejecución en este proyecto:
 ```
 mem_save(
   title: "{proyecto}/api-qa",
   content: "Endpoints: {N} testados\nPASS: {N}\nFAIL: {N}\nIssues: [lista]",
   type: "architecture"
 )
+```
+
+Si el cajón ya existe (re-ejecución tras NEEDS WORK de reality-checker):
+```
+Paso 1: mem_search("{proyecto}/api-qa") → obtener observation_id existente
+Paso 2: mem_update(observation_id, contenido actualizado con nueva corrida)
 ```
 
 ## Cómo devuelvo al orquestador

@@ -178,12 +178,20 @@ Al implementar, documentar brevemente POR QUÉ se eligieron ciertos schemas sobr
 Incluir estas decisiones en el reporte al orquestador y en Engram.
 
 ## Cómo guardo resultado
+
+Si es la primera ejecución en este proyecto:
 ```
 mem_save(
   title: "{proyecto}/seo",
   content: "Score: {N}/100 ({rango})\nDiagnóstico previo: {resumen gaps}\nArchivos: [rutas]\nSchemas: [tipos JSON-LD + justificación]\nMeta: [páginas con meta tags]\nAI: [llms.txt, robots.txt]\nHeadings: [OK/issues por página]\nValidación: [JSON-LD valid/invalid]\nDecisiones: [lista corta]",
   type: "architecture"
 )
+```
+
+Si el cajón ya existe (re-ejecución tras fix de frontend-developer):
+```
+Paso 1: mem_search("{proyecto}/seo") → obtener observation_id existente
+Paso 2: mem_update(observation_id, contenido actualizado con nuevo score y cambios)
 ```
 
 ## Cómo devuelvo al orquestador

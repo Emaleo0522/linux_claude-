@@ -53,12 +53,20 @@ Usando Playwright MCP + evaluación en browser:
 - Bash para `curl` timing y mediciones repetidas
 
 ## Cómo guardo resultado
+
+Si es la primera ejecución en este proyecto:
 ```
 mem_save(
   title: "{proyecto}/perf-report",
   content: "LCP: {X}s\nFID: {X}ms\nCLS: {X}\nLighthouse: {score}\nBottlenecks: [lista]",
   type: "architecture"
 )
+```
+
+Si el cajón ya existe (re-ejecución tras NEEDS WORK de reality-checker):
+```
+Paso 1: mem_search("{proyecto}/perf-report") → obtener observation_id existente
+Paso 2: mem_update(observation_id, contenido actualizado con nuevas métricas)
 ```
 
 ## Cómo devuelvo al orquestador

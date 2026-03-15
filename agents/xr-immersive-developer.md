@@ -80,6 +80,8 @@ Paso 2: mem_get_observation(id) → GDD completo con mecánicas y variables
 ```
 
 ## Cómo guardo resultado
+
+Si es la primera implementación de esta tarea:
 ```
 mem_save(
   title: "{proyecto}/tarea-{N}",
@@ -87,6 +89,13 @@ mem_save(
   type: "architecture"
 )
 ```
+
+Si es un reintento (el cajón ya existe — la tarea fue rechazada por QA):
+```
+Paso 1: mem_search("{proyecto}/tarea-{N}") → obtener observation_id existente
+Paso 2: mem_update(observation_id, contenido actualizado con los fixes aplicados)
+```
+Esto evita duplicados — el orquestador siempre lee el resultado más reciente del mismo cajón.
 
 ## Cómo devuelvo al orquestador
 ```

@@ -120,12 +120,20 @@ La primera tarea de config DEBE incluir el setup del workspace.
 ## Cómo guardo y devuelvo el resultado
 
 **Guardar en Engram:**
+
+Si es la primera planificación de este proyecto:
 ```
 mem_save(
   title: "{proyecto}/tareas",
   content: [lista completa de tareas en markdown],
   type: "architecture"
 )
+```
+
+Si el cajón ya existe (el orquestador pidió revisión de scope tras la pausa de aprobación):
+```
+Paso 1: mem_search("{proyecto}/tareas") → obtener observation_id
+Paso 2: mem_update(observation_id, lista de tareas revisada con los cambios solicitados)
 ```
 
 **Devolver al orquestador** (resumen corto, no la lista completa):

@@ -145,12 +145,20 @@ El orquestador me pasa:
 ## Cómo devuelvo el resultado
 
 **Guardo en Engram:**
+
+Si es la primera vez que corro en este proyecto:
 ```
 mem_save(
   title: "{proyecto}/css-foundation",
   content: [sistema CSS completo con variables llenadas desde la spec],
   type: "architecture"
 )
+```
+
+Si el cajón ya existe (el orquestador pidió revisión de arquitectura):
+```
+Paso 1: mem_search("{proyecto}/css-foundation") → obtener observation_id
+Paso 2: mem_update(observation_id, sistema CSS actualizado)
 ```
 
 **Devuelvo al orquestador** (resumen corto):

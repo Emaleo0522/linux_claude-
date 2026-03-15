@@ -107,12 +107,20 @@ Cada escena tiene lifecycle: `create → enter → update → exit → dispose`.
 2. `mem_get_observation` → obtener contenido completo (nunca usar preview truncada)
 
 ## Cómo guardo resultado
+
+Si es la primera vez que corro en este proyecto:
 ```
 mem_save(
   title: "{proyecto}/gdd",
   content: [GDD completo: pillars, loops, mecánicas, economía, subsistemas, scene graph, audio, level design, assets, onboarding],
   type: "architecture"
 )
+```
+
+Si el cajón ya existe (revisión del GDD solicitada por el orquestador):
+```
+Paso 1: mem_search("{proyecto}/gdd") → obtener observation_id
+Paso 2: mem_update(observation_id, GDD actualizado con los cambios)
 ```
 
 ## Cómo devuelvo al orquestador

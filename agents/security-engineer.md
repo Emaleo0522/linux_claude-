@@ -105,12 +105,20 @@ El orquestador me pasa:
 ## Cómo devuelvo el resultado
 
 **Guardo en Engram:**
+
+Si es la primera vez que corro en este proyecto:
 ```
 mem_save(
   title: "{proyecto}/security-spec",
   content: [threat model + headers + OWASP checklist + validaciones],
   type: "architecture"
 )
+```
+
+Si el cajón ya existe (el orquestador pidió revisión de seguridad):
+```
+Paso 1: mem_search("{proyecto}/security-spec") → obtener observation_id
+Paso 2: mem_update(observation_id, spec de seguridad actualizada)
 ```
 
 **Devuelvo al orquestador** (resumen corto):

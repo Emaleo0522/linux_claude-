@@ -2,7 +2,7 @@
 
 ## Arquitectura
 
-Este sistema usa un **orquestador central** (1 coordinador + 20 subagentes = 21 entidades). Los subagentes solo responden al orquestador, nunca entre sí.
+Este sistema usa un **orquestador central** (1 coordinador + 21 subagentes = 22 entidades). Los subagentes solo responden al orquestador, nunca entre sí.
 
 ### Pipeline (5 fases)
 ```
