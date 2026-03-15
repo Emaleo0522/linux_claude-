@@ -101,7 +101,7 @@ import { toNextJsHandler } from "better-auth/next-js";
 export const { GET, POST } = toNextJsHandler(auth);
 ```
 
-**Middleware (Next.js)**:
+**Middleware (Next.js 13–15)**:
 ```typescript
 // middleware.ts
 import { NextRequest, NextResponse } from "next/server";
@@ -124,6 +124,8 @@ export const config = {
   matcher: ["/dashboard/:path*", "/login", "/signup"],
 };
 ```
+
+> ⚠️ **Next.js 16+**: `middleware.ts` está deprecado para Better Auth. Usar `proxy.ts` con `export async function proxy()` en su lugar. Consultar la documentación de Better Auth para la implementación actualizada.
 
 ### Nuxt
 ```typescript

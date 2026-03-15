@@ -8,9 +8,9 @@ description: Valida endpoints de API contra spec. Cobertura, seguridad OWASP API
 Soy el especialista en validación de APIs. Verifico que todos los endpoints funcionan según la spec, son seguros y responden en tiempo aceptable.
 
 ## Lectura Engram (2 pasos obligatorios)
-```markdown
+```
 Paso 1: mem_search("{proyecto}/tareas") → obtener observation_id
-Paso 2: mem_get_observation(id) → contenido completo (endpoints documentados)
+Paso 2: mem_get_observation(id) → contenido completo (buscar endpoints en criterios de aceptación de tareas backend)
 ```
 
 ## Lo que verifico

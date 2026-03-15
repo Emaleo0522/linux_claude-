@@ -216,24 +216,18 @@ publicacion:
 
 ---
 
-### FASE 2 — Arquitectura (paralela)
+### FASE 2 — Arquitectura (orden secuencial crítico)
 
-Delega los 3 agentes. Cada uno recibe contexto mínimo, guarda en Engram, devuelve resumen corto.
+**IMPORTANTE: No es totalmente paralela. ux-architect debe completar antes que ui-designer pueda empezar.**
 
-**ux-architect**
+**Paso 1 — ux-architect** (primero, obligatorio)
 - Recibe: spec del proyecto + ruta al cajón `{proyecto}/tareas`
 - Guarda en: `{proyecto}/css-foundation`
 - Devuelve: resumen (tokens CSS, layout, breakpoints)
 
-**ui-designer**
-- Recibe: spec + ruta a `{proyecto}/css-foundation`
-- Guarda en: `{proyecto}/design-system`
-- Devuelve: resumen (componentes clave, paleta, tipografía)
-
-**security-engineer**
-- Recibe: spec del proyecto
-- Guarda en: `{proyecto}/security-spec`
-- Devuelve: resumen (amenazas identificadas, headers requeridos)
+**Paso 2 — ui-designer + security-engineer** (paralelo, DESPUÉS de que ux-architect devuelva)
+- **ui-designer**: Recibe spec + ruta a `{proyecto}/css-foundation` → Guarda en: `{proyecto}/design-system` → Devuelve: resumen (componentes clave, paleta, tipografía)
+- **security-engineer**: Recibe spec del proyecto → Guarda en: `{proyecto}/security-spec` → Devuelve: resumen (amenazas identificadas, headers requeridos)
 
 Actualiza DAG State. Informa al usuario: "Arquitectura lista. N tareas listas para desarrollo."
 
@@ -278,14 +272,10 @@ Ejecutar en paralelo a Fase 2 o antes de Fase 3, según cuándo se necesiten los
 5. PAUSA — Presentar assets al usuario para aprobación (ver protocolo abajo)
    → Si rechaza alguno: seguir protocolo de reintentos (máx 3 por imagen)
 
-6. Guardar en Engram {proyecto}/creative-assets:
-   {
-     "brand_json": "{project_dir}/assets/brand/brand.json",
-     "logo_dir": "{project_dir}/assets/logo/",
-     "images_dir": "{project_dir}/assets/images/",
-     "video_dir": "{project_dir}/assets/video/",
-     "user_approved": true
-   }
+6. Actualizar en Engram {proyecto}/creative-assets (UPSERT — agregar user_approved):
+   mem_search("{proyecto}/creative-assets") → mem_get_observation(id)
+   Mergear con: { "user_approved": true, "brand_json": "{project_dir}/assets/brand/brand.json" }
+   mem_update(observation_id, contenido_mergeado)
 
 7. COPIAR ASSETS A PUBLIC/ (crítico para Next.js/Vite):
    - Los agentes creativos guardan en {project_dir}/assets/
@@ -311,8 +301,8 @@ Cada agente creativo actualiza SOLO su sección del cajón:
 Como logo-agent e image-agent corren en PARALELO, cada uno hace:
 1. `mem_search("{proyecto}/creative-assets")` → leer existente
 2. Merge su sección con el contenido existente
-3. `mem_save` con contenido mergeado
-Si el cajón no existe, crear con solo su sección.
+3. Si existe: `mem_update(observation_id, contenido_mergeado)` — Si no existe: `mem_save` con solo su sección
+Cada agente implementa este protocolo UPSERT internamente (ver sección "Guardar en Engram" de cada agente).
 
 **Si brand.json ya existe con user_approved: true** → saltar pasos 1-2, usar el existente.
 Solo verificar via `{proyecto}/branding` en Engram si el hash cambió (brand actualizado).
@@ -376,8 +366,9 @@ Para **cada tarea** de la lista, en orden:
 
    **Cajones por agente dev:**
    - frontend-developer → `{proyecto}/css-foundation` + `{proyecto}/design-system`
+   - mobile-developer → `{proyecto}/design-system`
    - backend-architect → `{proyecto}/security-spec`
-   - xr-immersive-developer → `{proyecto}/gdd` (incluye subsistemas, scene graph, audio spec)
+   - xr-immersive-developer → `{proyecto}/gdd` (incluye subsistemas, scene graph, audio spec) + `{proyecto}/css-foundation` (opcional, si aplica)
    - rapid-prototyper → `{proyecto}/tareas` (la tarea específica)
 
 4. Agente devuelve: STATUS + archivos modificados (rutas, no contenido)
@@ -435,8 +426,10 @@ Solo ejecutar cuando TODAS las tareas están en PASS o aceptadas con limitación
 - Guarda en: `{proyecto}/seo`
 - Devuelve: archivos creados + schemas + Lighthouse SEO score
 
+**api-tester + performance-benchmarker** (paralelo, después de seo-discovery)
+
 **api-tester** (si hay API)
-- Lee: `{proyecto}/tareas` (endpoints documentados)
+- Lee: `{proyecto}/tareas` (buscar endpoints en criterios de aceptación de tareas backend)
 - Guarda en: `{proyecto}/api-qa`
 - Devuelve: N endpoints validados, issues críticos
 

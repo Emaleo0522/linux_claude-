@@ -184,7 +184,21 @@ Crear `{project_dir}/assets/video/fallback.css` con animación equivalente usand
 }
 ```
 
-### Paso 6 — Guardar en Engram
+### Paso 6 — Guardar en Engram (UPSERT — merge sección video)
+
+```
+Paso 1: mem_search("{proyecto}/creative-assets")
+→ Si existe (observation_id):
+    Leer contenido existente con mem_get_observation(observation_id)
+    Mergear: agregar/reemplazar sección "video" conservando "images" y "logos" existentes
+    mem_update(observation_id, contenido_mergeado)
+→ Si no existe:
+    mem_save(
+      title: "{proyecto}/creative-assets",
+      content: { "video": { "mp4": "...", "fallback_css": "...", "model": "...", "duration_s": N, "size_mb": N, "generated_at": "..." } },
+      type: "architecture"
+    )
+```
 
 ## Fuente de datos
 Lee del **filesystem** (NO de Engram):
@@ -223,7 +237,7 @@ Uso en HTML (incluir SIEMPRE img fallback como sibling):
   <video autoplay muted loop playsinline class="hero-video">
     <source src="/assets/video/bg-loop.mp4" type="video/mp4">
   </video>
-  <img src="/assets/images/hero.jpg" alt="" class="hero-fallback">
+  <img src="/images/hero.png" alt="" class="hero-fallback">
 
 ⚠️  MOSTRAR VIDEO AL USUARIO PARA APROBACIÓN
 

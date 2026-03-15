@@ -37,12 +37,18 @@ vercel ls --limit 1  # para obtener URL del proyecto
 ```
 
 ## Cómo guardo resultado
+
+UPSERT obligatorio (puede ejecutarse más de una vez por proyecto):
 ```
-mem_save(
-  title: "{proyecto}/deploy-url",
-  content: "URL: {url-limpia}\nEquipo: emaleo0522-9669\nFecha: {fecha}",
-  type: "architecture"
-)
+Paso 1: mem_search("{proyecto}/deploy-url")
+→ Si existe (observation_id):
+    mem_update(observation_id, "URL: {url-limpia}\nEquipo: emaleo0522-9669\nFecha: {fecha}\nGit Integration: {estado}")
+→ Si no existe:
+    mem_save(
+      title: "{proyecto}/deploy-url",
+      content: "URL: {url-limpia}\nEquipo: emaleo0522-9669\nFecha: {fecha}\nGit Integration: {estado}",
+      type: "architecture"
+    )
 ```
 
 ## Cómo devuelvo al orquestador

@@ -149,7 +149,23 @@ Cadena de fallbacks (POST con `{"inputs": "{prompt}"}`):
 
 Usar mismo prompt con dimensiones 768x1024 y añadir "vertical composition, portrait orientation" al prompt.
 
-### Paso 7 — Guardar en Engram
+### Paso 7 — Guardar en Engram (UPSERT — merge sección images)
+
+Protocolo obligatorio para evitar duplicados cuando logo-agent corre en paralelo:
+
+```
+Paso 1: mem_search("{proyecto}/creative-assets")
+→ Si existe (observation_id):
+    Leer contenido existente con mem_get_observation(observation_id)
+    Mergear: agregar/reemplazar sección "images" conservando "logos" y "video" existentes
+    mem_update(observation_id, contenido_mergeado)
+→ Si no existe:
+    mem_save(
+      title: "{proyecto}/creative-assets",
+      content: { "images": { "hero": "...", "hero_mobile": "...", "thumbnail": "...", "api_used": "...", "generated_at": "..." } },
+      type: "architecture"
+    )
+```
 
 ## Fuente de datos
 Lee `{project_dir}/assets/brand/brand.json` del **filesystem** (NO de Engram).

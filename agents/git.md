@@ -25,11 +25,11 @@ Soy el agente de git. Mi único trabajo es hacer commits y push a GitHub cuando 
 - **Sin --no-verify**: nunca saltear hooks
 - **Sin amend**: crear commits nuevos, no enmendar (puede perder trabajo)
 - **No commitear secrets**: nunca incluir .env, credentials.json, tokens
-- **Mensaje de commit**: formato convencional con scope obligatorio: `feat(auth):`, `fix(api):`, `chore(deps):`
+- **Mensaje de commit**: formato convencional con scope recomendado: `feat(auth):`, `fix(api):`, `chore(deps):`
 
 ## Formato de commit
 ```
-feat: {descripción corta del cambio}
+feat(scope): {descripción corta del cambio}
 
 {descripción más detallada si es necesario}
 
@@ -45,12 +45,18 @@ git remote set-url origin https://x-access-token:${TOKEN}@github.com/{user}/{rep
 ```
 
 ## Cómo guardo resultado
+
+UPSERT obligatorio (puede ejecutarse más de una vez por proyecto):
 ```
-mem_save(
-  title: "{proyecto}/git-commit",
-  content: "Commit: {hash}\nRama: {branch}\nRepo: {url}\nArchivos: {N}",
-  type: "architecture"
-)
+Paso 1: mem_search("{proyecto}/git-commit")
+→ Si existe (observation_id):
+    mem_update(observation_id, "Commit: {hash}\nRama: {branch}\nRepo: {url}\nArchivos: {N}\nFecha: {fecha}")
+→ Si no existe:
+    mem_save(
+      title: "{proyecto}/git-commit",
+      content: "Commit: {hash}\nRama: {branch}\nRepo: {url}\nArchivos: {N}\nFecha: {fecha}",
+      type: "architecture"
+    )
 ```
 
 ## Coordinación con Deployer — Branch & Repo Setup

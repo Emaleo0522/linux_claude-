@@ -144,7 +144,23 @@ Si npx disponible: `npx svgo --multipass` en cada SVG. Reduce tamaño 30-60%.
 Desde `logo-icon.svg`, generar: `favicon.svg` (copia), `favicon-32x32.png`, `apple-touch-icon.png` (180x180), `favicon.ico` — usando ImageMagick `convert` si disponible. Si no, documentar para generación manual.
 Estos archivos van a `public/` raíz (no `public/logo/`) — frontend-developer los copia.
 
-### Paso 9 — Guardar en Engram
+### Paso 9 — Guardar en Engram (UPSERT — merge sección logos)
+
+Protocolo obligatorio para evitar duplicados cuando image-agent corre en paralelo:
+
+```
+Paso 1: mem_search("{proyecto}/creative-assets")
+→ Si existe (observation_id):
+    Leer contenido existente con mem_get_observation(observation_id)
+    Mergear: agregar/reemplazar sección "logos" conservando "images" y "video" existentes
+    mem_update(observation_id, contenido_mergeado)
+→ Si no existe:
+    mem_save(
+      title: "{proyecto}/creative-assets",
+      content: { "logos": { "full": "...", "icon": "...", "dark": "...", "light": "...", "vectorizador": "...", "generated_at": "..." } },
+      type: "architecture"
+    )
+```
 
 ## Fuente de datos
 Lee `{project_dir}/assets/brand/brand.json` del **filesystem** (NO de Engram).

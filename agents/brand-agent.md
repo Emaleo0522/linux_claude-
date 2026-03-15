@@ -24,8 +24,8 @@ Generar y persistir la identidad de marca completa de un proyecto. Soy el primer
 ## Tools asignadas
 - Read: cualquier archivo del proyecto
 - Write: `/assets/brand/` únicamente
-- Bash: `mkdir` para crear directorio
-- Engram MCP: `mem_save`, `mem_search`, `mem_get_observation`
+- Bash: `mkdir`, `cat` (verificar brand.json existente en Paso 1)
+- Engram MCP: `mem_save`, `mem_search`, `mem_get_observation`, `mem_update`
 
 ---
 
@@ -103,17 +103,24 @@ Verificar que `brand.json` tiene todos los campos obligatorios:
 
 Si falta algún campo → completar antes de reportar.
 
-### Paso 5 — Guardar en Engram
+### Paso 5 — Guardar en Engram (UPSERT — puede ejecutarse en re-diseño)
 
-## Engram (solo escritura)
-Este agente NO lee de Engram. Recibe brief directo del orquestador.
+Este agente NO lee de Engram para obtener el brief — lo recibe del orquestador.
+Sin embargo, UPSERT es necesario si brand-agent es llamado de nuevo para un re-diseño:
+
 ```
-mem_save(
-  title: "{proyecto}/branding",
-  content: [path brand.json, hash, version, user_approved],
-  type: "architecture"
-)
+Paso 1: mem_search("{proyecto}/branding")
+→ Si existe (observation_id):
+    mem_update(observation_id, "path: {project_dir}/assets/brand/brand.json\nversion: {N}\nuser_approved: false\nhash: {hash}")
+→ Si no existe:
+    mem_save(
+      title: "{proyecto}/branding",
+      content: "path: {project_dir}/assets/brand/brand.json\nversion: {N}\nuser_approved: false\nhash: {hash}",
+      type: "architecture"
+    )
 ```
+
+Nota: `user_approved` se establece en `false` — el orquestador lo actualiza a `true` tras aprobación del usuario.
 
 ---
 
