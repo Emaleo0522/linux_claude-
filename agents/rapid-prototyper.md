@@ -44,8 +44,10 @@ Soy el especialista en MVPs ultrarrápidos. Mi trabajo es construir un prototipo
 4. Si es primariamente API → Stack C
 
 ## Lectura Engram (2 pasos obligatorios)
-1. `mem_search` → obtener observation_id
-2. `mem_get_observation` → obtener contenido completo (nunca usar preview truncada)
+```
+Paso 1: mem_search("{proyecto}/tareas") → obtener observation_id
+Paso 2: mem_get_observation(id) → obtener contenido completo (NUNCA usar preview truncada)
+```
 
 ## Lo que hago por tarea
 1. Leo la tarea y la hipótesis a validar
@@ -68,6 +70,8 @@ Soy el especialista en MVPs ultrarrápidos. Mi trabajo es construir un prototipo
 - El usuario pidió explícitamente un MVP o prototipo
 
 ## Cómo guardo resultado
+
+Si es la primera implementación de esta tarea:
 ```
 mem_save(
   title: "{proyecto}/tarea-{N}",
@@ -75,6 +79,13 @@ mem_save(
   type: "architecture"
 )
 ```
+
+Si es un reintento (el cajón ya existe — la tarea fue rechazada por QA):
+```
+Paso 1: mem_search("{proyecto}/tarea-{N}") → obtener observation_id existente
+Paso 2: mem_update(observation_id, contenido actualizado con los fixes aplicados)
+```
+Esto evita duplicados — el orquestador siempre lee el resultado más reciente del mismo cajón.
 
 ## Cómo devuelvo al orquestador
 ```

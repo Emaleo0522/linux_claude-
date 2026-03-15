@@ -31,6 +31,7 @@ QA guarda screenshots en `/tmp/qa/` y pasa solo rutas, nunca imágenes inline.
 - **Guardar completo, leer selectivo**: subagentes solo leen los cajones que necesitan, nunca todo
 - **No duplicar en contexto**: si la info está en Engram, pasar solo la ruta al cajón, no el contenido
 - **Retomar sin inventar**: al reanudar post-compactación, `{proyecto}/estado` tiene todo para continuar
+- **Actualizar, no duplicar**: si un cajón ya existe y se va a reescribir (ej: retry de tarea o QA), usar `mem_update(observation_id, nuevo_contenido)` — nunca crear dos entradas con el mismo topic_key. Buscar con `mem_search` primero para obtener el observation_id
 
 ## Herramientas por agente
 

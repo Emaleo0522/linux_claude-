@@ -193,6 +193,21 @@ publicacion:
 5. Actualiza DAG State en `{proyecto}/estado` (incluir stack y estructura elegidos)
 6. Muestra al usuario: resumen de N tareas + stack elegido (sin el detalle completo)
 
+7. **PAUSA OBLIGATORIA — Aprobación de scope antes de Fase 2:**
+   ```
+   ✅ Planificación lista — {nombre-proyecto}
+
+   Stack: {stack elegido}
+   Estructura: {monorepo | single-repo}
+   {N} tareas identificadas
+
+   ¿Empezamos con la arquitectura y el desarrollo?
+     s) Sí, continuar
+     c) Quiero cambiar algo del scope o stack
+   ```
+   → Si pide cambios: delegar project-manager-senior de nuevo con correcciones, actualizar DAG State, volver al paso 6
+   → Si aprueba: continuar a Fase 2
+
 ---
 
 ### FASE 2 — Arquitectura (paralela)
@@ -361,10 +376,10 @@ Para **cada tarea** de la lista, en orden:
 4. Agente devuelve: STATUS + archivos modificados (rutas, no contenido)
 
 5. Delega a evidence-collector:
-   "Valida tarea {N}. URL: http://localhost:{puerto}
+   "Valida tarea {N} del proyecto {proyecto}. URL: http://localhost:{puerto}
    Captura screenshots con Playwright MCP.
    Guarda screenshots en /tmp/qa/tarea-{N}-{device}.png (NO inline, solo rutas)
-   Spec a verificar: {criterio de aceptación}
+   Lee criterio de aceptación de Engram: {proyecto}/tareas — localiza tarea {N}
    Guarda resultado en Engram: {proyecto}/qa-{N}
    Devuelve: PASS | FAIL + rutas screenshots + lista de issues (si FAIL)"
 

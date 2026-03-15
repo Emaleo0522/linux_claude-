@@ -37,7 +37,7 @@ Segui la guia paso a paso en [`install/windows.md`](install/windows.md), o abri 
 @orquestador quiero crear [tu idea]
 ```
 
-El sistema se encarga del resto: planifica, diseña, implementa con QA visual, certifica y publica.
+El sistema se encarga del resto: planifica, te muestra que va a construir para tu aprobacion, diseña, implementa con QA visual, certifica y publica.
 
 ---
 
@@ -49,6 +49,8 @@ Tu idea
   ▼
 FASE 1 — Planificacion
   project-manager-senior ──► tareas granulares con criterios de aceptacion
+  │
+  ▼ ◄── PAUSA: el orquestador te muestra el scope y espera tu aprobacion
   │
   ▼
 FASE 2 — Arquitectura (paralelo)
@@ -123,6 +125,30 @@ El orquestador elige el stack en Fase 1 segun los requisitos del proyecto. No ha
 | ORM | Drizzle, Prisma | Drizzle (type-safe, edge) |
 | API | tRPC, REST, GraphQL | tRPC (full TypeScript) |
 | Auth | Better Auth | Siempre (salvo proyecto existente con otra solucion) |
+
+---
+
+## Memoria persistente — Engram
+
+El sistema usa **Engram MCP** como memoria entre sesiones. Cada proyecto tiene sus propios cajones con topic keys `{proyecto}/{tipo}`:
+
+| Cajon | Contenido |
+|-------|-----------|
+| `{proyecto}/estado` | DAG State: fase actual, stack, tareas completadas. Permite retomar despues de una compactacion de contexto sin perder progreso |
+| `{proyecto}/tareas` | Lista completa de tareas con criterios de aceptacion (PM Senior) |
+| `{proyecto}/css-foundation` | Variables CSS, tokens, breakpoints (UX Architect) |
+| `{proyecto}/design-system` | Design system visual, componentes (UI Designer) |
+| `{proyecto}/security-spec` | Threat model, headers, OWASP checklist (Security Engineer) |
+| `{proyecto}/tarea-{N}` | Resultado de implementacion de cada tarea (dev agents) |
+| `{proyecto}/qa-{N}` | Resultado QA de cada tarea con screenshots en /tmp/qa/ (Evidence Collector) |
+| `{proyecto}/certificacion` | Reporte final del Reality Checker |
+| `{proyecto}/deploy-url` | URL limpia del deploy en Vercel |
+
+**Protocolo de lectura:** siempre en 2 pasos: `mem_search` → `mem_get_observation`. Nunca usar la preview truncada directamente.
+
+**Protocolo de escritura:** si un cajon ya existe (ej: reintento de tarea fallida), los agentes usan `mem_update` en vez de `mem_save` para evitar duplicados. El orquestador siempre lee el resultado mas reciente del mismo cajon.
+
+Si el contexto se compacta en medio de un proyecto, el orquestador lee `{proyecto}/estado` y retoma exactamente desde donde estaba.
 
 ---
 
