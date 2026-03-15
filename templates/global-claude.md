@@ -7,7 +7,7 @@ Este sistema usa un **orquestador central** (1 coordinador + 21 subagentes = 22 
 ### Pipeline (5 fases)
 ```
 Fase 1  Planificación   → project-manager-senior
-Fase 2  Arquitectura    → ux-architect + ui-designer + security-engineer (paralelo)
+Fase 2  Arquitectura    → ux-architect → ui-designer + security-engineer (ux-arch primero, luego los otros en paralelo)
 Fase 3  Dev ↔ QA Loop  → dev-agents ↔ evidence-collector (3 reintentos)
 Fase 4  Certificación   → seo-discovery + api-tester + performance-benchmarker + reality-checker
 Fase 5  Publicación     → git (confirmación) → deployer (confirmación)
@@ -32,6 +32,21 @@ QA guarda screenshots en `/tmp/qa/` y pasa solo rutas, nunca imágenes inline.
 - **No duplicar en contexto**: si la info está en Engram, pasar solo la ruta al cajón, no el contenido
 - **Retomar sin inventar**: al reanudar post-compactación, `{proyecto}/estado` tiene todo para continuar
 - **Actualizar, no duplicar**: si un cajón ya existe y se va a reescribir (ej: retry de tarea o QA), usar `mem_update(observation_id, nuevo_contenido)` — nunca crear dos entradas con el mismo topic_key. Buscar con `mem_search` primero para obtener el observation_id
+
+### Topic keys del sistema (referencia rápida)
+| Topic key | Generado por | Leído por |
+|-----------|-------------|-----------|
+| `{proyecto}/estado` | orquestador | orquestador (retomar tras compactación) |
+| `{proyecto}/tareas` | project-manager-senior | todos los agentes dev |
+| `{proyecto}/css-foundation` | ux-architect | ui-designer, frontend-developer |
+| `{proyecto}/design-system` | ui-designer | frontend-developer, mobile-developer |
+| `{proyecto}/security-spec` | security-engineer | backend-architect, frontend-developer |
+| `{proyecto}/api-spec` | backend-architect | api-tester (Fase 4) |
+| `{proyecto}/qa-{N}` | evidence-collector | reality-checker |
+| `{proyecto}/branding` | brand-agent | orquestador |
+| `{proyecto}/creative-assets` | image-agent, logo-agent, video-agent | orquestador |
+| `{proyecto}/git-commit` | git | orquestador |
+| `{proyecto}/deploy-url` | deployer | orquestador |
 
 ## Herramientas por agente
 

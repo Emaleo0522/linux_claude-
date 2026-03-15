@@ -6,7 +6,7 @@ Esta guia te lleva paso a paso desde cero hasta tener el sistema completo funcio
 
 ## Lo que vas a instalar
 
-- **21 agentes de Claude + 1 referencia**: los especialistas del sistema (orquestador, PM, arquitectos, devs, QA, SEO, agentes creativos, etc.) + `better-auth-reference.md` (guia de autenticacion)
+- **22 agentes de Claude + 1 referencia**: los especialistas del sistema (orquestador, PM, arquitectos, devs, QA, SEO, agentes creativos, etc.) + `better-auth-reference.md` (guia de autenticacion)
 - **CLAUDE.md global**: le dice a Claude como coordinar el pipeline de 5 fases
 - **MCPs**: Engram (memoria), Context7 (docs), Playwright (QA visual)
 - **Node.js + npm**: para levantar previews locales
@@ -71,14 +71,14 @@ git config --global init.defaultBranch main
 
 ---
 
-## Paso 6: Copiar los 21 agentes
+## Paso 6: Copiar los 22 agentes
 
 En Git Bash, desde la carpeta donde clonaste este repo:
 ```bash
 # Crear la carpeta de agentes
 mkdir -p ~/.claude/agents/skills
 
-# Copiar los 21 agentes
+# Copiar los 22 agentes
 cp agents/*.md ~/.claude/agents/
 
 # Copiar skills si hay
@@ -232,8 +232,8 @@ El sistema se encarga del resto:
 **Claude no reconoce los agentes**
 -> Reinicia Claude Desktop. Los agentes se cargan al iniciar.
 
-**No aparecen los 21 agentes**
--> Verifica con `ls ~/.claude/agents/*.md | wc -l`. Debe ser 22.
+**No aparecen los 22 agentes**
+-> Verifica con `ls ~/.claude/agents/*.md | wc -l`. Debe ser 23 (22 agentes + 1 referencia).
 
 **MCPs no aparecen en Claude Desktop**
 -> Verifica que `claude_desktop_config.json` tenga JSON valido y reinicia. Verificar rutas absolutas.
