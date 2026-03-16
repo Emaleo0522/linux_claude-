@@ -33,8 +33,15 @@ Segui la guia paso a paso en [`install/windows.md`](install/windows.md), o abri 
 
 ## Uso
 
+El sistema tiene dos modos. El usuario elige explícitamente:
+
+| Modo | Cuándo | Cómo activarlo |
+|------|--------|----------------|
+| **Claude normal** | Preguntas, fixes, revisiones | Por defecto — simplemente habla |
+| **Orquestador** | Proyecto completo de principio a fin | Escribi: `modo orquestador — [tu idea]` |
+
 ```
-@orquestador quiero crear [tu idea]
+modo orquestador — quiero crear una app de gestión de inventario
 ```
 
 El sistema se encarga del resto: planifica, te muestra que va a construir para tu aprobacion, diseña, implementa con QA visual, certifica y publica.
@@ -53,9 +60,9 @@ FASE 1 — Planificacion
   ▼ ◄── PAUSA: el orquestador te muestra el scope y espera tu aprobacion
   │
   ▼
-FASE 2 — Arquitectura (paralelo)
+FASE 2 — Arquitectura (secuencial: ux-architect primero, luego ui-designer + security en paralelo)
   ux-architect      ──► fundacion CSS, tokens, breakpoints
-  ui-designer       ──► design system, componentes, WCAG AA
+  ui-designer       ──► design system, componentes, WCAG AA  (lee css-foundation)
   security-engineer ──► threat model STRIDE, headers OWASP
   │
   ▼
@@ -133,17 +140,20 @@ El orquestador elige el stack en Fase 1 segun los requisitos del proyecto. No ha
 
 El sistema usa **Engram MCP** como memoria entre sesiones. Cada proyecto tiene sus propios cajones con topic keys `{proyecto}/{tipo}`:
 
-| Cajon | Contenido |
-|-------|-----------|
-| `{proyecto}/estado` | DAG State: fase actual, stack, tareas completadas. Permite retomar despues de una compactacion de contexto sin perder progreso |
-| `{proyecto}/tareas` | Lista completa de tareas con criterios de aceptacion (PM Senior) |
-| `{proyecto}/css-foundation` | Variables CSS, tokens, breakpoints (UX Architect) |
-| `{proyecto}/design-system` | Design system visual, componentes (UI Designer) |
-| `{proyecto}/security-spec` | Threat model, headers, OWASP checklist (Security Engineer) |
-| `{proyecto}/tarea-{N}` | Resultado de implementacion de cada tarea (dev agents) |
-| `{proyecto}/qa-{N}` | Resultado QA de cada tarea con screenshots en /tmp/qa/ (Evidence Collector) |
-| `{proyecto}/certificacion` | Reporte final del Reality Checker |
-| `{proyecto}/deploy-url` | URL limpia del deploy en Vercel |
+| Cajon | Generado por | Contenido |
+|-------|-------------|-----------|
+| `{proyecto}/estado` | orquestador | DAG State: fase actual, stack, tareas completadas. Permite retomar tras compactacion sin perder progreso |
+| `{proyecto}/tareas` | project-manager-senior | Lista completa de tareas con criterios de aceptacion |
+| `{proyecto}/css-foundation` | ux-architect | Variables CSS, tokens, breakpoints |
+| `{proyecto}/design-system` | ui-designer | Design system visual, componentes |
+| `{proyecto}/security-spec` | security-engineer | Threat model, headers, OWASP checklist |
+| `{proyecto}/api-spec` | backend-architect | Contrato de endpoints REST/tRPC (leido por api-tester en Fase 4) |
+| `{proyecto}/tarea-{N}` | dev agents | Resultado de implementacion de cada tarea |
+| `{proyecto}/qa-{N}` | evidence-collector | QA de cada tarea con screenshots en /tmp/qa/ |
+| `{proyecto}/branding` | brand-agent | Identidad de marca aprobada (brand.json path + metadata) |
+| `{proyecto}/creative-assets` | image/logo/video agents | Inventario de assets generados (rutas + checksums) |
+| `{proyecto}/git-commit` | git | Hash + URL del commit |
+| `{proyecto}/deploy-url` | deployer | URL del deploy en Vercel |
 
 **Protocolo de lectura:** siempre en 2 pasos: `mem_search` → `mem_get_observation`. Nunca usar la preview truncada directamente.
 
@@ -222,13 +232,14 @@ Para cambiar el comportamiento, modifica `agents/git.md`. El auto-deploy de Verc
 ## Estructura del repositorio
 
 ```
-agents/                         21 agentes + referencia Better Auth
-  ├── orquestador.md
+agents/                         22 agentes + referencia Better Auth (23 archivos total)
+  ├── orquestador.md            ← coordinador central (top-level, nunca subagente)
   ├── project-manager-senior.md
   ├── ux-architect.md
   ├── ui-designer.md
   ├── security-engineer.md
   ├── frontend-developer.md
+  ├── mobile-developer.md
   ├── backend-architect.md
   ├── rapid-prototyper.md
   ├── game-designer.md

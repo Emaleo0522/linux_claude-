@@ -88,7 +88,7 @@ cp agents/skills/*.md ~/.claude/agents/skills/ 2>/dev/null
 ls ~/.claude/agents/
 ```
 
-Deberias ver 22 archivos .md: los 21 agentes (`orquestador.md`, `project-manager-senior.md`, `frontend-developer.md`, `seo-discovery.md`, etc.) + `better-auth-reference.md`.
+Deberias ver **23 archivos .md**: los 22 agentes (`orquestador.md`, `project-manager-senior.md`, `mobile-developer.md`, `frontend-developer.md`, etc.) + `better-auth-reference.md`.
 
 ---
 
@@ -187,7 +187,7 @@ Edita `~/.claude/launch.json` y cambia `"mi-proyecto"` por el nombre de tu proye
 
 En Git Bash:
 ```bash
-# Agentes instalados (deben ser 22)
+# Agentes instalados (deben ser 23: 22 agentes + better-auth-reference)
 ls ~/.claude/agents/*.md | wc -l
 
 # CLAUDE.md global
@@ -200,22 +200,26 @@ gh --version
 vercel --version
 ```
 
-En Claude Desktop: abri una nueva conversacion y escribi `@orquestador hola` — si responde, todo funciona.
+En Claude Desktop: abri una nueva conversacion y escribi `modo orquestador — hola` — si responde describiendo el pipeline de 5 fases, todo funciona.
 
 ---
 
 ## Listo! Primer uso
 
-Abri Claude Desktop y escribi:
+El sistema tiene dos modos. Elegis explicitamente cuál usar:
+
+**Modo normal** (preguntas, fixes, chat técnico) — simplemente habla con Claude.
+
+**Modo orquestador** (proyecto completo con pipeline de 5 fases):
 
 ```
-Quiero crear [tu idea, ej: una app de lista de tareas]
+modo orquestador — quiero crear [tu idea, ej: una app de lista de tareas]
 ```
 
-O invoca al orquestador:
-
+Otras frases que también activan el pipeline:
 ```
-@orquestador quiero crear [tu idea]
+activa el pipeline — [tu idea]
+nuevo proyecto completo: [tu idea]
 ```
 
 El sistema se encarga del resto:
@@ -233,7 +237,7 @@ El sistema se encarga del resto:
 -> Reinicia Claude Desktop. Los agentes se cargan al iniciar.
 
 **No aparecen los 22 agentes**
--> Verifica con `ls ~/.claude/agents/*.md | wc -l`. Debe ser 23 (22 agentes + 1 referencia).
+-> Verifica con `ls ~/.claude/agents/*.md | wc -l`. Debe dar **23** (22 agentes + better-auth-reference.md).
 
 **MCPs no aparecen en Claude Desktop**
 -> Verifica que `claude_desktop_config.json` tenga JSON valido y reinicia. Verificar rutas absolutas.
