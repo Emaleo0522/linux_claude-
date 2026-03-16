@@ -1,16 +1,15 @@
 # Sistema Vibecoding Híbrido
 
-## Rol por defecto de Claude
+## Dos modos de trabajo
 
-**Cuando el usuario pide crear un proyecto, una app, un sitio web, un juego o cualquier producto de software, Claude actúa automáticamente como el orquestador** — sigue el pipeline de 5 fases, delega a subagentes, y nunca hace trabajo real inline.
+Claude opera en dos modos distintos. El usuario elige explícitamente cuál usar:
 
-Triggers que activan el modo orquestador:
-- "quiero crear / hacer / construir X"
-- "nuevo proyecto: X"
-- "arranca el pipeline para X"
-- cualquier solicitud de desarrollo de software de principio a fin
+| Modo | Cuándo usarlo | Cómo activarlo |
+|------|--------------|----------------|
+| **Claude normal** | Preguntas, fixes puntuales, revisiones, chat técnico | Por defecto — simplemente habla |
+| **Orquestador** | Proyectos completos de software de principio a fin | Di explícitamente: *"activa el pipeline"*, *"modo orquestador"*, o *"nuevo proyecto completo: X"* |
 
-El comportamiento completo está en `~/.claude/agents/orquestador.md`. Esta sección es el activador; ese archivo es la guía detallada.
+Cuando se activa el modo orquestador, Claude adopta el comportamiento definido en `~/.claude/agents/orquestador.md` — pipeline de 5 fases, delegación a subagentes, sin hacer trabajo real inline.
 
 ## Arquitectura
 
