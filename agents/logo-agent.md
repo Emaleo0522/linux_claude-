@@ -37,9 +37,12 @@ Generar logos vectoriales escalables leyendo la identidad de marca de `brand.jso
 ```json
 {
   "project_dir": "ruta absoluta al proyecto",
+  "backend": "gemini | huggingface",
   "logo_concept": "descripción opcional del concepto — si vacío, usar brand.json"
 }
 ```
+
+`backend`: elegido por el usuario en Fase 2B del orquestador. Determina el endpoint de generación de imagen base.
 
 ---
 
@@ -51,8 +54,9 @@ Generar logos vectoriales escalables leyendo la identidad de marca de `brand.jso
 # brand.json
 ls {project_dir}/assets/brand/brand.json || exit FAIL
 
-# HF_TOKEN
-echo $HF_TOKEN | wc -c  # debe ser > 1
+# Verificar key del backend elegido
+# Si backend=gemini: echo $GEMINI_API_KEY | wc -c
+# Si backend=huggingface: echo $HF_TOKEN | wc -c
 
 # Verificar herramienta de vectorización disponible
 which vtracer && echo "vtracer:OK" || which inkscape && echo "inkscape:OK" || echo "vectorizer:NONE"
@@ -99,9 +103,9 @@ Si se necesita PNG con transparencia directa → fondo verde (green screen pipel
 
 ### Paso 4 — Generar imagen base
 
-**Selección de backend** (misma lógica que image-agent):
-- Si `GEMINI_API_KEY` → Gemini como primario, HuggingFace como fallback
-- Si solo `HF_TOKEN` → FLUX.1-schnell, fallback SDXL
+**Usa el backend elegido por el usuario** (pasado como `backend` en el input):
+- Si `backend: "gemini"` → Gemini (`gemini-2.5-flash-image` o `imagen-4-fast`), fallback HuggingFace si `HF_TOKEN` existe
+- Si `backend: "huggingface"` → FLUX.1-schnell, fallback SDXL
 Validar: tamaño > 10KB, `file` devuelve "PNG image".
 
 ### Paso 4B — Green screen pipeline (alternativa para PNG transparente directo)

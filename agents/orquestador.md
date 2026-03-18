@@ -235,7 +235,49 @@ Ejecutar en paralelo a Fase 2 o antes de Fase 3, según cuándo se necesiten los
    → Cambios: re-delegar brand-agent con correcciones → volver aquí
    → Aprueba: actualizar Engram `{proyecto}/branding` con `user_approved: true`
 
-3. **(paralelo)** logo-agent + image-agent — ambos reciben `{ "project_dir": "..." }`, leen brand.json del filesystem
+2B. **ELEGIR BACKEND DE IMÁGENES** — Preguntar al usuario:
+   ```
+   ¿Qué motor de imágenes querés usar para generar los assets?
+
+     a) HuggingFace (gratis, no requiere configuración extra)
+        Usa FLUX.1-schnell / SDXL. Requiere HF_TOKEN.
+
+     b) Google Gemini (mejor calidad, ~$0.02-0.04 por imagen)
+        Requiere cuenta en Google AI Studio con billing habilitado.
+        Si no lo tenés configurado, te guío paso a paso.
+   ```
+   → Si elige **a) HuggingFace**:
+     - Verificar que `HF_TOKEN` existe (`echo $HF_TOKEN | wc -c`)
+     - Si no existe: "Necesitás un token de HuggingFace. Creá uno gratis en https://huggingface.co/settings/tokens y ejecutá: export HF_TOKEN=hf_tu_token"
+     - Pasar `backend: "huggingface"` a image-agent y logo-agent
+
+   → Si elige **b) Gemini**:
+     - Verificar que `GEMINI_API_KEY` existe (`echo $GEMINI_API_KEY | wc -c`)
+     - Si NO existe → guiar setup:
+       ```
+       Para configurar Gemini necesitás:
+
+       1. Ir a https://aistudio.google.com/apikey
+       2. Crear una API key (se crea un proyecto Google Cloud automáticamente)
+       3. IMPORTANTE: habilitar billing en ese proyecto:
+          → https://console.cloud.google.com/billing
+          → Asociar una tarjeta (se cobra solo por uso, ~$0.02-0.04 por imagen)
+       4. Copiar la API key y ejecutar:
+          export GEMINI_API_KEY="tu_api_key_aqui"
+
+       ¿Ya tenés la key configurada? (s/n)
+       ```
+     - Si dice sí: verificar la key haciendo un test rápido:
+       ```bash
+       curl -s "https://generativelanguage.googleapis.com/v1beta/models?key=$GEMINI_API_KEY" | head -5
+       ```
+       Si retorna modelos → OK. Si retorna error → mostrar el error y ofrecer usar HuggingFace como fallback.
+     - Pasar `backend: "gemini"` a image-agent y logo-agent
+
+   → Guardar la elección en DAG State: `image_backend: "gemini" | "huggingface"`
+   → En proyectos futuros, si hay key guardada, preguntar: "La última vez usaste {backend}. ¿Seguimos con ese?"
+
+3. **(paralelo)** logo-agent + image-agent — ambos reciben `{ "project_dir": "...", "backend": "gemini|huggingface" }`, leen brand.json del filesystem
    - logo → `{project_dir}/assets/logo/` | image → `{project_dir}/assets/images/`
 
 4. **Consultar video** al usuario (NO auto-generar): "¿Video de fondo para hero? (~$0.03-0.10 en Replicate)"

@@ -18,7 +18,7 @@ Generar imágenes de alta calidad para proyectos web leyendo la identidad visual
 
 **Importante sobre Gemini**: la generación de imágenes por API NO funciona en el free tier de Google AI Studio. Requiere habilitar billing en el proyecto de Google Cloud. La API key se obtiene en [aistudio.google.com/apikey](https://aistudio.google.com/apikey).
 
-**Selección automática**: si `GEMINI_API_KEY` existe → usar Gemini como primario, HuggingFace como fallback. Si solo `HF_TOKEN` → flujo HuggingFace original. Si ninguno → FAIL.
+**Selección por el usuario**: el orquestador pasa `backend: "gemini" | "huggingface"` en el input. El usuario ya eligió y configuró su key antes de llegar aquí. Si la key del backend elegido no está → FAIL con instrucción clara. El otro backend se usa como fallback automático si existe.
 
 ## Clasificacion de Shot (OBLIGATORIO antes de generar)
 
@@ -65,11 +65,13 @@ Si la categoria es RISKY: devolver SUGERENCIA de alternativa SAFE/MEDIUM al orqu
 ```json
 {
   "project_dir": "ruta absoluta al proyecto",
+  "backend": "gemini | huggingface",
   "asset_types": ["hero", "thumbnail"],
   "custom_prompt_additions": ""
 }
 ```
 
+`backend`: elegido por el usuario en Fase 2B paso 2B del orquestador. Determina el endpoint primario.
 `asset_types` acepta: `hero` | `thumbnail` | `hero_and_mobile` | `all`
 
 ---
@@ -82,17 +84,19 @@ Si la categoria es RISKY: devolver SUGERENCIA de alternativa SAFE/MEDIUM al orqu
 # 1a. Verificar brand.json existe
 ls {project_dir}/assets/brand/brand.json
 
-# 1b. Verificar API keys (al menos una requerida)
-echo $GEMINI_API_KEY | wc -c  # Si > 1 → Gemini disponible
-echo $HF_TOKEN | wc -c        # Si > 1 → HuggingFace disponible
-# Si ambos vacíos → FAIL: "Agregar GEMINI_API_KEY o HF_TOKEN"
+# 1b. Verificar API key del backend elegido
+# Si backend=gemini:
+echo $GEMINI_API_KEY | wc -c  # Si = 1 → FAIL: "GEMINI_API_KEY no configurada"
+# Si backend=huggingface:
+echo $HF_TOKEN | wc -c        # Si = 1 → FAIL: "HF_TOKEN no configurado"
+# También verificar la otra key como fallback (opcional)
 
 # 1c. Crear directorio output
 mkdir -p {project_dir}/assets/images
 ```
 
 Si brand.json no existe → FAIL: "Ejecutar brand-agent primero"
-Si ambas API keys vacías → FAIL: "Agregar GEMINI_API_KEY o HF_TOKEN (ver CLAUDE.md § Variables de entorno)"
+Si la key del backend elegido no existe → FAIL: "Configurar {GEMINI_API_KEY|HF_TOKEN} (ver CLAUDE.md § Variables de entorno)"
 
 ### Paso 2 — Leer brand context
 
@@ -147,7 +151,7 @@ amateur photography, stock photo artifacts
 
 ### Paso 4 — Llamar API con retry logic
 
-**Si `GEMINI_API_KEY` disponible** — Gemini como primario:
+**Si `backend: "gemini"`** — Gemini como primario:
 1. **Gemini** (Google): `generativelanguage.googleapis.com`
    - Modelos disponibles (de más barato a mejor calidad):
      - `imagen-4-fast` — $0.02/img, solo texto→imagen, más rápido
@@ -159,7 +163,7 @@ amateur photography, stock photo artifacts
 2. **FLUX.1-schnell** (HuggingFace fallback)
 3. **Pollinations.ai** (último recurso, sin token)
 
-**Si solo `HF_TOKEN`** — cadena HuggingFace original:
+**Si `backend: "huggingface"`** — cadena HuggingFace:
 1. **FLUX.1-schnell** (HuggingFace): `router.huggingface.co/hf-inference/models/black-forest-labs/FLUX.1-schnell`
 2. **SDXL** (HuggingFace): `router.huggingface.co/hf-inference/models/stabilityai/stable-diffusion-xl-base-1.0`
 3. **Pollinations.ai** (sin token): `image.pollinations.ai/prompt/{encoded}?width=1920&height=1080&nologo=true`
