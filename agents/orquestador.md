@@ -258,6 +258,8 @@ Ejecutar en paralelo a Fase 2 o antes de Fase 3, según cuándo se necesiten los
 **Si brand.json ya existe con `user_approved: true`** → saltar pasos 1-2.
 Merge strategy: cada agente creativo hace UPSERT interno (`mem_search` → merge su sección → `mem_update` o `mem_save`).
 
+**Cost tracking**: después de Fase 2B, guardar/actualizar `{proyecto}/costs` en Engram con costo estimado acumulado. Los agentes creativos reportan el costo en su STATUS. Formato: `"images: $0.04 (Gemini), logo: $0 (HF), video: $0.05 (Replicate) — total: $0.09"`
+
 ---
 
 **Phase Gate → Fase 3**: verificar que estos cajones existen en Engram antes de empezar:

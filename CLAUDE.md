@@ -180,15 +180,22 @@ Cada agente agrega los suyos según contexto (SAFE/MEDIUM/RISKY en image-agent, 
 ### Cost tracking para agentes creativos
 El orquestador mantiene un cajón `{proyecto}/costs` con el costo estimado por invocación de API:
 - brand-agent: $0 (sin API externa)
-- image-agent (Gemini): ~$0.07/imagen | image-agent (HuggingFace): $0 (free tier)
-- logo-agent (Gemini): ~$0.07/logo | logo-agent (HuggingFace): $0 (free tier)
+- image-agent (Gemini): ~$0.02-0.04/imagen | image-agent (HuggingFace): $0 (free tier)
+- logo-agent (Gemini): ~$0.02-0.04/logo | logo-agent (HuggingFace): $0 (free tier)
 - video-agent: ~$0.03-0.10/video (Replicate)
-Los agentes reportan el costo en su STATUS al orquestador. Máximo estimado del pipeline creativo completo: ~$0.50 (con 3 reintentos de video).
+Los agentes reportan el costo en su STATUS al orquestador. Máximo estimado del pipeline creativo completo: ~$0.40 (con 3 reintentos de video + Gemini).
 
 ### Variables de entorno requeridas
-- `GEMINI_API_KEY` — Google Gemini (opcional, primario si existe) — para image-agent y logo-agent
-- `HF_TOKEN` — HuggingFace (registro gratis en hf.co) — para image-agent y logo-agent (fallback o primario si no hay Gemini)
-- `REPLICATE_API_TOKEN` — Replicate (registro gratis, free credits) — para video-agent
+
+| Variable | Servicio | Costo | Cómo obtener | Usado por |
+|----------|----------|-------|-------------|-----------|
+| `GEMINI_API_KEY` | Google AI Studio | ~$0.02-0.04/img (billing requerido) | [aistudio.google.com/apikey](https://aistudio.google.com/apikey) → habilitar billing en Google Cloud | image-agent, logo-agent |
+| `HF_TOKEN` | HuggingFace | Gratis (free tier) | [huggingface.co/settings/tokens](https://huggingface.co/settings/tokens) | image-agent, logo-agent |
+| `REPLICATE_API_TOKEN` | Replicate | ~$0.03-0.10/video | [replicate.com/account/api-tokens](https://replicate.com/account/api-tokens) | video-agent |
+
+**Gemini requiere billing**: la generación de imágenes por API NO funciona en el free tier de Google AI Studio. Hay que habilitar facturación en el proyecto de Google Cloud asociado. Sin billing, usar HuggingFace (gratis).
+
+**Al menos una key de imagen es obligatoria**: `GEMINI_API_KEY` o `HF_TOKEN`. Si ambas están, Gemini es primario con HuggingFace como fallback.
 
 **Resolución de env vars** (cascada de búsqueda): variable de entorno del sistema → `.env` en el proyecto → `~/.claude-agents/.env` (fallback global)
 

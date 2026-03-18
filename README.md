@@ -143,11 +143,13 @@ Ningun asset creativo bloquea el pipeline. Si una API falla, hay cadena de fallb
 
 | Variable | Servicio | Costo | Usado por |
 |----------|----------|-------|-----------|
-| `GEMINI_API_KEY` | [Google AI Studio](https://aistudio.google.com/apikey) | ~$0.07/imagen | image-agent, logo-agent (opcional, primario si existe) |
+| `GEMINI_API_KEY` | [Google AI Studio](https://aistudio.google.com/apikey) | ~$0.02-0.04/imagen (billing requerido) | image-agent, logo-agent (opcional, primario si existe) |
 | `HF_TOKEN` | [HuggingFace](https://huggingface.co) | Gratis | image-agent, logo-agent (fallback o primario si no hay Gemini) |
 | `REPLICATE_API_TOKEN` | [Replicate](https://replicate.com) | ~$0.05/video | video-agent |
 
-**Elegis tu backend de imagenes**: Gemini (mejor calidad, ~$0.07/img) o HuggingFace (gratis). Si tenes ambas keys, Gemini se usa como primario con HuggingFace como fallback.
+**Elegis tu backend de imagenes**: Gemini (mejor calidad, ~$0.02-0.04/img, requiere billing) o HuggingFace (gratis). Si tenes ambas keys, Gemini se usa como primario con HuggingFace como fallback.
+
+> **Nota**: Gemini requiere habilitar billing en Google Cloud. Sin billing, la generación de imágenes por API no funciona. HuggingFace funciona gratis sin configuración extra.
 
 ```bash
 export GEMINI_API_KEY="tu_api_key"        # Opcion A: Gemini (recomendado)

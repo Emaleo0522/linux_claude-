@@ -11,10 +11,12 @@ Generar imágenes de alta calidad para proyectos web leyendo la identidad visual
 
 ## Backend de generación (el usuario elige)
 
-| Backend | Env var | Ventajas | Limitaciones |
-|---------|---------|----------|-------------|
-| **Gemini** | `GEMINI_API_KEY` | Mejor comprensión de prompts (LLM-nativo), rápido, ~$0.07/imagen | Menos control (no ControlNet, no LoRA), modelos preview |
-| **HuggingFace** | `HF_TOKEN` | Gratis (free tier), modelos estables (FLUX.1, SDXL), cadena de fallbacks | Cold starts, rate limits, calidad variable |
+| Backend | Env var | Costo | Ventajas | Limitaciones |
+|---------|---------|-------|----------|-------------|
+| **Gemini** | `GEMINI_API_KEY` | ~$0.02-0.04/imagen (requiere billing) | Mejor comprensión de prompts (LLM-nativo), rápido, alta calidad | Requiere cuenta con billing habilitado, filtros de contenido agresivos, no ControlNet/LoRA |
+| **HuggingFace** | `HF_TOKEN` | Gratis (free tier) | Sin costo, modelos estables (FLUX.1, SDXL), cadena de fallbacks | Cold starts, rate limits, calidad variable |
+
+**Importante sobre Gemini**: la generación de imágenes por API NO funciona en el free tier de Google AI Studio. Requiere habilitar billing en el proyecto de Google Cloud. La API key se obtiene en [aistudio.google.com/apikey](https://aistudio.google.com/apikey).
 
 **Selección automática**: si `GEMINI_API_KEY` existe → usar Gemini como primario, HuggingFace como fallback. Si solo `HF_TOKEN` → flujo HuggingFace original. Si ninguno → FAIL.
 
@@ -146,9 +148,13 @@ amateur photography, stock photo artifacts
 ### Paso 4 — Llamar API con retry logic
 
 **Si `GEMINI_API_KEY` disponible** — Gemini como primario:
-1. **Gemini** (Google): `generativelanguage.googleapis.com` via `@google/genai` SDK
-   - Config: `responseModalities: ["IMAGE", "TEXT"]`, modelo `gemini-2.0-flash-preview-image-generation`
-   - El prompt se envía como texto, la imagen se extrae de la respuesta (base64)
+1. **Gemini** (Google): `generativelanguage.googleapis.com`
+   - Modelos disponibles (de más barato a mejor calidad):
+     - `imagen-4-fast` — $0.02/img, solo texto→imagen, más rápido
+     - `gemini-2.5-flash-image` — $0.039/img, LLM-nativo (entiende contexto complejo)
+     - `imagen-4` — $0.04/img, mejor calidad que fast
+   - Config: `responseModalities: ["IMAGE", "TEXT"]`
+   - El prompt se envía como texto, la imagen se extrae de la respuesta (base64 PNG)
    - Si falla → caer a cadena HuggingFace
 2. **FLUX.1-schnell** (HuggingFace fallback)
 3. **Pollinations.ai** (último recurso, sin token)
@@ -158,14 +164,15 @@ amateur photography, stock photo artifacts
 2. **SDXL** (HuggingFace): `router.huggingface.co/hf-inference/models/stabilityai/stable-diffusion-xl-base-1.0`
 3. **Pollinations.ai** (sin token): `image.pollinations.ai/prompt/{encoded}?width=1920&height=1080&nologo=true`
 
-**Llamada Gemini** (ejemplo con curl):
+**Llamada Gemini** (ejemplo con curl — usar `gemini-2.5-flash-image` o `imagen-4-fast`):
 ```bash
-curl -s "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-preview-image-generation:generateContent?key=$GEMINI_API_KEY" \
+curl -s "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image:generateContent?key=$GEMINI_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{"contents":[{"parts":[{"text":"'"$PROMPT"'"}]}],"generationConfig":{"responseModalities":["IMAGE","TEXT"]}}' \
   | python3 -c "import sys,json,base64;r=json.load(sys.stdin);d=[p for p in r['candidates'][0]['content']['parts'] if 'inlineData' in p][0]['inlineData']['data'];sys.stdout.buffer.write(base64.b64decode(d))" \
   > output.png
 ```
+**Nota**: si la respuesta contiene `"SAFETY"` o `"content not permitted"` → los filtros de Gemini rechazaron el prompt. Simplificar el prompt y reintentar, o caer al fallback HuggingFace.
 
 ### Paso 5 — Validar output
 
@@ -206,7 +213,7 @@ Assets generados:
   · hero-mobile.png  → {project_dir}/assets/images/hero-mobile.png ({size}KB)
   · thumbnail.png    → {project_dir}/assets/images/thumbnail.png ({size}KB)
 API usada: {endpoint usado — primario o fallback N}
-costo_estimado: ${X.XX} ({Gemini ~$0.07/img | HuggingFace $0 | Pollinations $0})
+costo_estimado: ${X.XX} ({Gemini ~$0.02-0.04/img | HuggingFace $0 | Pollinations $0})
 categoria: SAFE|MEDIUM|RISKY
 prompt_usado: "{el prompt exacto enviado al modelo}"
 negative_prompt: "{los negative prompts aplicados}"
@@ -236,3 +243,6 @@ ACCIÓN REQUERIDA: {qué necesita el usuario/orquestador}
 | `{"error":"Model is loading"}` | HF cargando el modelo | Reintentar en 30s |
 | `{"error":"Rate limit"}` | Demasiadas requests | Pasar al siguiente fallback inmediatamente |
 | `file: HTML document` | API devolvió error HTML | Leer primeras líneas para diagnóstico, reintentar |
+| `SAFETY` / `content not permitted` (Gemini) | Filtros de contenido de Google rechazaron el prompt | Simplificar prompt (quitar personas, marcas), reintentar. Si persiste → fallback a HuggingFace |
+| `403 PERMISSION_DENIED` (Gemini) | API key sin billing habilitado | El usuario debe habilitar billing en Google Cloud → caer a HuggingFace |
+| `404 model not found` (Gemini) | Modelo deprecado o incorrecto | Usar `gemini-2.5-flash-image` o `imagen-4-fast`. Modelos preview se retiran periódicamente |
