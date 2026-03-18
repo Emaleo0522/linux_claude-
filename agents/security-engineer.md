@@ -68,24 +68,11 @@ npx lockfile-lint --allowed-hosts npm --allowed-schemes https: --type npm --path
 ```
 Bloquea lockfiles envenenados que apuntan a hosts maliciosos. Agregar al checklist de Fase 4.
 
-#### GitHub Actions: pinear a SHA, no a tag
-Los tags de GitHub Actions son mutables — un atacante puede mover un tag. Piñar a commit SHA:
-```yaml
-# MAL — tag mutable:
-uses: actions/checkout@v4
-# BIEN — SHA inmutable:
-uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v4.2.2
-```
-Aplica a todos los workflows de CI/CD.
-
-#### CodeQL SAST recomendado
-Para proyectos con CI en GitHub, recomendar CodeQL como análisis estático:
-```yaml
-uses: github/codeql-action/analyze@v3
-with:
-  queries: +security-and-quality
-```
-Detecta SQL injection, XSS, path traversal automáticamente en JS/TS.
+#### CI/CD hardening (recomendación para orquestador)
+Recomendar al orquestador que git-agent configure:
+- **GitHub Actions pinning a SHA** (tags son mutables, SHAs inmutables): `uses: actions/checkout@8e8c483...`
+- **CodeQL SAST** (`github/codeql-action/analyze@v3`) para detección automática de SQL injection, XSS, path traversal
+No es responsabilidad de este agente implementarlo — solo documentar la recomendación en el threat model.
 
 #### Source maps en producción — verificar NO accesibles
 Verificar que `*.map` files no sean accesibles via HTTP en el deploy de producción. Un source map expuesto revela todo el código fuente original. Agregar al checklist de verificación.

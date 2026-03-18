@@ -97,6 +97,7 @@ Si es la primera ejecución en este proyecto:
 ```
 mem_save(
   title: "{proyecto}/api-qa",
+  topic_key: "{proyecto}/api-qa",
   content: "Endpoints: {N} testados\nPASS: {N}\nFAIL: {N}\nIssues: [lista]",
   type: "architecture"
 )

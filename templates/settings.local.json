@@ -74,7 +74,11 @@
       "mcp__playwright__browser_tabs",
       "mcp__context7__resolve-library-id",
       "mcp__context7__query-docs",
-      "Read(//tmp/**)"
+      "Read(//tmp/**)",
+      "Bash(grep:*)",
+      "Bash(done)",
+      "Bash(while read:*)",
+      "Bash(do echo:*)"
     ],
     "deny": [],
     "ask": []

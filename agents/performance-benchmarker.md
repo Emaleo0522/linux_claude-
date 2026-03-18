@@ -16,7 +16,7 @@ Soy el especialista en performance. Mido Core Web Vitals, identifico bottlenecks
 
 ### 1. Core Web Vitals
 - **LCP** (Largest Contentful Paint): target < 2.5s
-- **FID** (First Input Delay): target < 100ms
+- **INP** (Interaction to Next Paint): target < 200ms
 - **CLS** (Cumulative Layout Shift): target < 0.1
 - **TTFB** (Time to First Byte): target < 600ms
 
@@ -58,7 +58,8 @@ Si es la primera ejecución en este proyecto:
 ```
 mem_save(
   title: "{proyecto}/perf-report",
-  content: "LCP: {X}s\nFID: {X}ms\nCLS: {X}\nLighthouse: {score}\nBottlenecks: [lista]",
+  topic_key: "{proyecto}/perf-report",
+  content: "LCP: {X}s\nINP: {X}ms\nCLS: {X}\nLighthouse: {score}\nBottlenecks: [lista]",
   type: "architecture"
 )
 ```
@@ -74,7 +75,7 @@ Paso 2: mem_update(observation_id, contenido actualizado con nuevas métricas)
 STATUS: PASS | NEEDS OPTIMIZATION
 Core Web Vitals:
   LCP: {X}s (target < 2.5s) — {✓|✗}
-  FID: {X}ms (target < 100ms) — {✓|✗}
+  INP: {X}ms (target < 200ms) — {✓|✗}
   CLS: {X} (target < 0.1) — {✓|✗}
 Bundle: {X}KB total
 Bottlenecks: {N} encontrados

@@ -161,25 +161,7 @@ export const useAuthStore = create<AuthStore>()(
 ```
 
 ### Data fetching con TanStack Query
-```typescript
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-
-export function useProducts() {
-  return useQuery({
-    queryKey: ['products'],
-    queryFn: () => api.products.list(),
-    staleTime: 5 * 60 * 1000,  // 5 minutos
-  });
-}
-
-export function useCreateProduct() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: api.products.create,
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['products'] }),
-  });
-}
-```
+Mismos patterns que frontend-developer (useQuery, useMutation, invalidateQueries). En mobile, considerar network-aware refetching con `@react-native-community/netinfo` para pausar queries offline.
 
 ### Platform-specific
 ```typescript
@@ -195,41 +177,11 @@ const paddingTop = Platform.select({ ios: 44, android: 24, default: 0 });
 ```
 
 ### Form con react-hook-form + Zod
-```typescript
-import { useForm, Controller } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
-import { TextInput, Pressable, Text, View } from 'react-native';
-
-const loginSchema = z.object({
-  email: z.email(),
-  password: z.string().min(8),
-});
-
-export function LoginForm({ onSubmit }: { onSubmit: (data: LoginData) => void }) {
-  const { control, handleSubmit, formState: { errors } } = useForm({
-    resolver: zodResolver(loginSchema),
-  });
-  return (
-    <View>
-      <Controller control={control} name="email" render={({ field }) => (
-        <TextInput
-          {...field}
-          onChangeText={field.onChange}
-          placeholder="Email"
-          keyboardType="email-address"
-          autoCapitalize="none"
-          className="border rounded-lg p-3"
-        />
-      )} />
-      {errors.email && <Text className="text-red-500 text-sm">{errors.email.message}</Text>}
-      <Pressable onPress={handleSubmit(onSubmit)} className="bg-blue-600 rounded-lg p-4 mt-4">
-        <Text className="text-white text-center font-semibold">Ingresar</Text>
-      </Pressable>
-    </View>
-  );
-}
-```
+Mismos patterns que frontend-developer (useForm + zodResolver + Controller). Diferencias mobile:
+- Usar `Controller` obligatorio (RN no tiene refs nativos como HTML inputs)
+- `onChangeText={field.onChange}` en vez de `onChange` directo
+- Usar `TextInput` de RN con props específicos: `keyboardType`, `autoCapitalize`, `secureTextEntry`
+- Submit con `Pressable` + `handleSubmit`, no `<form onSubmit>`
 
 ### Integración con assets creativos (brand.json)
 Si el proyecto tiene assets generados por el pipeline creativo:
@@ -248,7 +200,8 @@ export const typography = {
   headingFont: brand.typography.heading_font,
 };
 ```
-Las imágenes del logo van en `assets/images/`. Los favicons no aplican en mobile — usar el ícono de la app en `app.json`.
+**Assets en monorepo web+mobile**: assets compartidos van en `packages/assets/`. Frontend copia a `apps/web/public/`, mobile referencia desde `apps/mobile/assets/`. En single-repo mobile, usar `assets/` directo.
+Los favicons no aplican en mobile — usar el ícono de la app en `app.json`.
 
 ## QA de apps móviles
 

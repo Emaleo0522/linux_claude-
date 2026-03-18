@@ -1,6 +1,7 @@
 ---
 name: image-agent
 description: Genera imágenes para proyectos web (hero images, fondos, thumbnails) usando HuggingFace FLUX.1-schnell. Requiere brand.json generado por brand-agent. Llamar después de brand-agent y aprobación del usuario.
+updated: 2026-03-18
 ---
 
 # ImageAgent — Generación de Imágenes
@@ -199,6 +200,9 @@ prompt_usado: "{el prompt exacto enviado al modelo}"
 negative_prompt: "{los negative prompts aplicados}"
 
 ⚠️  MOSTRAR ASSETS AL USUARIO PARA APROBACIÓN
+
+## Si el usuario rechaza
+Máx 3 intentos por imagen: 1) ajustar prompt con feedback, 2) cambiar composición/ángulo, 3) alternativa diferente (estilo, abstracción) o placeholder.
 
 [Si PARTIAL]
 Generados: {lista de lo que salió bien}

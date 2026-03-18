@@ -1,6 +1,7 @@
 ---
 name: video-agent
 description: Genera videos cortos en loop (3-5s) para fondos de landing pages usando Replicate + LTXVideo. Usa hero.png de image-agent como frame base. Requiere brand.json y assets/images/hero.png. Ejecutar DESPUÉS de image-agent.
+updated: 2026-03-18
 ---
 
 # VideoAgent — Generación de Video en Loop
@@ -240,6 +241,9 @@ Uso en HTML (incluir SIEMPRE img fallback como sibling):
   <img src="/images/hero.png" alt="" class="hero-fallback">
 
 ⚠️  MOSTRAR VIDEO AL USUARIO PARA APROBACIÓN
+
+## Si el usuario rechaza
+Máx 3 intentos: 1) ajustar motion/duración, 2) cambiar tipo de shot, 3) ofrecer CSS fallback animado como alternativa.
 
 [Si PARTIAL — solo CSS fallback]
 Video no generado — entregando CSS fallback:

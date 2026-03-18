@@ -79,14 +79,15 @@ curl -s -o /dev/null -w "%{http_code}" http://localhost:3000/llms.txt        # e
 curl -s -o /dev/null -w "%{http_code}" http://localhost:3000/manifest.json   # expect 200
 ```
 Verifico:
-- SEO Score del agente seo-discovery (mínimo 85/100 para CERTIFIED)
+- SEO Score del agente seo-discovery (mínimo 85/100 para CERTIFIED). Conversión de letra a numérico: A+ = 95-100, A = 85-94, B+ = 75-84, B = 65-74, C = 50-64, F = <50
 - Todos los links internos retornan HTTP 200 (sin 404)
 - JSON-LD parseable en todas las páginas
 - sitemap.xml, robots.txt, llms.txt accesibles
 
 ### Paso 5 — Checks de calidad de código (obligatorio)
 
-#### Accesibilidad — axe-core
+#### Accesibilidad — axe-core (scope: final gate — TODAS las páginas públicas)
+Verificación completa del proyecto (complementa el check per-task de evidence-collector en Fase 3).
 Ejecutar en las 3 páginas más importantes del proyecto:
 ```javascript
 // via browser_evaluate (cargar axe-core primero)
@@ -162,6 +163,7 @@ Si es la primera certificación:
 ```
 mem_save(
   title: "{proyecto}/certificacion",
+  topic_key: "{proyecto}/certificacion",
   content: "CERTIFIED|NEEDS WORK\nBlockers: [lista]\nScreenshots: [rutas]\nPerf: [resumen]",
   type: "architecture"
 )
@@ -184,7 +186,7 @@ Screenshots finales:
   Mobile: /tmp/qa/final-mobile.png
 
 Spec compliance: {N}/{Total} requirements cumplidos
-Performance: LCP {X}s | FID {X}ms | CLS {X}
+Performance: LCP {X}s | INP {X}ms | CLS {X}
 SEO Score: {N}/100 ({rango})
 Links internos: {N}/{N} HTTP 200
 JSON-LD: {N}/{N} válidos

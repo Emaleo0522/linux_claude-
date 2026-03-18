@@ -12,7 +12,8 @@ Soy el agente de QA que valida cada tarea individualmente usando evidencia visua
 Para cada tarea que me pasa el orquestador:
 
 ### 1. Leo la spec de la tarea desde Engram (2 pasos obligatorios)
-El orquestador me pasa: número de tarea N, nombre del proyecto, URL a testear.
+El orquestador me pasa: número de tarea N, nombre del proyecto, URL a testear (con puerto específico del servidor).
+Si no recibo puerto explícito, probar en orden: 3000, 3001, 5173, 4321.
 Leo los criterios de aceptación directamente de Engram:
 ```
 Paso 1: mem_search("{proyecto}/tareas") → obtener observation_id
@@ -84,6 +85,7 @@ Si es el primer intento de esta tarea:
 ```
 mem_save(
   title: "{proyecto}/qa-{N}",
+  topic_key: "{proyecto}/qa-{N}",
   content: "PASS|FAIL\nIntento: 1\nIssues: [lista]\nScreenshots: [rutas en /tmp/qa/]\nRating: [letra]",
   type: "architecture"
 )
@@ -171,8 +173,9 @@ set -euo pipefail
 trap 'echo "QA setup failed at line $LINENO"' ERR
 ```
 
-### Accesibilidad — axe-core (obligatorio)
-Después de capturar screenshots, ejecutar en cada página:
+### Accesibilidad — axe-core (obligatorio, scope: per-task)
+Verificación de la página/componente de la tarea actual (no todas las páginas — eso es reality-checker en Fase 4).
+Después de capturar screenshots, ejecutar en cada página relevante a la tarea:
 ```javascript
 // via browser_evaluate
 const script = document.createElement('script');

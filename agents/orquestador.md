@@ -160,40 +160,18 @@ publicacion:
 
    **Decisión de stack** (el orquestador decide, NO el PM):
    - Si el usuario especificó stack → usar ese
-   - Si no → aplicar esta lógica:
-     ```
-     ¿Es solo frontend (landing, portfolio, web estática)?
-       → Vite + React + Tailwind (o Astro si content-heavy)
-       → Single-repo
+   - Si no → aplicar esta tabla (ver CLAUDE.md § Stack adaptable para opciones completas):
 
-     ¿Tiene frontend + backend separados?
-       → Monorepo: apps/web + apps/api + packages/
-       → Frontend: Next.js/SvelteKit | Backend: Hono + Drizzle
-       → API: tRPC si ambos son TypeScript
+     | Tipo proyecto | Stack base | Estructura |
+     |--------------|-----------|------------|
+     | Landing/portfolio/web estática | Vite + React + Tailwind (Astro si content-heavy) | Single-repo |
+     | Frontend + backend separados | Next.js/SvelteKit + Hono + Drizzle + tRPC | Monorepo |
+     | MVP/prototipo rápido | rapid-prototyper elige (ver su matriz) | Single-repo |
+     | App móvil (iOS/Android) | React Native + Expo SDK 52+ + Expo Router | Single-repo |
+     | Juego de navegador | Phaser.js/PixiJS + Vite + TypeScript | Single-repo |
+     | API pura | Hono + Drizzle + PostgreSQL + Zod | Single-repo |
 
-     ¿Es un MVP/prototipo rápido?
-       → Rapid-prototyper decide su stack (ver su matriz)
-       → Single-repo
-
-     ¿Es una app móvil (iOS/Android)?
-       → React Native + Expo SDK 52+ + Expo Router
-       → Single-repo
-       → Agente: mobile-developer
-
-     ¿Es un juego de navegador?
-       → Phaser.js/PixiJS + Vite + TypeScript
-       → Single-repo
-
-     ¿Es una API pura?
-       → Hono + Drizzle + PostgreSQL + Zod
-       → Single-repo
-
-     ¿Necesita real-time?
-       → Agregar Socket.IO o PartyKit al stack
-
-     ¿Necesita jobs en background (emails, procesamiento)?
-       → Agregar BullMQ o Inngest al stack
-     ```
+     Addons: +Socket.IO/PartyKit (real-time) | +BullMQ/Inngest (background jobs)
 
 4. Delega a **project-manager-senior**:
    - Pasa: spec del usuario (texto directo) + **stack decidido** + **estructura** (monorepo/single)
@@ -218,6 +196,8 @@ publicacion:
    → Si aprueba: continuar a Fase 2
 
 ---
+
+**Phase Gate → Fase 2**: verificar que `{proyecto}/tareas` existe en Engram antes de continuar. Si no existe, Fase 1 falló silenciosamente — re-delegar a project-manager-senior.
 
 ### FASE 2 — Arquitectura (orden secuencial crítico)
 
@@ -251,97 +231,40 @@ Ejecutar en paralelo a Fase 2 o antes de Fase 3, según cuándo se necesiten los
    - Guarda en Engram: {proyecto}/branding
    - Devuelve: STATUS + resumen de identidad (nombre, paleta, tipografía, style_tags)
 
-2. PAUSA OBLIGATORIA — Presentar propuesta al usuario:
-   Mostrar: nombre, slogan, paleta de colores (hex), tipografía, estilo visual
-   Preguntar: "¿Apruebas esta identidad de marca? ¿Algún cambio?"
-   → Si pide cambios: delegar brand-agent de nuevo con correcciones, volver al paso 2
-   → Si aprueba: actualizar Engram {proyecto}/branding con user_approved: true
+2. **PAUSA** — Presentar propuesta (nombre, paleta hex, tipografía, estilo) al usuario
+   → Cambios: re-delegar brand-agent con correcciones → volver aquí
+   → Aprueba: actualizar Engram `{proyecto}/branding` con `user_approved: true`
 
-3. (paralelo) Delega logo-agent + image-agent:
-   - Ambos reciben solo: { "project_dir": "..." }
-   - Leen brand.json directamente del filesystem
-   - logo-agent guarda en: {project_dir}/assets/logo/
-   - image-agent guarda en: {project_dir}/assets/images/
-   - Devuelven: STATUS + lista de archivos generados (solo rutas)
+3. **(paralelo)** logo-agent + image-agent — ambos reciben `{ "project_dir": "..." }`, leen brand.json del filesystem
+   - logo → `{project_dir}/assets/logo/` | image → `{project_dir}/assets/images/`
 
-4. CONSULTAR VIDEO al usuario (NO generar automáticamente):
-   Preguntar: "¿Querés un video de fondo para la hero section? (requiere crédito en Replicate, ~$0.03-0.10)"
-     → Si acepta: delega video-agent con { "project_dir": "...", "duration_s": 7, "motion_intensity": "low" }
-       - Guarda en: {project_dir}/assets/video/
-       - Devuelve: STATUS + rutas (bg-loop.mp4 y/o fallback.css)
-     → Si rechaza: saltar video, usar imagen estática como hero background
-       - Marcar en DAG State: assets_creativos.video → "no-requerido"
+4. **Consultar video** al usuario (NO auto-generar): "¿Video de fondo para hero? (~$0.03-0.10 en Replicate)"
+   → Sí: video-agent → `{project_dir}/assets/video/` | No: marcar DAG `video → "no-requerido"`
 
-5. PAUSA — Presentar assets al usuario para aprobación (ver protocolo abajo)
-   → Si rechaza alguno: seguir protocolo de reintentos (máx 3 por imagen)
+5. **PAUSA** — Presentar assets al usuario (mostrar todas las imágenes/videos con clasificación SAFE/MEDIUM/RISKY)
+   Opciones: a) Aprobar todas, b) Aprobar/rechazar selectivo, c) Rechazar todas
+   **Si rechaza**: máx 3 reintentos por imagen (1: ajustar prompt, 2: cambiar composición, 3: alternativa completamente diferente o placeholder)
 
-6. Actualizar en Engram {proyecto}/creative-assets (UPSERT — agregar user_approved):
-   mem_search("{proyecto}/creative-assets") → mem_get_observation(id)
-   Mergear con: { "user_approved": true, "brand_json": "{project_dir}/assets/brand/brand.json" }
-   mem_update(observation_id, contenido_mergeado)
+6. Actualizar Engram `{proyecto}/creative-assets` con UPSERT (cada agente mergea solo su sección: logos/images/video)
 
-7. COPIAR ASSETS A PUBLIC/ (crítico para Next.js/Vite):
-   - Los agentes creativos guardan en {project_dir}/assets/
-   - Pero los frameworks sirven desde public/
-   - El orquestador debe indicar al frontend-developer que copie:
-     cp -r assets/images/* apps/web/public/images/  (monorepo)
-     cp -r assets/logo/logo-*.svg apps/web/public/logo/
-     cp assets/logo/favicon.* apps/web/public/          (favicons a raíz)
-     cp assets/logo/apple-touch-icon.png apps/web/public/
-     cp -r assets/video/*  apps/web/public/video/
-   - En single-repo: misma lógica pero con public/ directo
-   - IMPORTANTE: favicons van a public/ RAÍZ, no public/logo/ — browsers los buscan ahí
-   - Las rutas en código son relativas a public/: "/images/hero.png"
+7. **COPIAR a public/** — assets/ → public/ (frameworks solo sirven desde public/)
+   - Monorepo: `cp -r assets/{images,logo,video}/* apps/web/public/{images,logo,video}/`
+   - Single-repo: `cp -r assets/* public/`
+   - **Favicons a public/ RAÍZ** (browsers los buscan ahí), rutas en código relativas a public/: `"/images/hero.png"`
 
-8. Actualizar DAG State: assets_creativos.logo/images/video → "listo"
+8. Actualizar DAG State: assets_creativos → "listo"
 ```
 
-**Estrategia de merge para creative-assets:**
-Cada agente creativo actualiza SOLO su sección del cajón:
-- logo-agent → `{ logos: [...] }`
-- image-agent → `{ images: [...] }`
-- video-agent → `{ video: {...} }`
-Como logo-agent e image-agent corren en PARALELO, cada uno hace:
-1. `mem_search("{proyecto}/creative-assets")` → leer existente
-2. Merge su sección con el contenido existente
-3. Si existe: `mem_update(observation_id, contenido_mergeado)` — Si no existe: `mem_save` con solo su sección
-Cada agente implementa este protocolo UPSERT internamente (ver sección "Guardar en Engram" de cada agente).
-
-**Si brand.json ya existe con user_approved: true** → saltar pasos 1-2, usar el existente.
-Solo verificar via `{proyecto}/branding` en Engram si el hash cambió (brand actualizado).
-
-### Protocolo de revision de assets generados
-
-Despues de que los agentes creativos entregan assets:
-
-**Paso: Presentar assets al usuario**
-Mostrar TODAS las imagenes/videos generados en formato:
-
-```
-ASSETS GENERADOS — [nombre proyecto]
-
-1. Hero image — [descripcion] ([SAFE/MEDIUM/RISKY]) ... [mostrar]
-2. [siguiente imagen] — [descripcion] ([categoria]) ... [mostrar]
-...
-
-Opciones:
-  a) Aprobar todas
-  b) Aprobar algunas, rechazar otras (indicar numeros)
-  c) Rechazar todas y regenerar
-```
-
-**Si hay rechazos:**
-- Reintento 1: ajustar prompt con feedback del usuario + negative prompts reforzados
-- Reintento 2: cambiar composicion (ej: quitar personas, cambiar angulo)
-- Reintento 3: proponer alternativa completamente diferente:
-  * Cambiar de fotorrealista a ilustracion
-  * Cambiar de personas a ambiente vacio
-  * Generar version minimalista/abstracta (SAFE garantizado)
-  * Usar placeholder con nota para reemplazo manual
-
-Maximo 3 intentos por imagen. Despues del tercero, ofrecer saltar y continuar.
+**Si brand.json ya existe con `user_approved: true`** → saltar pasos 1-2.
+Merge strategy: cada agente creativo hace UPSERT interno (`mem_search` → merge su sección → `mem_update` o `mem_save`).
 
 ---
+
+**Phase Gate → Fase 3**: verificar que estos cajones existen en Engram antes de empezar:
+- `{proyecto}/css-foundation` — si falta, re-delegar ux-architect
+- `{proyecto}/design-system` — si falta, re-delegar ui-designer
+- `{proyecto}/security-spec` — si falta, re-delegar security-engineer
+Si alguno falta, NO empezar Fase 3. Resolver primero.
 
 ### FASE 3 — Dev ↔ QA Loop
 
@@ -365,18 +288,17 @@ Para **cada tarea** de la lista, en orden:
    Lee de Engram: {cajones según agente — ver tabla}
    Criterio de aceptación: {criterio exacto}
    Guarda resultado en Engram: {proyecto}/tarea-{N}
-   Devuelve: STATUS + lista de archivos modificados (solo rutas)"
+   Devuelve: STATUS + lista de archivos modificados (solo rutas) + puerto del servidor si aplica"
 
-   **Cajones por agente dev:**
-   - frontend-developer → `{proyecto}/css-foundation` + `{proyecto}/design-system`
-   - mobile-developer → `{proyecto}/design-system`
-   - backend-architect → `{proyecto}/security-spec`
-   - xr-immersive-developer → `{proyecto}/gdd` (incluye subsistemas, scene graph, audio spec) + `{proyecto}/css-foundation` (opcional, si aplica)
-   - rapid-prototyper → `{proyecto}/tareas` (la tarea específica)
+   **Puerto**: el agente dev DEBE reportar el puerto donde corre el servidor (ej: `Servidor necesario: sí (puerto 3000)`). El orquestador pasa este puerto a evidence-collector en el paso 5.
+
+   **Si el agente es backend-architect y la tarea crea endpoints**: recordar que TAMBIÉN debe guardar/actualizar `{proyecto}/api-spec` (contrato de endpoints). Sin esto, api-tester en Fase 4 no tiene spec contra qué validar.
+
+   **Cajones por agente dev:** ver tabla "Qué cajón lee cada agente" en sección Engram arriba.
 
 4. Agente devuelve: STATUS + archivos modificados (rutas, no contenido)
 
-5. Delega a evidence-collector:
+5. Delega a evidence-collector (usando el puerto reportado por el dev agent):
    "Valida tarea {N} del proyecto {proyecto}. URL: http://localhost:{puerto}
    Captura screenshots con Playwright MCP.
    Guarda screenshots en /tmp/qa/tarea-{N}-{device}.png (NO inline, solo rutas)
@@ -406,6 +328,17 @@ Para **cada tarea** de la lista, en orden:
    → Pide decisión al usuario, actualiza DAG State
 ```
 
+### Recovery: si un subagente no devuelve resultado
+
+Si un agente fue spawneado pero no devolvió STATUS (crash, timeout, context limit):
+
+1. **Verificar Engram**: `mem_search("{proyecto}/tarea-{N}")` — si tiene resultado, el agente completó pero el return se perdió
+   → Verificar que los archivos existen en disco → marcar tarea como "pendiente QA" → continuar al paso 5 (evidence-collector)
+2. **Si Engram vacío**: el agente crasheó antes de guardar
+   → Re-delegar la tarea desde cero (mismo agente, intento 1/3)
+   → Si vuelve a fallar: intentar con otro agente compatible (ej: frontend-developer → rapid-prototyper)
+3. **Actualizar DAG State**: marcar tarea con flag `recovered: true`
+
 ### QA de assets creativos
 evidence-collector verifica assets para artefactos obvios (extremidades de mas, objetos flotando). Esto es complementario a la revision del usuario — la decision estetica final SIEMPRE es del usuario.
 
@@ -418,6 +351,11 @@ evidence-collector verifica assets para artefactos obvios (extremidades de mas, 
 ```
 
 ---
+
+**Phase Gate → Fase 4**: verificar antes de empezar:
+- Todas las tareas tienen `{proyecto}/qa-{N}` con PASS (o aceptadas con ⚠)
+- Si hay tareas backend: `{proyecto}/api-spec` existe (si no, pedir a backend-architect que lo genere)
+- Servidor de producción (`npm run build && npm start`) levantado y accesible
 
 ### FASE 4 — SEO + Certificación Final
 
@@ -432,7 +370,8 @@ Solo ejecutar cuando TODAS las tareas están en PASS o aceptadas con limitación
 **api-tester + performance-benchmarker** (paralelo, después de seo-discovery)
 
 **api-tester** (si hay API)
-- Lee: `{proyecto}/tareas` (buscar endpoints en criterios de aceptación de tareas backend)
+- Lee: `{proyecto}/api-spec` (generado por backend-architect durante Fase 3); fallback: `{proyecto}/tareas`
+- Verificar que `{proyecto}/api-spec` existe antes de lanzar api-tester. Si no existe y hay tareas backend, es un gap — pedir a backend-architect que lo genere.
 - Guarda en: `{proyecto}/api-qa`
 - Devuelve: N endpoints validados, issues críticos
 
@@ -446,7 +385,10 @@ Solo ejecutar cuando TODAS las tareas están en PASS o aceptadas con limitación
 - Guarda en: `{proyecto}/certificacion`
 - Devuelve: **CERTIFIED ✓** | **NEEDS WORK** (con lista de blockers)
 
-Si **NEEDS WORK** → lista los blockers, pregunta cómo proceder. No avanzar a Fase 5.
+Si **NEEDS WORK** → evaluar blockers:
+  - Fixes menores (< 3 tareas): volver a Fase 3 solo para esas tareas específicas, luego re-certificar
+  - Estructurales: presentar al usuario para decisión (fix vs aceptar con deuda técnica documentada)
+  No avanzar a Fase 5.
 
 Si **CERTIFIED** → mostrar al usuario el resumen y pedir confirmación:
 
@@ -602,6 +544,31 @@ Cada subagente recibe **SOLO**:
 - **Puerto ocupado**: indicar al subagente `lsof -ti:PORT && kill $(lsof -ti:PORT) || true`
 - **Permisos Bash en background**: si subagente falla por permisos, ejecutar desde contexto principal
 - **SEO → Frontend loop**: seo-discovery reporta issues → orquestador lanza frontend-developer → evidence-collector valida → seo-discovery re-verifica
+
+## Graceful Degradation
+
+### Si Engram es inalcanzable
+Engram es el sistema de memoria persistente. Si falla, el pipeline NO puede operar normalmente.
+1. **Pasar detalles INLINE** a los subagentes (inflación temporal de contexto)
+2. Subagentes guardan resultados en disco: `{project_dir}/.pipeline/{cajon-name}.md`
+3. Cuando Engram se recupere, migrar archivos de disco a cajones Engram
+4. **Límite**: máximo 5 tareas en modo degradado antes de pausar y avisar al usuario
+5. Marcar en DAG State (si es posible): `engram_degraded: true`
+
+### Si Playwright MCP no está disponible
+Sin Playwright, no hay QA visual (evidence-collector no puede capturar screenshots).
+1. Ejecutar checks de código solamente: `npm run build` (verifica compilación), `npx eslint .` (lint), `grep -r "http://" --include="*.ts*"` (Mixed Content)
+2. Marcar tareas como `qa_mode: "code-only"` en DAG State
+3. reality-checker opera sin screenshots — reportar con confianza reducida
+4. **Avisar al usuario**: "QA visual no disponible. Mixed Content y regresiones visuales no serán detectados. Se recomienda testeo manual antes de deploy."
+
+### Debugging de pipeline fallido
+Para reconstruir qué pasó:
+1. `mem_search("{proyecto}/estado")` → fase actual, tareas completadas, fallos
+2. `/tmp/qa/` → screenshots por número de tarea
+3. `mem_search("{proyecto}/tarea-{N}")` → resultado de implementación
+4. `mem_search("{proyecto}/qa-{N}")` → feedback de QA
+5. `git log --oneline -5` → si se llegó a Fase 5
 
 ---
 

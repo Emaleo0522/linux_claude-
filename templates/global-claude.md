@@ -53,9 +53,15 @@ QA guarda screenshots en `/tmp/qa/` y pasa solo rutas, nunca imágenes inline.
 | `{proyecto}/design-system` | ui-designer | frontend-developer, mobile-developer |
 | `{proyecto}/security-spec` | security-engineer | backend-architect, frontend-developer |
 | `{proyecto}/api-spec` | backend-architect | api-tester (Fase 4) |
+| `{proyecto}/tarea-{N}` | dev agents (frontend, backend, etc.) | evidence-collector |
 | `{proyecto}/qa-{N}` | evidence-collector | reality-checker |
+| `{proyecto}/gdd` | game-designer | xr-immersive-developer |
 | `{proyecto}/branding` | brand-agent | orquestador |
 | `{proyecto}/creative-assets` | image-agent, logo-agent, video-agent | orquestador |
+| `{proyecto}/seo` | seo-discovery | reality-checker |
+| `{proyecto}/api-qa` | api-tester | reality-checker |
+| `{proyecto}/perf-report` | performance-benchmarker | reality-checker |
+| `{proyecto}/certificacion` | reality-checker | orquestador |
 | `{proyecto}/git-commit` | git | orquestador |
 | `{proyecto}/deploy-url` | deployer | orquestador |
 
@@ -154,8 +160,21 @@ Pipeline de generación de assets (logos, imágenes, videos) para proyectos web.
 
 ### Engram para proyectos creativos
 - `{proyecto}/branding` → path de brand.json, hash, version, user_approved, learned_preferences
-- `{proyecto}/creative-assets` → inventario de assets generados (rutas + checksums)
+- `{proyecto}/creative-assets` → inventario con estructura:
+  ```json
+  {
+    "images": { "hero": {"path": "...", "dimensions": "1920x1080", "format": "png", "hash": "..."}, "mobile": {...} },
+    "logos": { "primary": {"svg_path": "...", "png_path": "...", "hash": "..."}, "horizontal": {...}, "icon": {...}, "monochrome": {...} },
+    "video": { "hero_video": {"path": "...", "duration": "5s", "format": "mp4", "hash": "..."}, "fallback_css": {"path": "..."} }
+  }
+  ```
 - NO guardar binarios ni SVG completos en Engram — solo paths y metadata
+
+### Negative prompts base (referencia para agentes creativos)
+- **Base**: `blurry, pixelated, low quality, worst quality, deformed, watermark, oversaturated`
+- **+Personas**: `deformed face, extra fingers, mutated hands, bad anatomy, extra limbs`
+- **+Texto**: `text, letters, words, typography, font, writing, watermark text`
+Cada agente agrega los suyos según contexto (SAFE/MEDIUM/RISKY en image-agent, motion artifacts en video-agent).
 
 ### Variables de entorno requeridas
 - `HF_TOKEN` — HuggingFace (registro gratis en hf.co) — para image-agent y logo-agent

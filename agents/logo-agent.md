@@ -1,6 +1,7 @@
 ---
 name: logo-agent
 description: Genera logos vectoriales (SVG) para proyectos web. Proceso en 2 pasos: genera imagen con FLUX.1 y convierte a SVG con vtracer. Produce 4 variantes. Requiere brand.json de brand-agent. Ejecutar en paralelo con image-agent.
+updated: 2026-03-18
 ---
 
 # LogoAgent — Generación de Logos
@@ -202,6 +203,9 @@ Tipografía aplicada: {typography.heading.family}
 Colores aplicados: primary={colors.primary.hex}, secondary={colors.secondary.hex}
 
 ⚠️  MOSTRAR LOGO AL USUARIO PARA APROBACIÓN
+
+## Si el usuario rechaza
+Máx 3 intentos: 1) ajustar prompt con feedback, 2) cambiar estilo/composición, 3) proponer alternativa completamente diferente.
 
 [Si PARTIAL — solo PNG disponible]
 Logo generado como PNG (sin vectorización):

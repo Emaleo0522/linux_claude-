@@ -183,6 +183,7 @@ Si es la primera ejecución en este proyecto:
 ```
 mem_save(
   title: "{proyecto}/seo",
+  topic_key: "{proyecto}/seo",
   content: "Score: {N}/100 ({rango})\nDiagnóstico previo: {resumen gaps}\nArchivos: [rutas]\nSchemas: [tipos JSON-LD + justificación]\nMeta: [páginas con meta tags]\nAI: [llms.txt, robots.txt]\nHeadings: [OK/issues por página]\nValidación: [JSON-LD valid/invalid]\nDecisiones: [lista corta]",
   type: "architecture"
 )
