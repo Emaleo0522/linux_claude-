@@ -236,12 +236,18 @@ Los agentes reportan el costo en su STATUS al orquestador. Máximo estimado del 
 ## Best Practices Cross-Cutting (validadas en producción)
 
 ### SEO-Frontend Sync
+- **Keyword mapping anti-canibalizacion**: antes de escribir meta tags, mapear 1 keyword primaria por pagina. NUNCA repetir la misma primaria en dos paginas. El title lleva la keyword al inicio. El h1 la contiene. seo-discovery genera el mapa y frontend-developer alinea el copy.
 - FAQ visible en HTML DEBE coincidir con FAQPage JSON-LD (Google penaliza divergencia)
 - AggregateRating/Reviews JSON-LD solo con datos de testimonios REALES, nunca inventados
-- `@vercel/og` es el método preferido para OG images dinámicos en Next.js (no Pillow/canvas)
-- Páginas con SEO dinámico (colecciones, productos) → Server Component + `generateMetadata`
-- **`llms.txt` + `llms-full.txt` para AI search**: sitios que quieren visibilidad en ChatGPT, Perplexity, Claude deben incluir estos archivos en la raíz. `llms.txt` = descripción concisa + catálogo + contacto. `llms-full.txt` = FAQ completa + descripciones detalladas de productos/servicios. Son como `robots.txt` pero para LLMs.
-- **`robots.txt` con AI crawlers explícitos**: agregar `User-agent: GPTBot`, `Google-Extended`, `anthropic-ai`, `CCBot`, `PerplexityBot`, `Applebot-Extended` con `Allow: /` — los bots respetan esto y es señal de que el sitio quiere ser indexado por IAs
+- `@vercel/og` es el metodo preferido para OG images dinamicos en Next.js (no Pillow/canvas)
+- Paginas con SEO dinamico (colecciones, productos) → Server Component + `generateMetadata`
+- **`llms.txt` + `llms-full.txt` para AI search**: sitios que quieren visibilidad en ChatGPT, Perplexity, Claude deben incluir estos archivos en la raiz. `llms.txt` = descripcion concisa + catalogo + contacto. `llms-full.txt` = FAQ completa + descripciones detalladas de productos/servicios. Son como `robots.txt` pero para LLMs.
+- **`robots.txt` con AI crawlers explicitos**: agregar `User-agent: GPTBot`, `Google-Extended`, `anthropic-ai`, `CCBot`, `PerplexityBot`, `Applebot-Extended` con `Allow: /` — los bots respetan esto y es senal de que el sitio quiere ser indexado por IAs
+
+### Performance Benchmarking
+- **PageSpeed Insights API** para sitios deployados: usar la API de Google directamente (`googleapis.com/pagespeedonline/v5/`) para obtener scores oficiales. No requiere API key para uso basico.
+- **Playwright + Performance API** para localhost: medir Core Web Vitals en el browser via evaluate
+- **Seleccion automatica**: URL publica → PageSpeed API; localhost → Playwright; sin browser → curl timing
 
 ### Performance Web (obligatorio en todos los proyectos)
 - Preconnect + dns-prefetch para dominios externos (Unsplash, Google Fonts, CDNs)
