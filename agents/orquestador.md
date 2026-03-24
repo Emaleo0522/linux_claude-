@@ -115,28 +115,8 @@ El subagente puede saltar `mem_search` e ir directo a `mem_get_observation(id)`.
 ## Sistema de Memoria — Cajones Engram
 
 ### Nombres de cajones (topic keys)
-
-```
-{proyecto}/estado           → DAG state YAML (progreso actual, stack, recuperación post-compactación)
-{proyecto}/tareas           → Lista de tareas del PM con criterios de aceptación
-{proyecto}/css-foundation   → Arquitectura CSS + tokens del UX Architect
-{proyecto}/design-system    → Design system del UI Designer
-{proyecto}/security-spec    → Threat model del Security Engineer
-{proyecto}/gdd              → Game Design Document (solo proyectos de juegos)
-{proyecto}/branding         → path brand.json, hash, version, user_approved (creado por brand-agent)
-{proyecto}/creative-assets  → inventario de assets generados: rutas + checksums (logo, images, video)
-{proyecto}/tarea-{N}        → Resultado de implementación tarea N
-{proyecto}/qa-{N}           → Resultado QA tarea N (PASS/FAIL + ruta screenshot)
-{proyecto}/api-spec         → Contrato de endpoints (generado por backend-architect, leído por api-tester)
-{proyecto}/api-qa           → Resultados del API Tester
-{proyecto}/perf-report      → Benchmarks del Performance Benchmarker
-{proyecto}/certificacion    → Reporte final del Reality Checker
-{proyecto}/git-commit       → Hash, rama y URL del repo tras el push
-{proyecto}/seo              → SEO: meta tags, schemas JSON-LD, sitemap, llms.txt, robots
-{proyecto}/deploy-url       → URL limpia de Vercel tras el deploy
-{proyecto}/costs            → Costo acumulado de APIs creativas (Gemini, Replicate, HuggingFace)
-{proyecto}/discovery-{desc} → Descubrimientos no obvios de subagentes (bugs, workarounds, decisiones)
-```
+> Ver tabla completa en CLAUDE.md § "Topic keys del sistema". Cajones más usados por el orquestador:
+> `{proyecto}/estado`, `{proyecto}/tareas`, `{proyecto}/branding`, `{proyecto}/creative-images`, `{proyecto}/creative-logos`, `{proyecto}/creative-video`, `{proyecto}/certificacion`, `{proyecto}/costs`
 
 ### Protocolo de Engram — Proteger el contexto
 
@@ -173,9 +153,9 @@ NUNCA usar el resultado de mem_search directamente — es una preview cortada.
 | game-designer | nada (recibe spec de mecánicas) | `{proyecto}/gdd` |
 | xr-immersive-developer | `{proyecto}/gdd` | `{proyecto}/tarea-{N}` |
 | brand-agent | nada (recibe brief directo) | `{proyecto}/branding` |
-| logo-agent | nada (lee brand.json del filesystem) | `{proyecto}/creative-assets` (merge) |
-| image-agent | nada (lee brand.json del filesystem) | `{proyecto}/creative-assets` (merge) |
-| video-agent | nada (lee brand.json + hero.png del filesystem) | `{proyecto}/creative-assets` (merge) |
+| logo-agent | nada (lee brand.json del filesystem) | `{proyecto}/creative-logos` |
+| image-agent | nada (lee brand.json del filesystem) | `{proyecto}/creative-images` |
+| video-agent | nada (lee brand.json + hero.png del filesystem) | `{proyecto}/creative-video` |
 | seo-discovery | `{proyecto}/tareas` (estructura de páginas) | `{proyecto}/seo` |
 | evidence-collector | `{proyecto}/tarea-{N}` (criterios de la tarea) | `{proyecto}/qa-{N}` |
 | api-tester | `{proyecto}/api-spec` (generado por backend-architect; fallback: `{proyecto}/tareas`) | `{proyecto}/api-qa` |
@@ -290,7 +270,7 @@ engram_degraded: false            # true si Engram tuvo fallas en esta sesion (G
 
    **Decisión de stack** (el orquestador decide, NO el PM):
    - Si el usuario especificó stack → usar ese
-   - Si no → aplicar esta tabla (ver seccion "Stack adaptable por proyecto" en CLAUDE.md):
+   - Si no → aplicar tabla resumen (detalle completo en CLAUDE.md § "Stack adaptable por proyecto"):
 
      | Tipo proyecto | Stack base | Estructura |
      |--------------|-----------|------------|
