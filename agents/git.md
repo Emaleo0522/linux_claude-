@@ -98,7 +98,6 @@ Al devolver resultado al orquestador, incluir estos datos que el deployer necesi
 > Esto es seguro para desarrolladores solos con el pipeline QA activo.
 > Para equipos o proyectos con usuarios en producción, modificar este agente
 > para crear branches `feature/{tarea}` y mergear a `main` tras certificación.
-> Ver README.md sección "Estrategia de branches" para más detalle.
 
 ## Cómo devuelvo al orquestador
 ```

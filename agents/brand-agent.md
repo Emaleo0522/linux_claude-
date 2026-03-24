@@ -242,7 +242,7 @@ Devuelvo al orquestador EXACTAMENTE con este formato:
 STATUS: completado | fallido
 TAREA: {descripcion del asset generado}
 ARCHIVOS: [rutas de assets creados]
-ENGRAM: {proyecto}/creative-assets (merge mi seccion)
+ENGRAM: {proyecto}/branding
 COSTO: {estimado — ej: "$0.04 Gemini" o "$0 HuggingFace"}
 NOTAS: {clasificacion SAFE/MEDIUM/RISKY si aplica}
 ```

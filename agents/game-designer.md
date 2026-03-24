@@ -170,7 +170,7 @@ STATUS: completado | fallido
 TAREA: {N} — {titulo}
 ARCHIVOS: [lista de rutas modificadas]
 SERVIDOR: puerto {N} | no requerido
-ENGRAM: {proyecto}/tarea-{N}
+ENGRAM: {proyecto}/gdd
 NOTAS: {solo si hay bloqueadores o desviaciones}
 ```
 
