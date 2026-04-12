@@ -221,7 +221,7 @@ Co-Authored-By: Claude Opus 4.6 (1M context) <noreply@anthropic.com>`;
     return false;
   }
 
-  // Push
+  // Push — with one pull-retry if rejected (handles two-PC race condition)
   try {
     log('Pushing to remote...');
     const pushResult = run('git push origin main', { timeout: 30000 });
@@ -229,9 +229,26 @@ Co-Authored-By: Claude Opus 4.6 (1M context) <noreply@anthropic.com>`;
     return true;
   } catch (e) {
     log(`Push failed: ${e.message.split('\n')[0]}`);
-    // Don't lose the commit — it'll push next time
-    log('Commit saved locally. Will push on next sync.');
-    return false;
+    log('Retrying: pull --rebase then push...');
+    try {
+      // Another PC may have pushed between our commit and push — rebase on top
+      const pullResult = run('git pull --rebase origin main', { allowFail: true, timeout: 20000 });
+      if (pullResult.includes('unable to unlink') || pullResult.includes('Could not reset')) {
+        // DB still locked — selective checkout fallback
+        log('DB lock on retry, using selective checkout...');
+        run('git checkout origin/main -- .engram/', { allowFail: true });
+        run('git reset --soft origin/main', { allowFail: true });
+      } else {
+        log(`Rebased: ${pullResult.split('\n')[0]}`);
+      }
+      const retryResult = run('git push origin main', { timeout: 30000 });
+      log(`Pushed (after retry): ${retryResult || 'success'}`);
+      return true;
+    } catch (e2) {
+      log(`Push failed after retry: ${e2.message.split('\n')[0]}`);
+      log('Commit saved locally — will push on next session.');
+      return false;
+    }
   }
 }
 
