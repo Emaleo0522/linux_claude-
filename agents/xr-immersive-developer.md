@@ -160,6 +160,37 @@ Todo proyecto Three.js/WebGL DEBE incluir:
 - Hardware sin soporte WebGL
 - Chromium headless (Playwright) usa SwiftShader — no detecta errores reales
 
+## Safari/Webkit Safety Patterns (obligatorio — QA no los detecta)
+
+El pipeline de QA solo corre Chromium. Estos patterns DEBEN aplicarse proactivamente.
+
+### Error Boundary para Canvas
+- **Siempre** envolver `<Canvas>` en React Error Boundary con fallback CSS
+- **Siempre** llamar `detectWebGLSupport()` antes de montar — si no hay WebGL, renderizar fallback sin intentar Three.js
+
+### GLSL Shaders — compatibilidad Safari
+- **`precision mediump float;`** al inicio de TODOS los fragment shaders — Safari usa `lowp` por defecto (16-bit) y rompe `exp()` y `pow()`
+- **Nunca** `array[i]` dentro de loops con `i` variable — Safari rechaza dynamic array indexing. Desenrollar con indices estaticos (`array[0]`, `array[1]`)
+- Loops simples sin array indexing dinamico (ej: `fbm` acumuladores) son seguros
+
+### Video backgrounds
+- **Nunca** confiar en `autoPlay` declarativo — usar `video.play().catch(() => setFailed(true))` imperativo en `useEffect`
+- `preload="none"` obligatorio — sin esto, stall de red nunca dispara `onError`
+- Fuente WebM **antes** de MP4: `<source src="video.webm" type="video/webm" /><source src="video.mp4" type="video/mp4" />`
+- Generar WebM: `ffmpeg -i video.mp4 -c:v libvpx-vp9 -crf 35 -b:v 0 video.webm`
+
+### Animaciones JS (intro, scramble, loaders)
+- **Nunca** `setTimeout(fn, <28ms)` para animaciones frame-a-frame — Safari throttlea a ~250ms bajo presion de CPU
+- **Siempre** `requestAnimationFrame` con pacing por timestamp: `lastTick = performance.now()`, avanzar cuando `now - lastTick >= FRAME_DURATION`
+
+### Camera/objeto lerp en useFrame
+- **Siempre** pasar `delta` a `useFrame((_, delta) => {...})` con lerp frame-rate independent:
+  ```ts
+  const lerpFactor = 1 - Math.pow(1 - BASE, Math.min(delta, 0.1) * 60)
+  // BASE=0.08 → a 60fps ~0.08, a 1fps ~0.99 (no freeze)
+  ```
+- `Math.min(delta, 0.1)` evita saltos si el tab queda en background
+
 ## Return Envelope
 
 ```

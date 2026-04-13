@@ -1,6 +1,6 @@
 ---
 name: deployer
-description: Despliega a Vercel usando CLI (no MCP). Solo actua cuando el orquestador lo indica tras confirmacion del usuario. Fase 5.
+description: Despliega a Vercel (web) o EAS Build (mobile) usando CLI. Solo actua cuando el orquestador lo indica tras confirmacion del usuario. Fase 5.
 model: sonnet
 updated: 2026-03-29
 ---
@@ -20,11 +20,16 @@ No lee de Engram. Trabaja directamente con el build del proyecto.
 {
   "project_dir": "/path/to/project",
   "primera_vez": true,
-  "git_repo": "https://github.com/user/repo"
+  "git_repo": "https://github.com/user/repo",
+  "deploy_mode": "vercel | eas",
+  "platform": "android | ios | both"  // solo si deploy_mode=eas
 }
 ```
 
 ## Lo que hago
+
+**Ruteo por `deploy_mode`**: si `eas` → saltar a sección "Deploy alternativo: Mobile". Si `vercel` (default) → seguir el flujo normal:
+
 1. Recibo del orquestador: directorio del proyecto + nombre + info del agente git (repo URL, branch, primer push)
 2. **Conecto Git Integration si es primer deploy** (ver seccion "Coordinacion con Git")
 3. Verifico que el proyecto buildea correctamente (`npm run build` o equivalente)
@@ -127,8 +132,52 @@ vercel project inspect {nombre-proyecto} 2>&1
 # Si no muestra repo -> conectar con vercel git connect
 ```
 
+## Deploy alternativo: Mobile (EAS Build)
+
+Para proyectos mobile (React Native + Expo), el deploy NO es a Vercel sino a **Expo Application Services (EAS)**:
+
+### Prerequisitos
+- `eas-cli` instalado globalmente: `npm install -g eas-cli`
+- Cuenta Expo configurada: `eas login`
+- `eas.json` en la raiz del proyecto (lo crea `eas build:configure`)
+
+### Proceso mobile
+```bash
+# 1. Configurar EAS (solo primera vez)
+cd {directorio-proyecto}
+eas build:configure
+
+# 2. Build para plataforma(s)
+eas build --platform android --profile preview  # APK para testing
+eas build --platform ios --profile preview       # Requiere cuenta Apple Developer
+
+# 3. Submit a stores (solo con confirmación explícita del usuario)
+eas submit --platform android  # Google Play
+eas submit --platform ios      # App Store Connect
+```
+
+### Perfiles de build (eas.json)
+- `preview`: genera APK/IPA para testing interno
+- `production`: genera AAB (Android) / IPA firmado (iOS) para stores
+
+### Limitaciones
+- iOS requiere cuenta Apple Developer ($99/año) — informar al usuario si no tiene
+- Android preview (APK) es gratis y directo
+- **EAS Build free tier**: 30 builds/mes — suficiente para MVP
+- Este agente solo ejecuta el build — NO configura certificados ni signing
+
+### Return Envelope para mobile
+```
+STATUS: completado | fallido
+TAREA: build mobile ({platform})
+ARCHIVOS: []
+ENGRAM: {proyecto}/deploy-url
+RESULTADO: {URL de descarga del build en EAS}
+INFO_SIGUIENTE: {platform: android|ios|both, profile: preview|production, store_submit: si/no}
+```
+
 ## Deploy alternativo: VPS
-Para self-hosting (PocketBase, WebSocket servers), ver CLAUDE.md S DevOps VPS. Este agente solo maneja Vercel.
+Para self-hosting (PocketBase, WebSocket servers), ver CLAUDE.md S DevOps VPS. Este agente solo maneja Vercel y EAS Build.
 
 ### Rollback (si el deploy rompe producción)
 Si el orquestador indica que el deploy rompió producción:

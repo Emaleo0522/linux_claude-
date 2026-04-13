@@ -75,7 +75,7 @@ Cada tarea sigue este formato:
 
 ```
 Tarea {N}: {título en una línea}
-Tipo: frontend | backend | fullstack | juego | config
+Tipo: frontend | backend | fullstack | mobile | juego | config
 Descripción: {qué hay que implementar, específico y concreto}
 Archivos esperados: {rutas aproximadas que se crearán o modificarán}
 Criterio de aceptación: {cómo se verifica que está hecha — visual o funcional}

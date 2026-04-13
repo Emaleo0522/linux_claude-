@@ -210,8 +210,14 @@ if [[ -f "$SETTINGS_TEMPLATE" ]]; then
     cp "$CLAUDE_SETTINGS" "$CLAUDE_SETTINGS.bak"
     warn "settings.json existente respaldado en $CLAUDE_SETTINGS.bak"
   fi
-  cp "$SETTINGS_TEMPLATE" "$CLAUDE_SETTINGS"
-  info "settings.json instalado (Engram MCP configurado)"
+  # Replace __CLAUDE_HOME__ placeholder with actual path
+  CLAUDE_HOME_PATH="$HOME/.claude"
+  if [[ "$OSTYPE" == "msys" ]] || [[ "$OSTYPE" == "cygwin" ]]; then
+    # Windows Git Bash: convert to /c/Users/... format
+    CLAUDE_HOME_PATH=$(cygpath -u "$USERPROFILE/.claude" 2>/dev/null || echo "$HOME/.claude")
+  fi
+  sed "s|__CLAUDE_HOME__|$CLAUDE_HOME_PATH|g" "$SETTINGS_TEMPLATE" > "$CLAUDE_SETTINGS"
+  info "settings.json instalado (Engram MCP configurado, paths resueltos)"
 else
   # Fallback: configurar via python
   if command -v python3 &>/dev/null; then
@@ -343,7 +349,7 @@ if [[ "$INSTALL_PIXEL" =~ ^[Yy]$ ]]; then
       npm run build 2>/dev/null || warn "Rebuild con assets fallo"
     fi
 
-    # Add SessionStart hook to settings.json (only if python3 is available)
+    # Add Pixel Bridge hooks to settings.json (only if python3 is available)
     if command -v python3 &>/dev/null; then
       python3 - <<'PYEOF'
 import json, os
@@ -351,13 +357,27 @@ settings_path = os.path.expanduser("~/.claude/settings.json")
 with open(settings_path) as f:
     s = json.load(f)
 s.setdefault("hooks", {})
-s["hooks"]["SessionStart"] = [{
-    "matcher": "",
+
+bridge_path = os.path.expanduser("~/.claude/pixel-bridge/bridge.js")
+bridge_hook = {"type": "command", "command": f"node {bridge_path}", "async": True}
+
+# Add bridge.js to PreToolUse, PostToolUse, Stop (visual feedback per tool call)
+for hook_type in ["PreToolUse", "PostToolUse", "Stop"]:
+    s["hooks"].setdefault(hook_type, [])
+    # Prepend pixel-bridge hook (runs first, async so no blocking)
+    s["hooks"][hook_type].insert(0, {"hooks": [bridge_hook]})
+
+# Add SessionStart for auto-launching the standalone server
+s["hooks"].setdefault("Notification", [])
+s["hooks"]["Notification"].append({
     "hooks": [{
         "type": "command",
-        "command": "bash ~/.claude/pixel-bridge/start.sh"
-    }]
-}]
+        "command": "bash ~/.claude/pixel-bridge/start.sh",
+        "async": True
+    }],
+    "description": "Auto-launches Pixel Bridge server on session start"
+})
+
 with open(settings_path, "w") as f:
     json.dump(s, f, indent=2)
 PYEOF

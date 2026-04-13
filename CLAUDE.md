@@ -23,6 +23,8 @@ Fase 2B Assets visuales → brand-agent → (pausa aprobación) → logo-agent +
 Fase 3  Dev ↔ QA Loop  → dev-agents ↔ evidence-collector (3 reintentos)
 Fase 4  Certificación   → seo-discovery + api-tester + performance-benchmarker + reality-checker
 Fase 5  Publicación     → git (confirmación) → deployer (confirmación)
+
+Modo Modificación → análisis → planificación ligera → mini Fase 3+QA (para proyectos ya completados)
 ```
 
 ### Model routing (Opus / Sonnet)
@@ -39,22 +41,17 @@ El orquestador **NUNCA** hace trabajo real (no lee código, no escribe código, 
 
 ## Gestión de contexto
 
-### Handoffs mínimos
-Los subagentes devuelven al orquestador **solo resúmenes cortos** (STATUS + archivos + issues). Nunca código completo ni contenido largo.
+### Reglas de protección de contexto
+- **Handoffs mínimos**: subagentes devuelven solo STATUS + archivos + issues. Nunca código completo.
+- **Screenshots a disco**: QA guarda en `/tmp/qa/` y pasa solo rutas, nunca imágenes inline.
+- **No duplicar en contexto**: si la info está en Engram, pasar solo el topic_key, no el contenido.
 
-### Screenshots a disco
-QA guarda screenshots en `/tmp/qa/` y pasa solo rutas, nunca imágenes inline.
-
-### Engram (memoria persistente — protege el contexto)
-- **Topic keys**: `{proyecto}/{tipo}` (ej: `mi-app/tareas`, `mi-app/qa-3`)
-- **Lectura siempre en 2 pasos**: `mem_search` → `mem_get_observation` (nunca usar preview truncada directamente)
-- **DAG State**: el orquestador guarda `{proyecto}/estado` despues de cada TAREA completada (no solo fases)
-- **Guardar completo, leer selectivo**: subagentes solo leen los cajones que necesitan, nunca todo
-- **No duplicar en contexto**: si la info esta en Engram, pasar solo la ruta al cajon, no el contenido
-- **Retomar sin inventar**: al reanudar post-compactación, `{proyecto}/estado` tiene todo para continuar
-- **Actualizar, no duplicar**: si un cajon ya existe y se va a reescribir (ej: retry de tarea o QA), usar `mem_update(observation_id, nuevo_contenido)` — nunca crear dos entradas con el mismo topic_key. Buscar con `mem_search` primero para obtener el observation_id
-- **Proactive saves**: subagentes guardan descubrimientos no obvios inmediatamente con `mem_save` (topic key: `{proyecto}/discovery-{descripcion}`)
+### Engram (memoria persistente)
+- **Lectura siempre en 2 pasos**: `mem_search` → `mem_get_observation` (nunca usar preview truncada)
+- **Escritura siempre con topic_key**: evita duplicados en reintentos
+- **Actualizar, no duplicar**: usar `mem_update(observation_id, nuevo)` si el cajón ya existe
 - **Dual-write critico**: `{proyecto}/estado` y `{proyecto}/tareas` se guardan SIEMPRE en Engram + disco (`{project_dir}/.pipeline/`)
+- **Proactive saves**: subagentes guardan descubrimientos no obvios con topic key `{proyecto}/discovery-{desc}`
 
 ### Lectura Engram — bloque canonico (referencia para todos los agentes)
 ```
@@ -68,131 +65,35 @@ else:
 ```
 
 ### Perfil personal del usuario
-Al iniciar **cualquier** sesion (nueva, retomada o activa), el **orquestador** ejecuta `mem_context(scope="personal")` como **paso 0 del Boot Sequence**, antes de cualquier otra acción. Esto carga el perfil laboral y personal del usuario (Leonardo Emanuel Mansilla / @Tio / PM en Reyesoft) y permite trabajar con contexto completo desde el primer mensaje.
+El **orquestador** ejecuta `mem_context(scope="personal")` como **paso 0 del Boot Sequence**. Los hooks NO pueden llamar MCPs. En modo Claude normal, llamar `mem_context(scope="personal")` manualmente al inicio.
 
-**IMPORTANTE**: El hook `session-start-context` NO puede hacer esta llamada — los hooks no tienen acceso a MCPs. Esta responsabilidad es exclusiva del orquestador (ver `orquestador.md` § "Boot Sequence paso 0"). En modo Claude normal (sin orquestador), Claude debe llamar `mem_context(scope="personal")` manualmente al inicio.
+### Resiliencia Engram
+- **Disk fallback**: si Engram falla → `{project_dir}/.pipeline/{cajon}.md`. Orquestador busca Engram primero, luego disco.
+- **Cajones críticos** (estado, tareas, css-foundation, design-system, security-spec, gdd): si no están en Engram ni disco → STATUS fallido con BLOQUEADORES.
+- **Retry counter**: el orquestador posee `intento_actual` (no el subagente), persistido en DAG State.
 
-### Carga progresiva del DAG State (v2.2)
+> **Detalles completos** (Boot Sequence, carga progresiva del DAG State, continuidad entre sesiones, topic keys completa, pre-compact snapshot): ver `orquestador.md`
 
-El DAG State se carga en **2 niveles** para no inflar el contexto innecesariamente:
-
-| Nivel | Contenido | Tokens aprox | Cuando |
-|-------|-----------|--------------|--------|
-| **Boot ligero** | fase_actual, tarea_actual/total, stack (1 linea), ultimo_save | ~50-100 | SIEMPRE al retomar |
-| **Boot completo** | DAG State entero | ~500-2000 | Cambio de fase, escalacion, cambio de scope, certificacion |
-
-El orquestador lee el DAG completo una vez al inicio para extraer el resumen ligero, y luego retiene solo el resumen + el observation_id. Re-lee el completo bajo demanda cuando necesita tomar decisiones.
-
-### Continuidad entre sesiones
-
-Si un usuario abre una NUEVA conversacion y dice "retomar {proyecto}":
-
-1. El orquestador busca `{proyecto}/estado` en Engram (Boot Sequence)
-2. Lee el DAG State completo, extrae resumen ligero, descarta el resto
-3. Presenta al usuario:
-   ```
-   Retomando {proyecto}
-   Fase: {fase_actual}
-   Tareas: {completadas}/{total}
-   Ultima actividad: {ultimo_save}
-
-   ¿Continuo desde donde quedo?
-   ```
-4. No re-ejecuta fases completadas ni re-pregunta decisiones ya tomadas
-5. Si hay una tarea en progreso que no llego a PASS, la re-intenta
-
-**Esto funciona porque TODO el estado esta en Engram, no en la conversacion.**
-**Cualquier persona (u otra sesion de Claude) puede retomar leyendo el DAG State.**
-
-### Topic keys del sistema (referencia rápida)
-| Topic key | Generado por | Leído por |
-|-----------|-------------|-----------|
-| `{proyecto}/estado` | orquestador | orquestador, reality-checker |
-| `{proyecto}/tareas` | project-manager-senior | todos los agentes dev |
-| `{proyecto}/css-foundation` | ux-architect | ui-designer, frontend-developer |
-| `{proyecto}/design-system` | ui-designer | frontend-developer, mobile-developer |
-| `{proyecto}/security-spec` | security-engineer | backend-architect, frontend-developer |
-| `{proyecto}/api-spec` | backend-architect | api-tester (Fase 4) |
-| `{proyecto}/tarea-{N}` | dev agents (frontend, backend, etc.) | evidence-collector |
-| `{proyecto}/qa-{N}` | evidence-collector | reality-checker |
-| `{proyecto}/gdd` | game-designer | xr-immersive-developer |
-| `{proyecto}/branding` | brand-agent + orquestador | orquestador, agentes creativos |
-| `{proyecto}/creative-images` | image-agent | orquestador |
-| `{proyecto}/creative-logos` | logo-agent | orquestador |
-| `{proyecto}/creative-video` | video-agent | orquestador |
-| `{proyecto}/seo` | seo-discovery | reality-checker |
-| `{proyecto}/api-qa` | api-tester | reality-checker |
-| `{proyecto}/perf-report` | performance-benchmarker | reality-checker |
-| `{proyecto}/certificacion` | reality-checker | orquestador |
-| `{proyecto}/git-commit` | git | orquestador |
-| `{proyecto}/costs` | orquestador | orquestador (resumen de costos API del pipeline creativo) |
-| `{proyecto}/deploy-url` | deployer | orquestador |
-| `codepen-vault/{slug}` | codepen-explorer | codepen-explorer, frontend-developer |
-| `{proyecto}/discovery-{desc}` | cualquier subagente (proactive saves) | busqueda futura via mem_search |
-| `system/audit-latest` | self-auditor | orquestador (health check) |
-
-### Resiliencia Engram (fallbacks validados en auditoría 2026-04-07)
-- **Disk fallback para escritura**: si `mem_save`/`mem_update` falla → escribir a `{project_dir}/.pipeline/{cajon}.md`. Orquestador busca primero en Engram, luego en `.pipeline/`
-- **Null observation_id en lectura**: cajones críticos (tareas, css-foundation, design-system, security-spec, gdd) → buscar fallback en disco → si no existe, STATUS fallido con BLOQUEADORES. Cajones opcionales → continuar con defaults. Cajones QA → marcar como "no validada"
-- **Retry counter**: el orquestador posee `intento_actual` (no el subagente). Se pasa en cada handoff a evidence-collector y se persiste en DAG State
-- **pre-compact snapshot (v2.2)**: guarda metadata de sesion (tool count, cwd, pipeline status) a disco Y emite mensaje critico via stderr instruyendo a Claude a hacer dual-write del DAG State antes de compactar. El orquestador DEBE responder al mensaje "COMPACTION IMMINENT" haciendo mem_update + disk write antes de que proceda la compactacion
-
-## Hook System (capa reactiva — v2.1, auditada 2026-04-07)
+## Hook System (13 hooks, auditados 2026-04-12 — 11/11 HEALTHY)
 
 Hooks interceptan tool calls en tiempo real. Configurados en `~/.claude/settings.json`. Scripts en `~/.claude/hooks/`.
 
-### Hooks activos
+| Hook | Accion |
+|------|--------|
+| `block-no-verify` | **BLOQUEA** git --no-verify, rm -rf, git reset --hard, DROP TABLE, chmod 777, curl\|sh |
+| `config-protection` | **BLOQUEA** secrets (.env, .pem, .key). **ADVIERTE** configs de linting |
+| `quality-gate` | **ADVIERTE** debugger, .only(), @ts-ignore, secrets hardcodeados |
+| `console-log-warning` | **ADVIERTE** console.log/warn/error en produccion (ignora tests) |
+| `suggest-compact` | **ADVIERTE** cada ~50 tool calls (async) |
+| `pre-compact-engram` | **GUARDA** snapshot a disco antes de compactar (v2.2) |
+| `cost-tracker` | **REGISTRA** tool calls por categoria (async) |
+| `session-summary` | **LOGUEA** actividad en JSONL (async) |
+| `engram-sync` | **SINCRONIZA** Engram con GitHub al parar sesion (async, 60s) |
+| `session-start-context` | **CARGA** contexto de sesion anterior al iniciar |
 
-| Hook | Tipo | Matcher | Accion |
-|------|------|---------|--------|
-| `block-no-verify` | PreToolUse | Bash | **BLOQUEA** git --no-verify, --no-gpg-sign, rm -rf, git reset --hard, git clean -f, DROP TABLE/DATABASE, chmod 777, curl\|sh |
-| `config-protection` | PreToolUse | Write\|Edit | **BLOQUEA** edicion de secrets (.env, .pem, .key, credentials). **ADVIERTE** al modificar configs de linting/formatting |
-| `quality-gate` | PostToolUse | Write\|Edit | **ADVIERTE** debugger, .only(), @ts-ignore, @ts-nocheck, secrets/API keys hardcodeados en JS/TS |
-| `console-log-warning` | PostToolUse | Write\|Edit | **ADVIERTE** console.log/warn/error en codigo de produccion (ignora tests) |
-| `suggest-compact` | PostToolUse | (global) | **ADVIERTE** cada ~50 tool calls con contexto de fase/tarea del pipeline (async) |
-| `pre-compact-engram` | PreCompact | (lifecycle) | **GUARDA** snapshot a disco + **INSTRUYE** a Claude a hacer dual-write del DAG State antes de compactar (v2.2) |
-| `cost-tracker` | PostToolUse | (global) | **REGISTRA** cada tool call con categoria, subagente, modelo (async) |
-| `session-summary` | Stop | (lifecycle) | **LOGUEA** actividad de sesion en JSONL para recovery (async) |
-| `engram-sync` | Stop | (lifecycle) | **SINCRONIZA** memorias Engram con GitHub automaticamente (async, 60s timeout) |
-| `session-start-context` | Notification | (lifecycle) | **CARGA** contexto de sesion anterior (snapshot pre-compact + metricas) + health check de hooks. NOTA: los hooks NO pueden llamar MCPs — `mem_context(scope="personal")` lo ejecuta el orquestador en Boot Sequence paso 0 |
+**Comportamiento**: Exit 2 = BLOCK | Exit 0 + stderr = WARN | Fail-open (nunca rompe el flujo)
 
-### Comportamiento de hooks
-- **Exit 2** = BLOCK (solo PreToolUse puede bloquear)
-- **Exit 0 + stderr** = WARN (el mensaje llega a Claude como contexto)
-- **Exit 0 silencioso** = ALLOW (no consume tokens)
-- **Fail-open**: si un hook crashea, permite la operacion (nunca rompe el flujo)
-- **async: true**: el hook no bloquea la respuesta (suggest-compact usa esto)
-
-### Self-audit
-Ejecutar `node ~/.claude/hooks/audit-system.js` para validar el sistema completo:
-- T1: Catalog sync (agentes en disco vs esperados)
-- T2: Hook integrity (archivos existen, no crashean)
-- T3: Protocol compliance (frontmatter, name, protocol ref)
-- T4: Settings structure (JSON valido, Engram habilitado)
-- T5: Hook performance (todos deben ser <500ms)
-- T6: Snapshot directory (existe)
-- T7: Hook functional tests
-- T8: Model routing (todos los agentes tienen modelo válido)
-- T9: CLAUDE.md sync (entity count y tools table)
-- T10: Reference files (12 archivos de referencia presentes)
-- T11: Output files (logs y snapshots escribibles)
-
-Resultado: HEALTHY (11/11) | DEGRADED (8-10/11) | BROKEN (<8/11)
-
-### Cost report
-Ejecutar `node ~/.claude/hooks/cost-report.js` para ver uso de herramientas:
-- Desglose por categoria (agent, exec, file, search, memory, browser)
-- Subagentes invocados y frecuencia
-- Top tools por numero de llamadas
-- Opciones: `--last=50` (ultimos N), `--agents-only` (solo subagentes)
-
-### Learning index (continuous learning ligero)
-Indice local de descubrimientos que complementa Engram proactive saves:
-- `node ~/.claude/hooks/learning-index.js --list` — ver todos los descubrimientos
-- `node ~/.claude/hooks/learning-index.js --search=keyword` — buscar por keyword
-- `node ~/.claude/hooks/learning-index.js --add "Titulo|Contenido"` — agregar discovery
-- Auto-tagging por tecnologias mencionadas (React, Next.js, TypeScript, etc.)
-- Max 200 entries (auto-trim)
+**Utilidades manuales**: `node ~/.claude/hooks/audit-system.js` (health check) | `cost-report.js` (uso de tools) | `learning-index.js` (discoveries)
 
 ## Herramientas por agente
 
@@ -219,7 +120,7 @@ Indice local de descubrimientos que complementa Engram proactive saves:
 | logo-agent | Read, Write, Bash, Engram MCP |
 | video-agent | Read, Write, Bash, Engram MCP |
 | git | Bash (git, gh), Engram MCP |
-| deployer | Bash (vercel), Engram MCP |
+| deployer | Bash (vercel, eas), Engram MCP |
 | codepen-explorer | Playwright MCP (browser_navigate, browser_evaluate, browser_snapshot, browser_click, browser_wait_for, browser_take_screenshot), Engram MCP |
 | self-auditor | Read, Bash, Glob, Grep, Engram MCP |
 | build-resolver | Read, Write, Edit, Bash, Grep, Glob, Engram MCP |
@@ -253,7 +154,7 @@ Ver tabla completa de inputs/outputs por agente en `orquestador.md` § "Qué caj
 - Los subagentes guardan sus propios resultados en Engram con topic keys del proyecto
 - Solo **evidence-collector** y **reality-checker** hacen QA visual
 - Solo **git** hace commits/push — nunca un agente dev
-- Solo **deployer** despliega a Vercel
+- Solo **deployer** despliega (Vercel para web, EAS Build para mobile)
 - git y deployer actúan **solo con confirmación del usuario** — pero si el mensaje original ya incluía "sube", "git", "deploy", "push", "publica" o similar, eso **ya es la confirmación**. No volver a preguntar.
 - Si el orquestador devuelve una pregunta de confirmación sobre una acción que el usuario ya autorizó en su mensaje, main Claude debe continuar el agente con `SendMessage` respondiendo la respuesta implícita — no dejar el agente suspendido.
 - Cada tarea dev pasa por **evidence-collector** antes de avanzar (máx 3 reintentos)
@@ -335,162 +236,50 @@ Nothing Design es un design system inspirado en Nothing Phone/tech (tipografía 
 - **Reglas clave**: postgres.js (no pg), Transaction Pooler (puerto 6543), `prepare: false`, dynamic imports en route handler, `toCleanRequest()` para Request limpio, `getSessionCookie` con `cookiePrefix`
 
 ## Agentes creativos — Assets visuales
-Pipeline de generación de assets (logos, imágenes, videos) para proyectos web.
 
-### Orden de ejecución obligatorio
-1. **brand-agent** → genera `assets/brand/brand.json` con identidad completa
-2. Orquestador presenta propuesta al usuario → **PAUSA PARA APROBACIÓN**
-3. **logo-agent** + **image-agent** → en paralelo, ambos leen `brand.json`
-4. **video-agent** → después de image-agent (necesita `assets/images/hero.png`)
+> El flujo completo (orden, gates, pausas, manejo de errores, cost tracking) está en `orquestador.md` § "FASE 2B". Esta sección solo tiene las reglas que aplican fuera del orquestador.
 
-### Reglas críticas
+- **Orden obligatorio**: brand-agent → (aprobación usuario) → logo-agent + image-agent (paralelo) → video-agent
 - **brand-agent SIEMPRE primero** — ningún agente creativo funciona sin `brand.json`
-- **Aprobación de marca antes de generar assets** — no auto-generar sin confirmación del usuario
-- Los agentes leen brand.json del filesystem, el orquestador solo pasa `project_dir`
-- El orquestador guarda `{proyecto}/branding` en Engram con `user_approved: true` tras aprobación
-- Si brand.json ya existe y `user_approved: true` → saltar brand-agent, usar existente
-- video-agent entrega siempre un `fallback.css` aunque el video falle
-
-### Engram para proyectos creativos
-- `{proyecto}/branding` → path de brand.json, hash, version, user_approved, learned_preferences (escrito por brand-agent, actualizado por orquestador con user_approved)
-- `{proyecto}/creative-images` → inventario de imágenes generadas (paths, dimensions, format, hash)
-- `{proyecto}/creative-logos` → inventario de logos (svg_path, png_path, hash, variantes)
-- `{proyecto}/creative-video` → inventario de video (path, duration, format, fallback_css)
-- Cada agente creativo escribe SOLO su cajón — sin race conditions ni merge paralelo
+- **NO auto-generar assets sin confirmación del usuario**
+- Cada agente creativo escribe SOLO su cajón Engram — sin race conditions
 - NO guardar binarios ni SVG completos en Engram — solo paths y metadata
-
-### Negative prompts base (referencia para agentes creativos)
-- **Base**: `blurry, pixelated, low quality, worst quality, deformed, watermark, oversaturated`
-- **+Personas**: `deformed face, extra fingers, mutated hands, bad anatomy, extra limbs`
-- **+Texto**: `text, letters, words, typography, font, writing, watermark text`
-Cada agente agrega los suyos según contexto (SAFE/MEDIUM/RISKY en image-agent, motion artifacts en video-agent).
-
-### Cost tracking para agentes creativos
-El orquestador mantiene un cajón `{proyecto}/costs` con el costo estimado por invocación de API:
-- brand-agent: $0 (sin API externa)
-- image-agent (Gemini): ~$0.02-0.04/imagen | image-agent (HuggingFace): $0 (free tier)
-- logo-agent (Gemini): ~$0.02-0.04/logo | logo-agent (HuggingFace): $0 (free tier)
-- video-agent: ~$0.03-0.10/video (Replicate)
-Los agentes reportan el costo en su STATUS al orquestador. Máximo estimado del pipeline creativo completo: ~$0.40 (con 3 reintentos de video + Gemini).
 
 ### Variables de entorno requeridas
 
-| Variable | Servicio | Costo | Cómo obtener | Usado por |
-|----------|----------|-------|-------------|-----------|
-| `GEMINI_API_KEY` | Google AI Studio | ~$0.02-0.04/img (billing requerido) | [aistudio.google.com/apikey](https://aistudio.google.com/apikey) → habilitar billing en Google Cloud | image-agent, logo-agent |
-| `HF_TOKEN` | HuggingFace | Gratis (free tier) | [huggingface.co/settings/tokens](https://huggingface.co/settings/tokens) | image-agent, logo-agent |
-| `REPLICATE_API_TOKEN` | Replicate | ~$0.03-0.10/video | [replicate.com/account/api-tokens](https://replicate.com/account/api-tokens) | video-agent |
+| Variable | Servicio | Costo |
+|----------|----------|-------|
+| `GEMINI_API_KEY` | Google AI Studio | ~$0.02-0.04/img (billing requerido) |
+| `HF_TOKEN` | HuggingFace | Gratis (free tier) |
+| `REPLICATE_API_TOKEN` | Replicate | ~$0.03-0.10/video |
 
-**Gemini requiere billing**: la generación de imágenes por API NO funciona en el free tier de Google AI Studio. Hay que habilitar facturación en el proyecto de Google Cloud asociado. Sin billing, usar HuggingFace (gratis).
-
-**Al menos una key de imagen es obligatoria**: `GEMINI_API_KEY` o `HF_TOKEN`. Si ambas están, Gemini es primario con HuggingFace como fallback.
-
-**Resolución de env vars** (cascada de búsqueda): variable de entorno del sistema → `.env` en el proyecto → `~/.claude/.env` (fallback global)
+Al menos una key de imagen obligatoria (`GEMINI_API_KEY` o `HF_TOKEN`). Resolución: env var del sistema → `.env` del proyecto → `~/.claude/.env`
 
 ## Best Practices Cross-Cutting (validadas en producción)
 
-### SEO-Frontend Sync
-- **Keyword mapping anti-canibalizacion**: antes de escribir meta tags, mapear 1 keyword primaria por pagina. NUNCA repetir la misma primaria en dos paginas. El title lleva la keyword al inicio. El h1 la contiene. seo-discovery genera el mapa y frontend-developer alinea el copy.
-- FAQ visible en HTML DEBE coincidir con FAQPage JSON-LD (Google penaliza divergencia)
-- AggregateRating/Reviews JSON-LD solo con datos de testimonios REALES, nunca inventados
-- `@vercel/og` es el metodo preferido para OG images dinamicos en Next.js (no Pillow/canvas)
-- Paginas con SEO dinamico (colecciones, productos) → Server Component + `generateMetadata`
-- **`llms.txt` + `llms-full.txt` para AI search**: sitios que quieren visibilidad en ChatGPT, Perplexity, Claude deben incluir estos archivos en la raiz. `llms.txt` = descripcion concisa + catalogo + contacto. `llms-full.txt` = FAQ completa + descripciones detalladas de productos/servicios. Son como `robots.txt` pero para LLMs.
-- **`robots.txt` con AI crawlers explicitos**: agregar `User-agent: GPTBot`, `Google-Extended`, `anthropic-ai`, `CCBot`, `PerplexityBot`, `Applebot-Extended` con `Allow: /` — los bots respetan esto y es senal de que el sitio quiere ser indexado por IAs
-
-### Performance Benchmarking
-- **PageSpeed Insights API** para sitios deployados: usar la API de Google directamente (`googleapis.com/pagespeedonline/v5/`) para obtener scores oficiales. No requiere API key para uso basico.
-- **Playwright + Performance API** para localhost: medir Core Web Vitals en el browser via evaluate
-- **Seleccion automatica**: URL publica → PageSpeed API; localhost → Playwright; sin browser → curl timing
-
-### Performance Web (obligatorio en todos los proyectos)
-- Preconnect + dns-prefetch para dominios externos (Unsplash, Google Fonts, CDNs)
-- **Preconnect al backend propio también**: si hay API calls a un origen externo (PocketBase, Express, etc.), agregar `<link rel="preconnect" href="https://mi-backend.com">` — ahorra el DNS lookup en el primer fetch
-- `manifest.json` básico siempre (PWA-ready, mejora Lighthouse)
-- `theme-color` meta tag para mobile browsers
-- Google Search Console verification tag como placeholder (listo para reemplazar)
-- **`<link rel="preload" as="image">` para el LCP element**: si la imagen más grande del viewport está en CSS o tiene `loading="auto"`, el browser la descubre tarde. Identificar el LCP y agregarlo como preload explícito en `<head>`
-- **PNG grandes como background → WebP obligatorio**: imágenes PNG usadas como `background-image` en CSS pueden superar 1MB fácilmente. Convertir a WebP (ahorro típico >90%). La imagen no aparece en el HTML, el browser la descubre al parsear CSS — doble penalización.
+> Las best practices de SEO, performance web, accesibilidad, WebGL safety y Mixed Content ya están integradas en los agentes que las aplican (frontend-developer.md, seo-discovery.md, evidence-collector.md, xr-immersive-developer.md). Esta sección solo contiene patterns que NO están en ningún agente.
 
 ### Vercel — Sitios Estáticos
-- **`Cache-Control: max-age=0` es el default de Vercel** para todos los assets estáticos — el browser re-valida en cada visita. Para añadir browser caching, crear `vercel.json` con headers explícitos: `max-age=604800` para `/assets/**`, `max-age=3600` para `/js/**` y `/css/**`
-- **Security headers via `vercel.json`**: Vercel no agrega X-Frame-Options, X-Content-Type-Options, Referrer-Policy ni Permissions-Policy por defecto. Agregarlos en `vercel.json` bajo `"source": "/(.*)"`. Plantilla mínima:
-  ```json
-  { "headers": [{ "source": "/(.*)", "headers": [
-    { "key": "X-Content-Type-Options", "value": "nosniff" },
-    { "key": "X-Frame-Options", "value": "SAMEORIGIN" },
-    { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" },
-    { "key": "Permissions-Policy", "value": "camera=(), microphone=(), geolocation=()" }
-  ]}]}
-  ```
-- **Admin panel en sitio estático**: agregar en `vercel.json` un header `X-Robots-Tag: noindex, nofollow` + `Cache-Control: no-store` para la ruta `/admin.html` — evita que Google indexe el panel y que browsers cacheen la sesión
-
-### PocketBase
-- **Referencia completa**: `~/.claude/agents/pocketbase-reference.md` — gotchas de boolean fields, rules, auth, sort, Docker, HTTPS
+- **`Cache-Control: max-age=0` es el default de Vercel**. Para browser caching, crear `vercel.json` con headers: `max-age=604800` para `/assets/**`, `max-age=3600` para `/js/**` y `/css/**`
+- **Security headers via `vercel.json`**: agregar X-Content-Type-Options (nosniff), X-Frame-Options (SAMEORIGIN), Referrer-Policy, Permissions-Policy bajo `"source": "/(.*)"`. Vercel no los agrega por defecto.
+- **Admin panel en sitio estático**: `X-Robots-Tag: noindex, nofollow` + `Cache-Control: no-store` para `/admin.html`
 
 ### CSS Patterns (validados en producción)
-- **`::after` para background images**: mejor que un div extra. El pseudo-elemento va con `position: absolute; inset: 0; z-index: 0; pointer-events: none`. Los hijos del contenedor necesitan `position: relative; z-index: 1`.
-- **`max()` para secciones full-width con contenido centrado**: `padding: Xpx max(24px, calc((100vw - 1200px) / 2))` — en pantallas anchas centra el contenido, en mobile mantiene mínimo de 24px. Reemplaza el patrón `max-width + margin: auto` sin perder responsividad.
-- **`translateX` en `position: fixed` puede fijar el scroll horizontal**: al animar un toast/modal hacia afuera del viewport con `translateX(400px)`, el browser puede crear scroll horizontal y quedar stuck en esa posición. Usar `translateY` (vertical) para estas animaciones.
-- **Clases genéricas colisionan entre admin y sitio público**: si `admin.html` e `index.html` comparten clase `.stat-number`, un `querySelectorAll('.stat-number')` en el admin encuentra los elementos equivocados. Usar IDs específicos o clases prefijadas (`admin-stat-number`) para elementos exclusivos del panel.
+- **`::after` para background images**: pseudo-elemento con `position: absolute; inset: 0; z-index: 0; pointer-events: none`. Hijos con `position: relative; z-index: 1`.
+- **`max()` para secciones full-width centradas**: `padding: Xpx max(24px, calc((100vw - 1200px) / 2))` — reemplaza `max-width + margin: auto`.
+- **`translateX` en `position: fixed` puede fijar scroll horizontal**: usar `translateY` para animar toasts/modales fuera del viewport.
+- **Clases genéricas colisionan entre admin y sitio público**: usar IDs específicos o clases prefijadas para paneles admin.
 
-### Accesibilidad (obligatorio en todos los proyectos)
-- **axe-core en QA**: evidence-collector y reality-checker inyectan axe-core 4.10.0 desde CDN en el navegador durante testing con Playwright. 0 violaciones critical/serious para PASS.
-- **eslint-plugin-jsx-a11y**: siempre incluir en proyectos React/Next.js — atrapa errores de a11y en build time
-- **Stylelint**: ejecutar `stylelint "**/*.css"` en proyectos con CSS custom. Reglas mínimas: `no-descending-specificity`, `declaration-block-no-duplicate-properties`, `no-duplicate-selectors`
-- **Skip-nav link**: toda app con navbar debe tener `<a href="#main-content" class="skip-nav">Skip to content</a>` como primer hijo de `<body>`
-- **Focus trap en modales**: todo modal/drawer debe atrapar el foco con `focus-trap-react` o equivalente
+### Bundle Size Gates
+- **bundlewatch** en `package.json`: main < 250KB gzip, vendor < 150KB gzip, páginas < 50KB gzip. Gate en Fase 4.
 
-### Bundle Size Gates (performance)
-- **bundlewatch**: configurar en `package.json` con límites por bundle. Gate obligatorio en Fase 4 si el proyecto tiene build JS.
-- Límites recomendados: main bundle < 250KB gzip, vendor < 150KB gzip, páginas individuales < 50KB gzip
+### QA & Certificación (reglas que NO están en agentes)
+- Testear contra **build de producción** (`npm run build && npm start`), no dev server
+- SEO Score mínimo 85/100 para certificación
+- **Playwright solo corre Chromium** — issues Safari/Webkit NO detectados. Para WebGL, aplicar safety patterns ANTES de Fase 4.
 
-### WebGL / Three.js / R3F — Safety Patterns (obligatorio en proyectos con Canvas 3D)
-
-Estos patrones son **obligatorios** cuando frontend-developer o xr-immersive-developer usan Three.js, R3F, PixiJS o cualquier Canvas WebGL. El pipeline fue desarrollado en Chrome — Safari, Dia y Chrome en hardware limitado fallan silenciosamente sin estos guards.
-
-#### Error handling (sin esto la escena desaparece sin aviso)
-- **Siempre** envolver `<Canvas>` en un React Error Boundary con fallback CSS. Ver patrón en `kahntus-portfolio/src/components/WebGLErrorBoundary.tsx`
-- **Siempre** llamar `detectWebGLSupport()` antes de montar el Canvas — si WebGL no está disponible, renderizar el fallback directamente sin intentar montar Three.js
-- El boundary captura tanto errores de JS como pérdidas de contexto WebGL
-
-#### GLSL Shaders — compatibilidad Safari/Webkit
-- **`precision mediump float;`** al inicio de TODOS los fragment shaders — Safari usa `lowp` por defecto (floats de 16-bit) lo que rompe completamente `exp()` y `pow()`
-- **Nunca** usar `array[i]` dentro de loops donde `i` es variable de loop — el compilador GLSL de Safari rechaza dynamic array indexing en branches. Desenrollar manualmente con índices estáticos (`array[0]`, `array[1]`, etc.)
-- Loops simples sin array indexing dinámico (ej: `fbm` acumuladores) son seguros
-
-#### Video backgrounds
-- **Nunca** confiar en el atributo declarativo `autoPlay` — usar `video.play().catch(() => setFailed(true))` imperativo en `useEffect`
-- Agregar `preload="none"` — sin esto, un stall de red nunca dispara `onError` y el video queda en estado indeterminado para siempre
-- Poner fuente WebM **antes** del MP4: `<source src="video.webm" type="video/webm" /><source src="video.mp4" type="video/mp4" />`
-- Generar WebM con: `ffmpeg -i video.mp4 -c:v libvpx-vp9 -crf 35 -b:v 0 video.webm`
-
-#### Animaciones JS (intro, scramble, loaders)
-- **Nunca** usar `setTimeout(fn, <28ms)` para animaciones frame-a-frame — Safari throttlea `setTimeout` a ~250ms bajo presión de CPU, congelando la animación a mitad
-- **Siempre** usar `requestAnimationFrame` con pacing por timestamp: guardar `lastTick = performance.now()` y solo avanzar cuando `now - lastTick >= FRAME_DURATION`
-
-#### Camera/objeto lerp en useFrame
-- **Siempre** pasar `delta` a `useFrame((_, delta) => {...})` y usar lerp frame-rate independent:
-  ```ts
-  const lerpFactor = 1 - Math.pow(1 - BASE, Math.min(delta, 0.1) * 60)
-  // BASE=0.08 → a 60fps da ~0.08, a 1fps da ~0.99 (no freeze)
-  ```
-- El `Math.min(delta, 0.1)` evita saltos bruscos si el tab queda en background
-
-#### Limitación conocida del pipeline de QA
-- **Playwright (evidence-collector, reality-checker) solo corre Chromium** — issues de Safari/Webkit/Dia NO son detectados por el QA automatizado
-- Para proyectos con WebGL, aplicar obligatoriamente todos los safety patterns de esta sección ANTES de Fase 4 — no se puede detectar en QA
-
-### QA & Certificación
-- Siempre testear contra **build de producción** (`npm run build && npm start`), no dev server
-- Matar procesos en puerto antes de levantar servidor de test (`lsof -ti:PORT && kill ...`)
-- SEO Score mínimo 85/100 para certificación (reality-checker lo valida)
-- Links internos: todos deben retornar HTTP 200 (verificar con sitemap.xml)
-- JSON-LD: todos los bloques deben ser parseables (validar con `python3 -m json.tool`)
-- **Mixed Content check obligatorio**: si el frontend va a HTTPS (Vercel, Netlify, etc.), verificar SIEMPRE que el backend también tiene HTTPS antes de pushear. El error es silencioso — la app cae al fallback sin mostrar nada en la UI.
-
-### DevOps VPS
-- **Referencia completa**: `~/.claude/agents/devops-vps-reference.md` — Mixed Content HTTPS, Oracle Cloud firewalls, nginx + Let's Encrypt
+### Referencias externas
+- **PocketBase**: `pocketbase-reference.md` | **DevOps VPS**: `devops-vps-reference.md`
 
 ## Overrides Windows — Diferencias con Linux/Claude Code
 

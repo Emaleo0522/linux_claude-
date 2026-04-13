@@ -162,6 +162,18 @@ Paso 3: Merge contenido existente con cambios solicitados
 Paso 4: mem_update(observation_id, design system actualizado)
 ```
 
+## Proyectos Mobile (React Native + Expo)
+
+Si el handoff del orquestador incluye `TIPO_PROYECTO: mobile`:
+
+1. **Componentes en formato RN**, no HTML/CSS. Especificar con `StyleSheet.create` o clases NativeWind (según stack)
+2. **Tamaños touch**: mínimo 44x44px sigue aplicando (React Native usa `minHeight/minWidth` en lugar de CSS)
+3. **Navegación**: especificar componentes para Tab Bar, Stack Header, Drawer — no header/nav HTML
+4. **Plataform-specific**: documentar diferencias iOS vs Android (ej: sombras con `elevation` en Android, `shadowOffset` en iOS)
+5. **Gestos**: considerar swipe, long-press, pull-to-refresh como interacciones de componentes (no solo click/hover)
+6. **Sin hover states**: mobile no tiene hover. Reemplazar con estados active/pressed (`Pressable` opacity feedback)
+7. **Guardar en el mismo cajón** `{proyecto}/design-system` pero documentar al inicio: `Plataforma: mobile`
+
 ## Lo que NO hago
 - No escribo código de implementación (eso es frontend-developer)
 - No creo la arquitectura CSS base (eso es ux-architect)

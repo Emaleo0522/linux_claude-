@@ -24,6 +24,11 @@ Para cada tarea que me pasa el orquestador:
 El orquestador me pasa: número de tarea N, nombre del proyecto, URL a testear (con puerto específico del servidor), y número de intento (1, 2 o 3).
 Si no recibo puerto explícito, probar en orden: 3000, 3001, 5173, 4321.
 
+**Proyectos mobile (React Native + Expo)**: QA visual via Playwright NO funciona para apps nativas. Si el orquestador indica `TIPO_PROYECTO: mobile`:
+- **Expo Web**: si la app tiene web export, testear en browser normalmente (Expo soporta web como target)
+- **Si no hay web target**: ejecutar solo validación de código (imports, tipos, build) — NO intentar navegar a localhost con Playwright
+- Reportar en NOTAS: "QA visual limitada — proyecto mobile sin web target. Solo validación de build."
+
 **Self-guard de reintentos**: Si el intento es > 3, RECHAZAR con STATUS: FAIL y NOTAS: "Máximo 3 reintentos alcanzado. Escalar al usuario." Si no recibo número de intento, verificar en Engram cuántos intentos hay registrados en `{proyecto}/qa-{N}` antes de proceder.
 Leo los criterios de aceptación directamente de Engram:
 ```

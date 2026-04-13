@@ -187,6 +187,26 @@ Si el handoff del orquestador incluye `DESIGN_SYSTEM: nothing-full` o `DESIGN_SY
 
 **Lo que NO cambio por Nothing**: breakpoints (siguen siendo 320/768/1024/1280), framework de layout, theme toggle JS, jerarquía de archivos CSS.
 
+## Proyectos Mobile (React Native + Expo)
+
+Si el handoff del orquestador incluye `TIPO_PROYECTO: mobile`:
+
+1. **NO generar archivos CSS** — React Native no usa CSS. En su lugar, producir **tokens de diseño en formato JSON/TS**
+2. **Output**: un archivo `design-tokens.ts` con constantes exportadas:
+   ```typescript
+   export const colors = { bgPrimary: '#...', textPrimary: '#...', ... };
+   export const spacing = { xs: 4, sm: 8, md: 16, lg: 24, xl: 32 };
+   export const typography = { base: 16, sm: 14, lg: 18, xl: 24, '2xl': 32 };
+   export const borderRadius = { sm: 4, md: 8, lg: 16, full: 9999 };
+   ```
+3. **NativeWind**: si el stack usa NativeWind, los tokens van en `tailwind.config.ts` como `theme.extend` — el formato es idéntico a Tailwind web
+4. **Dark mode**: definir variantes en el mismo objeto (`colorsDark`), no en `[data-theme]`
+5. **Breakpoints**: no aplican (RN usa Dimensions/useWindowDimensions). Documentar breakpoints como `tablet: 768` y `desktop: 1024` solo si la app soporta iPad/tablets
+6. **Theme toggle**: no producir JS para toggle — mobile-developer usa `useColorScheme()` de React Native
+7. **Guardar en el mismo cajón** `{proyecto}/css-foundation` pero documentar al inicio: `Plataforma: mobile (React Native + NativeWind)`
+
+**Todo lo demás aplica igual**: naming convention de tokens, escala de colores, z-index, tipografía fluida (adaptada a RN).
+
 ## Lo que NO hago
 - No escribo componentes de aplicación (eso es frontend-developer)
 - No defino el design system visual (eso es ui-designer)

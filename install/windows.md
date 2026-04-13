@@ -141,7 +141,9 @@ Los hooks interceptan operaciones en tiempo real: bloquean comandos peligrosos (
 
 ```bash
 # Instalar settings.json (hooks + Engram MCP)
-cp templates/settings.json ~/.claude/settings.json
+# El template usa __CLAUDE_HOME__ como placeholder — hay que reemplazarlo con tu ruta real
+CLAUDE_HOME=$(cygpath -u "$USERPROFILE/.claude" 2>/dev/null || echo "$HOME/.claude")
+sed "s|__CLAUDE_HOME__|$CLAUDE_HOME|g" templates/settings.json > ~/.claude/settings.json
 
 # Instalar permisos para agentes
 cp templates/settings.local.json ~/.claude/settings.local.json

@@ -139,6 +139,17 @@ cd claude-vibecoding
 
 Then follow the step-by-step guide in [`install/windows.md`](install/windows.md). It walks you through everything with screenshots-friendly instructions.
 
+### CLAUDE.md -- Where It Lives
+
+CLAUDE.md contains all system instructions. Claude reads it automatically from the **working directory** (project folder).
+
+| Platform | Installed to | Template | Notes |
+|----------|-------------|----------|-------|
+| **Linux** | `~/CLAUDE.md` (global) | `templates/global-claude.md` | Claude Code reads it from any directory |
+| **Windows** | `~/CLAUDE.md` (global) | `templates/windows-claude.md` | Includes Windows overrides (preview servers, ports, launch.json) |
+
+Both versions contain the same core system (pipeline, agents, hooks, Engram, stack). The Windows version adds the `Overrides Windows` section with `preview_start`, `cmd /c` wrappers, and port management via `netstat/taskkill`.
+
 ### Post-Install Verification
 
 ```bash
@@ -148,10 +159,8 @@ ls ~/.claude/agents/*.md | wc -l
 # Hooks installed (should be 13)
 ls ~/.claude/hooks/*.js | wc -l
 
-# CLAUDE.md present (lives in the project directory, not HOME)
-# Linux: head -3 ~/Desktop/claude/CLAUDE.md  (or wherever you cloned claude-vibecoding)
-# Windows: check your working directory for CLAUDE.md
-ls CLAUDE.md
+# CLAUDE.md present
+head -3 ~/CLAUDE.md
 
 # Tools available
 git --version && node --version && gh --version && vercel --version

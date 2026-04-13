@@ -212,7 +212,7 @@ NUNCA usar el resultado de mem_search directamente — es una preview cortada.
 | video-agent | nada (lee brand.json + hero.png del filesystem) | `{proyecto}/creative-video` |
 | seo-discovery | `{proyecto}/tareas` (estructura de páginas) | `{proyecto}/seo` |
 | evidence-collector | `{proyecto}/tarea-{N}` (criterios de la tarea) | `{proyecto}/qa-{N}` |
-| api-tester | `{proyecto}/api-spec` (generado por backend-architect; fallback: `{proyecto}/tareas`) | `{proyecto}/api-qa` |
+| api-tester | `{proyecto}/api-spec` (generado por backend-architect; sin fallback — si no existe, el orquestador re-delega a backend-architect para generarlo) | `{proyecto}/api-qa` |
 | performance-benchmarker | nada (recibe URL) | `{proyecto}/perf-report` |
 | reality-checker | todos los cajones del proyecto | `{proyecto}/certificacion` |
 | git | nada (recibe directorio + mensaje) | `{proyecto}/git-commit` |
@@ -267,7 +267,7 @@ stack:
   game_subsystems: []  # subsistemas del GDD: [entity, event, fsm, scene, sound, pool, ...]
   design_system: "nothing-full | nothing-partial | custom | none"  # nothing-full=todo el proyecto, nothing-partial=solo secciones listadas en nothing_scope, custom=design propio (default), none=sin design system
   nothing_scope: []    # solo si design_system=nothing-partial — lista de secciones/componentes: ["hero", "dashboard", "stats-section", "footer"]
-fase_actual: "fase_1_planificacion | fase_2_arquitectura | fase_2b_assets | fase_3_dev | fase_4_certificacion | fase_5_publicacion | completado"
+fase_actual: "fase_1_planificacion | fase_2_arquitectura | fase_2b_assets | fase_3_dev | fase_4_certificacion | fase_5_publicacion | completado | modificacion"
 fases_completadas:
   planificacion: null             # observation_id (numero) o null si no completada
   arquitectura:
@@ -300,6 +300,12 @@ certificacion:
 publicacion:
   git_commit: null                # observation_id del git-commit
   deploy_url: null                # observation_id del deploy-url
+# Campos anti-loop (se incrementan, nunca resetear a 0 mid-pipeline)
+phase_gate_retries: 0             # re-delegaciones por Phase Gate (max 2 compartido con Fase 2)
+recertification_cycles: 0         # ciclos NEEDS WORK→fix→re-certify (max 3)
+# Campos de modo modificación (solo si fase_actual = "modificacion")
+modificacion_tareas: []           # [13, 14, 15] — IDs de las nuevas tareas
+modificacion_origen: ""           # "completado" — fase desde la que se inició
 # Campos de estado del sistema
 backup_disk: ""                   # ruta al backup en disco (ver Dual-Write)
 recovered: false                  # true si esta sesion retomo tras crash/compactación
@@ -320,6 +326,58 @@ Despues de CADA `mem_update` de `{proyecto}/estado`, escribir tambien a disco:
 Write("{project_dir}/.pipeline/estado.yaml", dagStateYaml)
 ```
 Esto garantiza que si Engram falla o la sesion crashea, el DAG State se puede recuperar del filesystem. El Boot Sequence busca primero en Engram, luego en `.pipeline/`.
+
+---
+
+## Modo Modificación (proyectos existentes)
+
+Cuando el usuario pide **modificar, agregar o quitar features de un proyecto ya completado** (no un proyecto nuevo):
+
+### Detección
+El orquestador detecta modo modificación si:
+- Existe `{proyecto}/estado` en Engram con `fase_actual: "completado"` o `fase_actual: 5`
+- El usuario referencia un proyecto existente + pide cambios específicos
+- El usuario dice "agrega X a [proyecto]", "quita Y", "modifica Z"
+
+### Mini-pipeline (3 pasos)
+```
+1. ANÁLISIS — El orquestador (no un subagente) evalúa:
+   - ¿Qué cajones de Engram existen para este proyecto?
+   - ¿El cambio requiere nueva arquitectura (nueva DB table, nuevo servicio) o solo UI/lógica?
+   - ¿Afecta design system, seguridad, o solo implementación?
+
+2. PLANIFICACIÓN LIGERA — Generar tareas inline (sin PM):
+   - Si son ≤3 tareas simples: el orquestador las define directamente
+   - Si son >3 tareas o requieren análisis de scope: delegar a project-manager-senior con contexto del proyecto existente
+   - Actualizar `{proyecto}/tareas` en Engram (append, no sobrescribir)
+   - Numerar tareas continuando desde la última (ej: si había 12 tareas, las nuevas son 13, 14...)
+
+3. EJECUCIÓN — Mini Fase 3 + QA:
+   - Mismo loop dev→QA que Fase 3 normal
+   - Usa los cajones de Engram existentes (css-foundation, design-system, security-spec)
+   - Si el cambio requiere actualizar arquitectura:
+     a) Cambio de UI/design → re-delegar a ui-designer para actualizar design-system
+     b) Nuevo endpoint → backend-architect + actualizar api-spec
+     c) Cambio de seguridad → security-engineer para actualizar security-spec
+   - NO re-ejecutar Fase 2 completa — solo los agentes afectados
+```
+
+### Qué NO se re-ejecuta
+- Fase 1 completa (ya existe el proyecto)
+- Fase 2 completa (solo agentes afectados por el cambio)
+- Fase 2B (assets creativos) — salvo que el usuario pida nuevos assets
+- Fase 4 completa — solo re-ejecutar reality-checker si los cambios son sustanciales
+
+### Cuándo escalar a pipeline completo
+Si el cambio es tan grande que equivale a rehacer el proyecto (>50% de tareas nuevas, cambio de stack, nueva DB):
+- Informar al usuario: "Este cambio es tan sustancial que recomiendo tratarlo como un proyecto nuevo. ¿Continuamos con el pipeline completo?"
+- Si acepta → pipeline normal de 5 fases
+
+### DAG State en modo modificación
+- `fase_actual: "modificacion"`
+- `modificacion_tareas: [13, 14, 15]` (IDs de las nuevas tareas)
+- `modificacion_origen: "completado"` (fase desde la que se inició la modificación)
+- Al completar → volver a `fase_actual: "completado"`
 
 ---
 
@@ -403,6 +461,7 @@ Para verificar un phase gate:
 
 **Paso 1 — ux-architect** (primero, obligatorio)
 - Recibe: spec del proyecto + ruta al cajón `{proyecto}/tareas`
+- **Si DAG State `tipo: mobile`**: agregar al handoff `TIPO_PROYECTO: mobile` — ux-architect producirá tokens en formato TS/JSON (no CSS)
 - **Si `design_system` es `nothing-full` o `nothing-partial`**: agregar al handoff:
   ```
   DESIGN_SYSTEM: {nothing-full | nothing-partial}
@@ -413,7 +472,7 @@ Para verificar un phase gate:
 - Devuelve: resumen (tokens CSS, layout, breakpoints)
 
 **Paso 2 — ui-designer + security-engineer** (paralelo, DESPUÉS de que ux-architect devuelva)
-- **ui-designer**: Recibe spec + ruta a `{proyecto}/css-foundation` + **mismos campos DESIGN_SYSTEM/NOTHING_SCOPE/REFERENCIA si aplica** → Guarda en: `{proyecto}/design-system` → Devuelve: resumen (componentes clave, paleta, tipografía)
+- **ui-designer**: Recibe spec + ruta a `{proyecto}/css-foundation` + **mismos campos DESIGN_SYSTEM/NOTHING_SCOPE/REFERENCIA si aplica** + **TIPO_PROYECTO si mobile** → Guarda en: `{proyecto}/design-system` → Devuelve: resumen (componentes clave, paleta, tipografía)
 - **security-engineer**: Recibe spec del proyecto → Guarda en: `{proyecto}/security-spec` → Devuelve: resumen (amenazas identificadas, headers requeridos)
 
 Actualiza DAG State. Informa al usuario: "Arquitectura lista. N tareas listas para desarrollo."
@@ -544,6 +603,7 @@ Si alguno falta, NO avanzar. Resolver primero.
 - `{proyecto}/design-system` — si falta, re-delegar ui-designer
 - `{proyecto}/security-spec` — si falta, re-delegar security-engineer
 Si alguno falta, NO empezar Fase 3. Resolver primero.
+**Anti-loop**: cada re-delegación por Phase Gate cuenta contra el límite de 2 re-delegaciones de Fase 2. Si un cajón sigue faltando después de agotar las re-delegaciones → escalar al usuario. Trackear `phase_gate_retries` en DAG State. **NUNCA** re-delegar más de 2 veces por cajón faltante en total (Fase 2 + Phase Gate combinados).
 
 ### FASE 3 — Dev ↔ QA Loop
 
@@ -561,6 +621,7 @@ Para **cada tarea** de la lista, en orden:
    - Diseño de mecánicas (juego)            → game-designer
    - Implementación de juego (canvas/WebGL) → xr-immersive-developer
    - Setup monorepo / workspace config      → backend-architect (config) + frontend-developer (UI packages)
+   **Override mobile**: si DAG State `tipo: mobile`, las tareas con Tipo `frontend` se redirigen a mobile-developer (no frontend-developer). Las tareas Tipo `mobile` siempre van a mobile-developer.
 
 3. Delega al agente con handoff minimo:
    ```
@@ -601,11 +662,13 @@ Para **cada tarea** de la lista, en orden:
 5. Delega a evidence-collector (usando el puerto reportado por el dev agent):
    "Valida tarea {N} del proyecto {proyecto}. URL: http://localhost:{puerto}
    Intento: {intento_actual}/3
+   TIPO_PROYECTO: {web | mobile} (del DAG State)
    Captura screenshots con Playwright MCP.
    Guarda screenshots en /tmp/qa/tarea-{N}-{device}.png (NO inline, solo rutas)
    Lee criterio de aceptación de Engram: {proyecto}/tareas — localiza tarea {N}
    Guarda resultado en Engram: {proyecto}/qa-{N}
    Devuelve: PASS | FAIL + rutas screenshots + lista de issues (si FAIL)"
+   **Mobile**: si evidence-collector reporta "QA visual limitada", informar al usuario una vez: "QA de tareas mobile se limita a validación de build — no hay simulador visual disponible."
    **El orquestador mantiene el contador de intentos en DAG State** (`tareas_fallidas[N].intentos`), NO depende de que evidence-collector lo trackee internamente.
 
 **Umbral PASS/FAIL:**
@@ -630,6 +693,16 @@ Para **cada tarea** de la lista, en orden:
    → Pide decisión al usuario, actualiza DAG State
 ```
 
+### Timeout guidance para subagentes
+
+No hay timeout explícito en Agent spawns — el agente corre hasta completar o agotar contexto. Si un agente tarda más de lo esperado:
+- **Dev agents (frontend, backend, rapid-prototyper)**: tareas normales ~2-5 min. Si >10 min, verificar Engram por resultado parcial.
+- **evidence-collector**: ~1-3 min por tarea. Si >5 min, probablemente el servidor de test no respondió.
+- **Agentes creativos (image, logo, video)**: ~1-5 min dependiendo de API externa. Timeout de la API es el bottleneck.
+- **Agentes de planificación/análisis (PM, security, ux, ui)**: ~1-3 min.
+
+Si un agente parece stuck: NO cancelar manualmente — verificar Engram primero (puede haber completado y solo se perdió el return).
+
 ### Recovery: si un subagente no devuelve resultado
 
 Si un agente fue spawneado pero no devolvió STATUS (crash, timeout, context limit):
@@ -638,7 +711,8 @@ Si un agente fue spawneado pero no devolvió STATUS (crash, timeout, context lim
    → Verificar que los archivos existen en disco → marcar tarea como "pendiente QA" → continuar al paso 5 (evidence-collector)
 2. **Si Engram vacío**: el agente crasheó antes de guardar
    → Re-delegar la tarea desde cero (mismo agente, intento 1/3)
-   → Si vuelve a fallar: intentar con otro agente compatible (ej: frontend-developer → rapid-prototyper)
+   → Si vuelve a fallar: intentar con **un** agente alternativo compatible (ej: frontend-developer → rapid-prototyper)
+   → Si el alternativo también falla: **PARAR**. Escalar al usuario con el error. **No probar más agentes** — si 2 agentes distintos crashean en la misma tarea, el problema es la tarea, no el agente.
 3. **Actualizar DAG State**: marcar tarea con flag `recovered: true`
 
 **Recovery: evidence-collector crash**
@@ -752,13 +826,14 @@ solo hay que re-ejecutar `tier: "full"` (el structural ya esta hecho). Ahorra ~1
 **Paso 2 — api-tester + performance-benchmarker** (paralelo, despues del paso 1)
 
 **api-tester** (si hay API)
-- Lee: `{proyecto}/api-spec` (generado por backend-architect); fallback: `{proyecto}/tareas`
-- Verificar que `{proyecto}/api-spec` existe antes de lanzar. Si no existe y hay tareas backend → pedir a backend-architect que lo genere.
+- Lee: `{proyecto}/api-spec` (generado por backend-architect; **sin fallback** — tareas tiene formato incompatible)
+- **ANTES de lanzar**: verificar `mem_search("{proyecto}/api-spec")`. Si no existe y hay tareas backend → re-delegar a backend-architect para que genere SOLO el api-spec. NO lanzar api-tester sin api-spec.
+- Handoff: `PROYECTO: {nombre}, PROJECT_DIR: {directorio}, URL: http://localhost:{puerto}, LEE: {proyecto}/api-spec`
 - Guarda en: `{proyecto}/api-qa`
 - Devuelve: N endpoints validados, issues criticos
 
 **performance-benchmarker**
-- Accede a: URL del proyecto (local o deployada)
+- Handoff: `PROYECTO: {nombre}, URL: http://localhost:{puerto}`
 - Guarda en: `{proyecto}/perf-report`
 - Devuelve: Core Web Vitals, tiempos de carga, bottlenecks
 
@@ -769,6 +844,7 @@ solo hay que re-ejecutar `tier: "full"` (el structural ya esta hecho). Ahorra ~1
 - Devuelve: Return Envelope con score completo
 
 **Paso 4 — reality-checker** (ejecutar AL FINAL, despues de los 3 pasos)
+- Handoff: `PROYECTO: {nombre}, PROJECT_DIR: {directorio}, URL: http://localhost:{puerto}`
 - Lee: `{proyecto}/qa-*`, `{proyecto}/seo` (espera tier=full), `{proyecto}/api-qa`, `{proyecto}/perf-report`
 - Guarda en: `{proyecto}/certificacion`
 - Devuelve: **CERTIFIED** | **NEEDS WORK** (con lista de blockers)
@@ -830,21 +906,34 @@ Commit: {hash} — "{mensaje}"
 Branch: main (default)
 ```
 
-#### Si el usuario eligió "s" — Vercel (solo después del git exitoso)
+#### Si el usuario eligió "s" — Deploy (solo después del git exitoso)
 
+**Routing por tipo de proyecto:**
+- **Web (DAG State `tipo` ≠ `mobile`)**: deployer en modo Vercel (default)
+- **Mobile (DAG State `tipo: mobile`)**: deployer en modo EAS Build
+
+**Modo Vercel** (web):
 Delega directamente a **deployer** sin pedir confirmación adicional (el usuario ya eligió "s" o pre-autorizó el deploy):
-- Recibe: directorio del proyecto + nombre + **info del git** (repo URL, branch, primer push)
+- Recibe: directorio del proyecto + nombre + **info del git** (repo URL, branch, primer push) + `deploy_mode: "vercel"`
 - Si es primer deploy: `vercel deploy --prod` + `vercel git connect` (activa auto-deploy)
 - Si ya tiene Git Integration: verifica que el auto-deploy se disparó correctamente
 - Devuelve: URL limpia del proyecto + estado de Git Integration + auto-deploy activo/no
 - Guarda en Engram: `{proyecto}/deploy-url`
 
+**Modo EAS Build** (mobile):
+Delega a **deployer** con:
+- Recibe: directorio del proyecto + nombre + `deploy_mode: "eas"` + `platform: "android" | "ios" | "both"` (preguntar al usuario si no especificó)
+- Primer build: configura EAS + build preview
+- Devuelve: URL de descarga del build en EAS + plataformas buildeadas
+- Guarda en Engram: `{proyecto}/deploy-url`
+- **Nota**: submit a stores requiere confirmación explícita adicional del usuario
+
 **Handoff git→deployer**: el orquestador pasa la info que git devolvió directamente al deployer. Esto permite que deployer sepa si necesita conectar Git Integration o si ya está activa.
 
 Muestra al usuario:
 ```
-Deployado en Vercel
-URL: {url-limpia}
+Deployado en {Vercel | EAS Build}
+URL: {url-limpia | url-descarga-build}
 ```
 
 **Si git retorna fallido:**
@@ -890,7 +979,7 @@ Después de que un subagente retorna su envelope:
    — Los últimos 5 son válidos SOLO para agentes utilitarios (build-resolver, codepen-explorer, self-auditor). Para agentes dev/QA, solo los primeros 6.
 2. Si ARCHIVOS listados → verificar que existen ([ -f path ])
 3. Si ENGRAM reportado → confirmar con mem_search que la observación fue guardada
-4. Si alguna validación falla → pedir al subagente que reformatee/reintente
+4. Si alguna validación falla → pedir al subagente que reformatee/reintente (**máximo 2 intentos de reformateo**). Si tras 2 intentos sigue inválido: loguear la respuesta raw en `{proyecto}/discovery-envelope-fail-{agente}`, marcar tarea como fallida, escalar al usuario. **NUNCA pedir un tercer reformateo** — es un loop infinito garantizado.
 5. Solo ENTONCES actualizar DAG State
 
 ---
@@ -956,8 +1045,8 @@ Antes de spawnear un subagente, verificar estos 3 puntos (~50 tokens):
 
 - **Puerto ocupado**: indicar al subagente `lsof -ti:PORT && kill $(lsof -ti:PORT) || true` (Windows: `netstat -ano | findstr :PORT` + `taskkill /PID <pid> /F`)
 - **Permisos Bash en background**: si subagente falla por permisos, ejecutar desde contexto principal
-- **SEO → Frontend loop**: seo-discovery reporta issues → orquestador lanza frontend-developer → evidence-collector valida → seo-discovery re-verifica
-- **Subagente devuelve formato invalido**: pedir que reformatee usando su Return Envelope antes de procesar
+- **SEO → Frontend loop**: seo-discovery reporta issues → orquestador lanza frontend-developer → evidence-collector valida → seo-discovery re-verifica. **Máximo 2 iteraciones** (seo-discovery → fix → seo-discovery). Si después de 2 iteraciones el score no alcanza el mínimo, loguear issues pendientes en `{proyecto}/seo` y continuar a reality-checker con los issues documentados.
+- **Subagente devuelve formato invalido**: pedir que reformatee usando su Return Envelope (max 2 intentos, luego escalar al usuario)
 - **Engram timeout/lento**: si `mem_search` tarda >10s, verificar que Engram MCP server esta corriendo. Fallback: usar disco (`.pipeline/`)
 - **Subagente crashea mid-tarea**: verificar Engram (`mem_search("{proyecto}/tarea-{N}")`) — si guardo resultado, continuar con QA. Si no guardo, re-delegar
 - **Mixed Content en Fase 4**: si reality-checker detecta `http://` en codigo, verificar que el backend tiene HTTPS antes de re-deployar
@@ -978,13 +1067,20 @@ Los cajones `{proyecto}/estado` y `{proyecto}/tareas` son CRITICOS — sin ellos
 - Si Engram falla → leer de disco (`{project_dir}/.pipeline/`)
 - Si disco tambien falta → PAUSAR, pedir al usuario que verifique Engram
 
-**Solo `estado` y `tareas` necesitan dual-write.** Los demas cajones se pueden reconstruir re-ejecutando la fase correspondiente.
+**Cajones con dual-write obligatorio**:
+- `estado` y `tareas` → SIEMPRE (sin ellos no se puede continuar)
+- `css-foundation`, `design-system`, `security-spec` → después de que cada agente de Fase 2 retorne OK
+
+Los cajones de Fase 2 son críticos porque bloquean el Phase Gate a Fase 3 y re-ejecutar Fase 2 es costoso. Los demás cajones se pueden reconstruir re-delegando.
 
 **Estructura del directorio `.pipeline/`**:
 ```
 {project_dir}/.pipeline/
   estado.yaml        → copia del DAG State (mismo formato YAML que en Engram)
   tareas.md          → copia de la lista de tareas (mismo contenido que en Engram)
+  css-foundation.md  → copia de tokens/layout CSS (de ux-architect)
+  design-system.md   → copia del design system visual (de ui-designer)
+  security-spec.md   → copia de la spec de seguridad (de security-engineer)
 ```
 Crear el directorio automaticamente con `mkdir -p` al primer dual-write. Agregar `.pipeline/` al `.gitignore` del proyecto.
 

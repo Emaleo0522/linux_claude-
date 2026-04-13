@@ -26,7 +26,7 @@ Usar SOLO completo.content — NUNCA resultado.preview
 
 Si `mem_search` no retorna observation_id → el cajón no existe. Manejo universal:
 
-1. **Cajón critico** (inputs que necesitas para trabajar: `tareas`, `css-foundation`, `design-system`, `security-spec`, `gdd`):
+1. **Cajón critico** (inputs que necesitas para trabajar: `estado`, `tareas`, `css-foundation`, `design-system`, `security-spec`, `gdd`):
    - Buscar fallback en disco: `{project_dir}/.pipeline/{cajon}.md`
    - Si existe en disco: usar contenido del archivo y continuar
    - Si NO existe en disco: informar en Return Envelope `STATUS: fallido` con `BLOQUEADORES: [{cajon} no encontrado en Engram ni disco]`
