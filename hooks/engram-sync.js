@@ -207,7 +207,7 @@ function gitCommitAndPush() {
 
 ${newChunks} new chunk(s), ${totalChunks} total chunks, ${totalMemories} total memories
 
-Co-Authored-By: Claude Opus 4.6 (1M context) <noreply@anthropic.com>`;
+Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>`;
 
   try {
     // Write commit msg to temp file to avoid shell quoting issues

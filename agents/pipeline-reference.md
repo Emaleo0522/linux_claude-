@@ -19,12 +19,36 @@ Despues de que ux-architect crea la fundacion CSS y antes de lanzar ui-designer,
 6. **Mood**: oscuro, claro, mixto, alto contraste
 7. **Efectos especiales**: cursor custom, text animations, smooth scroll, parallax, page transitions, particles
 
+### Design dials cuantitativos (1-10)
+
+Despues de los 7 campos cualitativos, el orquestador pregunta 3 valores numericos (o los infiere del estilo elegido con defaults razonables):
+
+| Dial | Rango | Significado |
+|------|-------|-------------|
+| `DESIGN_VARIANCE` | 1 (clean/centered) → 10 (asymmetric/experimental) | Nivel de experimentacion en layout. 1-3 = grids simetricos, 4-6 = hero asymmetric + split layouts, 7-10 = broken grid, rotated elements, collage |
+| `MOTION_INTENSITY` | 1 (static) → 10 (magnetic/scroll-triggered) | Cantidad y sofisticacion de animacion. 1-3 = CSS hover only, 4-6 = FM enter/exit + scroll reveals, 7-10 = GSAP timelines + pin + magnetic cursor + SplitText |
+| `VISUAL_DENSITY` | 1 (spacious/luxury) → 10 (dense/dashboard) | Concentracion de contenido. 1-3 = editorial whitespace, 4-6 = balanced marketing, 7-10 = data-heavy, multi-column, tables |
+
+**Defaults por estilo** (si el usuario no especifica):
+- editorial → `variance:4, motion:3, density:3`
+- inmersivo → `variance:7, motion:8, density:4`
+- minimalista → `variance:2, motion:2, density:2`
+- bold/colorido → `variance:6, motion:6, density:6`
+
+**Consumo por agentes**:
+- `ui-designer`: ajusta behavioral specs (e.g. `motion:8` → agrega scroll-pin specs, magnetic cursor)
+- `frontend-developer`: dispara Tier de animacion correcto (1-3 = Tier 1 CSS, 4-6 = Tier 2 FM, 7-10 = Tier 3 GSAP). `density:7+` obliga a considerar tabla/virtualizacion
+- `ux-architect`: `density` influye en spacing scale base (ej. density 2 → scale 1.5x, density 8 → scale 0.85x)
+
+Los anti-patterns HIGH del Design Intelligence Engine siguen siendo **obligatorios** y sobrescriben los dials si hay conflicto.
+
 Antes de presentar las opciones, el orquestador consulta:
 - **Boveda CodePen** (`~/.claude/codepen-vault/`): efectos probados se muestran como opciones concretas
 - **21st.dev**: si `component_source: "21st.dev"`, se mencionan componentes animados disponibles
 - **Animaciones disponibles**: CSS (Tier 1), Framer Motion (Tier 2), GSAP+Lenis (Tier 3)
+- **Style presets** (`~/.claude/design-data/style-presets.csv`): si el usuario elige un preset nombrado (brutalist, editorial, soft-luxury, etc.), los dials se setean automaticamente desde el CSV
 
-Las respuestas se guardan en Engram como `{proyecto}/visual-direction` y fluyen a ui-designer (behavioral specs) y frontend-developer (design decision tree).
+Las respuestas (7 campos + 3 dials + preset opcional) se guardan en Engram como `{proyecto}/visual-direction` y fluyen a ui-designer (behavioral specs) y frontend-developer (design decision tree).
 
 ## Herramientas por agente
 
@@ -70,6 +94,7 @@ Motor de busqueda local en `~/.claude/design-data/` (search.js + 8 CSVs):
 | landing.csv | 34 | Patrones de landing con section order y conversion |
 | ui-reasoning.csv | 161 | Reglas de razonamiento por industria (anti-patterns, decision rules) |
 | charts.csv | 25 | Tipos de chart con accesibilidad y library recommendations |
+| style-presets.csv | 10 | Presets esteticos con dials (variance/motion/density), tokens CSS, fonts y anti-patterns |
 
 **Uso por agentes** (Fase 2):
 | Agente | Cuando | Que obtiene |

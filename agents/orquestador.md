@@ -337,6 +337,44 @@ El orquestador detecta modo modificación si:
 - Fase 2B (assets creativos) — salvo que el usuario pida nuevos assets
 - Fase 4 completa — solo re-ejecutar reality-checker si los cambios son sustanciales
 
+### UI Audit Checklist (para cambios visuales/UX)
+
+Cuando el cambio afecta UI o el usuario pide "redesign", "mejorar el diseño", "se ve genérico", "más premium" — el orquestador corre un audit estructurado **antes** de delegar a ui-designer/frontend-developer:
+
+**1. Spacing audit**
+- ¿El spacing es coherente con `visual_density` declarado en `{proyecto}/visual-direction`? Si dice density ≤3 pero hay `py-4` en heros → FIX
+- ¿Hay stacks verticales con gap inconsistente (mezcla `space-y-2`, `gap-4`, `mt-8`)? → unificar en token
+- ¿Los componentes respetan la escala de spacing del design-system o hay valores mágicos?
+
+**2. Typography hierarchy audit**
+- ¿Hay más de 4 font-sizes en uso? (indica jerarquía rota)
+- ¿El heading font y body font del preset/brand.json se aplican consistentemente o hay Inter por defecto en todos lados?
+- ¿`line-height` de párrafos largos es 1.5-1.75? (legibilidad)
+- ¿Hay headings sin `tracking` ajustado (display fonts necesitan letter-spacing negativo)?
+
+**3. Motion coherence audit**
+- ¿El `motion_intensity` del proyecto coincide con lo implementado? Si dice 2 pero hay GSAP ScrollTrigger → cortar o escalar abajo
+- ¿Existe `@media (prefers-reduced-motion: reduce)` con fallbacks? (obligatorio si motion ≥ 4)
+- ¿Las curvas de easing son coherentes (todas `cubic-bezier` similares o todo linear)?
+- ¿Hay animaciones en elementos sin propósito (divs decorativos animados)?
+
+**4. Color coherence audit**
+- ¿Los colores usados existen en brand.json o son hex mágicos en el código?
+- ¿Contraste WCAG AA mínimo (4.5:1 texto normal, 3:1 grande) en todos los pares fondo/texto?
+- ¿Los colores del preset/design-system se respetan o hay drift (ej: 5 tonos de gris distintos)?
+
+**5. Layout variance audit**
+- ¿El `design_variance` coincide con lo implementado? Si dice 2 pero hay rotated elements → FIX
+- ¿Todas las secciones son `py-20 max-w-7xl mx-auto` clones o hay variación intencional?
+- Anti-pattern: "cada sección es un div centrado" cuando el preset pide variance ≥ 5
+
+**Flujo**:
+1. Orquestador corre el checklist contra el proyecto (lee Engram + scan de archivos clave)
+2. Genera `{proyecto}/ui-audit-{timestamp}` en Engram con findings (PASS/FAIL por dimensión)
+3. Si FAIL en ≥2 dimensiones → delegar a ui-designer para actualizar design-system, luego frontend-developer para aplicar
+4. Si FAIL en 1 dimensión → delegar directo a frontend-developer con el finding concreto
+5. QA vía evidence-collector valida que el fix cerró el finding
+
 ### Cuándo escalar a pipeline completo
 Si el cambio es tan grande que equivale a rehacer el proyecto (>50% de tareas nuevas, cambio de stack, nueva DB):
 - Informar al usuario: "Este cambio es tan sustancial que recomiendo tratarlo como un proyecto nuevo. ¿Continuamos con el pipeline completo?"

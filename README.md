@@ -386,6 +386,26 @@ Between Phase 2 (architecture) and Phase 3 (development), the orchestrator pause
 
 The user's choices are saved in Engram and flow to `ui-designer` (behavioral specs) and `frontend-developer` (design decision tree). If a CodePen vault effect or 21st.dev component matches the chosen direction, it is presented as a concrete option.
 
+### Design Dials (quantitative 1-10)
+
+After the 8 qualitative categories, the orchestrator asks for three numeric dials (or infers them from the chosen style with sensible defaults). These translate directly into implementation decisions:
+
+| Dial | Range | What it controls |
+|------|-------|-----------------|
+| `DESIGN_VARIANCE` | 1 (clean/centered) -> 10 (asymmetric/experimental) | Layout experimentation -- 1-3 symmetric 12-col grids, 4-6 asymmetric heros + split layouts, 7-10 broken grid + rotated elements + collage |
+| `MOTION_INTENSITY` | 1 (static) -> 10 (magnetic/scroll-triggered) | Animation sophistication -- 1-3 CSS transitions only, 4-6 Framer Motion enter/exit + scroll reveals, 7-10 GSAP timelines + pinning + SplitText + magnetic cursor |
+| `VISUAL_DENSITY` | 1 (spacious/luxury) -> 10 (dense/dashboard) | Content concentration -- 1-3 editorial whitespace, 4-6 balanced marketing, 7-10 data-heavy multi-column with tabular figures |
+
+**Defaults by style:** editorial `variance:4 motion:3 density:3`, immersive `variance:7 motion:8 density:4`, minimalist `variance:2 motion:2 density:2`, bold/colorful `variance:6 motion:6 density:6`.
+
+**Consumed by agents:** `ui-designer` adjusts behavioral specs, `frontend-developer` selects the correct animation Tier (1 CSS / 2 Framer Motion / 3 GSAP), `ux-architect` scales the spacing base. Anti-patterns HIGH from the Design Intelligence Engine always override the dials on conflict.
+
+### Style Presets
+
+If the user picks a named preset instead of answering dial-by-dial, all three values plus CSS tokens, fonts, border-radius and motion curves are seeded from `design-data/style-presets.csv` (10 presets). Examples: `soft-luxury`, `neo-brutalism`, `editorial-magazine`, `dashboard-dense`, `glass-morphism`, `cyber-neon`.
+
+The preset is loaded by `ui-designer` (Paso 0b-bis) and `frontend-developer` injects the CSS tokens into `:root` of the global stylesheet. `brand.json` still wins on color conflicts -- the preset informs defaults, not identity.
+
 ---
 
 ## Design Quality System
@@ -416,6 +436,26 @@ These specs are stored in Engram (`{project}/design-system`) and enforced during
 - **Fontshare** -- curated premium-quality fonts for projects requiring a more distinctive typographic identity
 
 The Design Intelligence Engine provides a `typography_mood` recommendation per industry (display, elegant, technical, neutral), but `brand-agent` makes the final font selection.
+
+### Brand Inspiration On-Demand
+
+When the user's brief explicitly references a known brand ("Linear feel", "Stripe docs style", "Apple vibe"), `brand-agent` fetches the corresponding design profile from the public [awesome-design-md](https://github.com/VoltAgent/awesome-design-md) repository (68+ brand DESIGN.md files: Apple, Stripe, Linear, Notion, Vercel, Figma, Cursor, OpenAI, Claude, Ferrari, Tesla, Spotify, Airbnb, Nike, etc.).
+
+**Only abstract tokens are extracted** -- color hues, spacing scale, motion curves, typography mood. **Never extracted:** logos, brand signatures, exact layouts, distinctive imagery. A guardrail enforces that the final result looks *inspired*, not *cloned* -- if the project is recognizable as "a fake Linear" the brand is rejected and regenerated.
+
+When the brief has no brand reference, this step is skipped entirely and `design-data/style-presets.csv` is used instead -- cheaper in tokens and zero derivative risk.
+
+### UI Audit Checklist (Modification Mode)
+
+When the user asks for a redesign or says "this looks generic", the orchestrator runs a structured audit before delegating to `ui-designer`/`frontend-developer`:
+
+1. **Spacing audit** -- stack gap consistency, density coherence with declared dial
+2. **Typography hierarchy audit** -- max 4 font-sizes, heading vs body font consistency, line-height 1.5-1.75 on body
+3. **Motion coherence audit** -- implemented intensity matches dial, `prefers-reduced-motion` fallback present when motion >= 4
+4. **Color coherence audit** -- all colors exist in brand.json, WCAG AA contrast, no "5 shades of gray" drift
+5. **Layout variance audit** -- variance dial matches implementation, no "every section is a centered div" when variance >= 5
+
+The audit produces concrete fix instructions, not vague suggestions.
 
 ---
 
@@ -462,6 +502,41 @@ When QA fails, the failure is classified to give targeted feedback:
 | **FAIL_SPEC** | Code works but doesn't match the spec -- wrong animation level, incorrect interactions | Dev agent re-reads design system and adjusts |
 
 Each task gets up to 3 retry attempts. After 3 failures, the orchestrator escalates to the user.
+
+---
+
+## Security Posture Check
+
+Beyond real-time hooks (`config-protection`, `quality-gate`), `reality-checker` runs a retrospective security scan as **Step 6** of Phase 4 certification. This catches secrets and supply-chain issues that existed in the codebase before the pipeline started, or that hooks may have missed.
+
+### 6.1 -- Secret Scan
+
+Static scan against 9 secret patterns across `.ts/.tsx/.js/.jsx/.mjs/.cjs/.json/.yaml/.yml/.env` files (excluding `node_modules`, `.next`, `build`, `dist`, `__tests__`, `.env.example`, `docs`):
+
+| Pattern | Example match |
+|---------|---------------|
+| AWS Access Key ID | `AKIA[0-9A-Z]{16}` |
+| GitHub Personal Access Token | `ghp_[A-Za-z0-9]{36}` |
+| GitHub OAuth / App Token | `(gho_\|ghu_\|ghs_\|ghr_)[A-Za-z0-9]{36}` |
+| Stripe Live Key | `sk_live_[A-Za-z0-9]{24,}` |
+| Slack Bot Token | `xox[baprs]-...` |
+| Google API Key | `AIza[0-9A-Za-z_-]{35}` |
+| OpenAI / Anthropic | `sk-[A-Za-z0-9]{32,}` / `sk-ant-[A-Za-z0-9_-]{32,}` |
+| Private keys (RSA/EC/DSA/OPENSSH/PGP) | `-----BEGIN ... PRIVATE KEY-----` |
+| JWT in source | `eyJ...eyJ...` three-segment pattern |
+
+Any match in source code is a **BLOCKER**. The reporter outputs file + line + type only -- never the matched value, to avoid re-leaking the secret.
+
+### 6.2 -- Lock File Integrity
+
+Supply-chain checks executed per detected package manager (npm/pnpm/yarn/bun):
+
+1. A lock file **must exist** when `package.json` is present (reproducible builds)
+2. The lock file **must not be gitignored** (CI and collaborators need the same resolution)
+3. For npm: `lockfile-lint` validates allowed hosts, HTTPS schemes, no `file://` resolutions (registry poisoning defense)
+4. `npm audit` / `pnpm audit` / `yarn npm audit` with severity >= HIGH is a **BLOCKER** until the user either runs `audit fix` or documents the accepted risk in `security-notes`
+
+The checks are defensive -- they complement what `security-engineer` declared in Phase 2 (threat model, headers, Better Auth config) rather than duplicating it. No new MCPs, no new dependencies -- everything uses tools already available (Bash + Grep + `npx lockfile-lint`).
 
 ---
 

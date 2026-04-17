@@ -189,6 +189,107 @@ Si el proyecto usa Lenis, GSAP scroll, canvas generativo o audio reactivo y NO r
 #### Cross-browser nota
 Agregar en el reporte final: "QA ejecutado en Chromium headless. Testear Safari/Firefox manualmente antes de launch a producción."
 
+### Paso 6 — Security Posture Check (obligatorio)
+
+Complementa los hooks en tiempo real (`config-protection`, `quality-gate`) escaneando codigo ya escrito. El security-engineer declaro estos checks como parte del checklist Fase 4 — aqui se ejecutan. NO duplicar lo que hace security-engineer en Fase 2 (threat modeling, headers spec) — aqui solo se valida que el codigo final no tenga secrets ni lock files comprometidos.
+
+#### 6.1 — Secret Scan (scan estatico de codigo fuente)
+
+Buscar patrones de API keys/tokens hardcodeados. Excluir `node_modules`, `.next`, `build`, `dist`, `.env.example`, `__tests__`, `*.test.*`, `*.spec.*`, `docs/` para evitar falsos positivos.
+
+```bash
+# AWS Access Key ID
+grep -rnE 'AKIA[0-9A-Z]{16}' --include='*.{ts,tsx,js,jsx,mjs,cjs,json,yaml,yml,env}' \
+  --exclude-dir={node_modules,.next,build,dist,.git,coverage,__tests__,docs} \
+  --exclude='*.test.*' --exclude='*.spec.*' --exclude='.env.example' . 2>/dev/null
+
+# GitHub Personal Access Token
+grep -rnE 'ghp_[A-Za-z0-9]{36}' --include='*.{ts,tsx,js,jsx,mjs,cjs,json,yaml,yml,env}' \
+  --exclude-dir={node_modules,.next,build,dist,.git,coverage,__tests__,docs} . 2>/dev/null
+
+# GitHub OAuth / App Token
+grep -rnE '(gho_|ghu_|ghs_|ghr_)[A-Za-z0-9]{36}' --include='*.{ts,tsx,js,jsx,mjs,cjs}' \
+  --exclude-dir={node_modules,.next,build,dist,.git} . 2>/dev/null
+
+# Stripe Live Key
+grep -rnE 'sk_live_[A-Za-z0-9]{24,}' --include='*.{ts,tsx,js,jsx,mjs,cjs,env}' \
+  --exclude-dir={node_modules,.next,build,dist,.git} --exclude='.env.example' . 2>/dev/null
+
+# Slack Bot Token
+grep -rnE 'xox[baprs]-[0-9]+-[0-9]+-[A-Za-z0-9]+' --include='*.{ts,tsx,js,jsx,mjs,cjs,env,yml,yaml}' \
+  --exclude-dir={node_modules,.next,build,dist,.git} . 2>/dev/null
+
+# Google API Key
+grep -rnE 'AIza[0-9A-Za-z_-]{35}' --include='*.{ts,tsx,js,jsx,mjs,cjs,env,json}' \
+  --exclude-dir={node_modules,.next,build,dist,.git} --exclude='.env.example' . 2>/dev/null
+
+# OpenAI / Anthropic API Key
+grep -rnE '(sk-[A-Za-z0-9]{32,}|sk-ant-[A-Za-z0-9_-]{32,})' --include='*.{ts,tsx,js,jsx,mjs,cjs,env}' \
+  --exclude-dir={node_modules,.next,build,dist,.git} --exclude='.env.example' . 2>/dev/null
+
+# Private key headers (RSA/EC/DSA/PGP)
+grep -rnE -- '-----BEGIN (RSA |EC |DSA |OPENSSH |PGP )?PRIVATE KEY-----' \
+  --exclude-dir={node_modules,.next,build,dist,.git} . 2>/dev/null
+
+# JWT en codigo (comun cuando se hardcodea un token de test en produccion)
+grep -rnE 'eyJ[A-Za-z0-9_-]{10,}\.eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}' \
+  --include='*.{ts,tsx,js,jsx}' --exclude-dir={node_modules,.next,build,dist,.git,__tests__} \
+  --exclude='*.test.*' . 2>/dev/null
+```
+
+**Regla de interpretacion**:
+- CUALQUIER match en archivo de codigo fuente = **BLOCKER** (NEEDS WORK)
+- Match en `.env.example`, `README.md`, `docs/`, tests → NO es blocker si el valor es claramente placeholder (ej: `AKIA...example...`, `sk_live_xxxxx`)
+- Si el usuario usa secret management (Vercel env vars, Supabase secrets): NO deberian existir en codigo
+- Reportar: archivo + linea + tipo de secret detectado (NO incluir el valor real en el reporte para no re-filtrarlo)
+
+#### 6.2 — Lock File Integrity (supply chain)
+
+El security-engineer ya declaro este check en su spec (linea 70). Aqui se ejecuta.
+
+```bash
+# 1. Verificar que EXISTE un lock file (segun el package manager detectado)
+PKG_MGR="unknown"
+[ -f package-lock.json ] && PKG_MGR="npm"
+[ -f pnpm-lock.yaml ] && PKG_MGR="pnpm"
+[ -f yarn.lock ] && PKG_MGR="yarn"
+[ -f bun.lockb ] && PKG_MGR="bun"
+echo "Package manager detectado: $PKG_MGR"
+
+# 2. Si NO hay lock file → BLOCKER (supply chain risk: builds no reproducibles)
+if [ "$PKG_MGR" = "unknown" ] && [ -f package.json ]; then
+  echo "BLOCKER: package.json presente pero sin lock file"
+fi
+
+# 3. Verificar que el lock file esta committed (no gitignored)
+git check-ignore package-lock.json pnpm-lock.yaml yarn.lock bun.lockb 2>/dev/null && \
+  echo "BLOCKER: lock file esta en .gitignore"
+
+# 4. lockfile-lint para npm (supply-chain integrity: hosts legitimos, HTTPS, sin resolved a file://)
+if [ "$PKG_MGR" = "npm" ]; then
+  npx lockfile-lint --allowed-hosts npm --allowed-schemes https: \
+    --validate-https --type npm --path package-lock.json 2>&1 | tail -20
+fi
+
+# 5. Audit de dependencias (severidad HIGH+ es blocker)
+case "$PKG_MGR" in
+  npm)  npm audit --audit-level=high --json 2>/dev/null | head -50 ;;
+  pnpm) pnpm audit --audit-level high --json 2>/dev/null | head -50 ;;
+  yarn) yarn npm audit --severity high --recursive 2>/dev/null | head -50 ;;
+  bun)  echo "bun audit no estandarizado aun — correr npm audit manual si preocupa" ;;
+esac
+```
+
+**Regla de interpretacion**:
+- Sin lock file + `package.json` presente → **BLOCKER** (builds no reproducibles, supply chain abierto)
+- Lock file en `.gitignore` → **BLOCKER** (colaboradores/CI tendran deps distintas)
+- `lockfile-lint` reporta host no permitido / non-HTTPS → **BLOCKER** (riesgo de registry poisoning)
+- `npm/pnpm audit` con vulnerabilities HIGH o CRITICAL → **BLOCKER** hasta que el usuario:
+  a) Ejecute `npm audit fix` / `pnpm update` y vuelva a certificar
+  b) Documente explicitamente el riesgo aceptado en README/security-notes
+
+**Excepcion documentada**: si el proyecto tiene `NO_AUDIT=true` en `security-spec` (raro, solo para POCs internos sin prod), saltar audit pero mantener los otros checks.
+
 ## Triggers de FAIL automático
 - Claims sin screenshots de soporte
 - Scores perfectos sin justificación
@@ -199,6 +300,8 @@ Agregar en el reporte final: "QA ejecutado en Chromium headless. Testear Safari/
 - Links internos con HTTP 404
 - JSON-LD inválido (no parseable)
 - SEO Score < 85/100 (si seo-discovery corrió)
+- **Secrets hardcoded detectados en código fuente** (Paso 6.1) — AWS/GitHub/Stripe/Slack/Google/OpenAI/Anthropic keys, JWTs, private keys
+- **Lock file ausente, en .gitignore, o con vulnerabilities HIGH/CRITICAL sin mitigación** (Paso 6.2) — supply chain integrity
 
 ## Rating
 - **CERTIFIED**: abrumadora evidencia de que cumple la spec en todos los viewports, performance aceptable, 0 errores en consola, todos los user journeys funcionan

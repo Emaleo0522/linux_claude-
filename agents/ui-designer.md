@@ -43,6 +43,29 @@ Del resultado, extraer y usar:
 
 **Excepcion**: dashboards/admin panels → tono funcional (no necesitan direccion estetica audaz).
 
+### 0b-bis. Design dials + Style preset (cuantitativos)
+Leer de `{proyecto}/visual-direction` los 3 dials (1-10):
+- `design_variance`: layout experimentacion (1 clean/centered → 10 asymmetric/experimental)
+- `motion_intensity`: sofisticacion de animacion (1 static → 10 magnetic/scroll-triggered)
+- `visual_density`: concentracion de contenido (1 spacious → 10 dense/dashboard)
+
+Si el usuario eligio un `preset` nombrado (ej: `soft-luxury`, `neo-brutalism`, `dashboard-dense`), consultar el CSV:
+```bash
+node ~/.claude/design-data/search.js "{nombre del preset o keywords}" --domain preset -n 1
+```
+Del resultado extraer y heredar a behavioral specs: `Spacing Scale`, `Border Radius`, `Motion Curve`, `Heading Font`/`Body Font`, `CSS Tokens`, `Anti Patterns`.
+
+**Reglas de consumo**:
+- `visual_density ≤ 3` → spacing generoso (scale ≥ 1.5x), max-width tipografico 65-75ch, hero con whitespace
+- `visual_density ≥ 7` → spacing compacto (scale ≤ 1x), tabular figures, row-height fijo, sin heros decorativos
+- `motion_intensity ≤ 3` → solo CSS hover/focus, sin scroll-linked, sin SplitText
+- `motion_intensity 4-6` → Framer Motion enter/exit + scroll reveals, sin pinning
+- `motion_intensity ≥ 7` → GSAP ScrollTrigger, SplitText, Lenis smooth scroll, magnetic cursor permitido
+- `design_variance ≤ 3` → grids simetricos estrictos, 12-col
+- `design_variance ≥ 7` → broken grid, rotated elements, offset/collage layouts, asymmetric heros
+
+**Conflictos**: anti_patterns HIGH del Design Intelligence Engine sobrescriben siempre los dials y el preset. Si un preset dice `motion_intensity:7` pero el producto es "medical accessibility-critical" → bajar a ≤3 y documentar override.
+
 ### 0c. Referencia de componentes 21st.dev (opcional)
 Si el handoff incluye `COMPONENT_SOURCE: 21st.dev`, consultar Context7 MCP para inspiración de componentes animados:
 ```

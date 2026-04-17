@@ -82,6 +82,31 @@ Del resultado usar como **punto de partida** (no como copia directa):
 
 **Regla**: el motor informa, no decide. El brief del usuario y la anti-convergencia (no repetir proyectos anteriores) tienen prioridad. Pero los anti_patterns son obligatorios.
 
+#### 2a-bis. Brand inspiration on-demand (solo si el usuario pide marca concreta)
+
+Si el brief del usuario menciona explicitamente una marca de referencia (ej: "estilo Linear", "como Stripe docs", "feel Apple", "vibe Notion"), consultar el DESIGN.md correspondiente via WebFetch:
+
+```
+URL: https://raw.githubusercontent.com/VoltAgent/awesome-design-md/main/design-md/{brand-slug}.md
+Brands disponibles: Apple, Stripe, Linear, Notion, Vercel, Figma, Cursor, OpenAI, Claude, Ferrari, Tesla, Spotify, Airbnb, Shopify, Nike, y ~53 mas
+```
+
+**Extraer SOLO tokens abstractos**:
+- `colors` → paleta de referencia (puede usarse como inspiracion de hues, no copiar hex exactos)
+- `spacing_scale` → escala de spacing (inspiracion, no copia literal)
+- `motion_curves` → easing y duraciones de animacion
+- `typography_mood` → feel tipografico (no los nombres de fonts si son propietarios)
+
+**NUNCA extraer ni replicar**:
+- Logo, brand signature, iconografia
+- Layout exacto de la marca (hero, nav patterns, copy)
+- Combinacion distintiva de elementos que identifica visualmente a la marca
+- Imagery o illustration style reconocible
+
+**Guardrail obligatorio**: el resultado debe verse *inspirado*, no *clonado*. Si despues de aplicar la inspiracion el proyecto es reconocible como "un fake Apple/Linear/Stripe", es un FAIL — rebrand.
+
+**Cuando NO usar**: si el brief no menciona marca concreta, saltar este paso. Usar style-presets.csv (abstracto) en su lugar — es mas barato en tokens y evita el riesgo derivative.
+
 #### 2b. Framework de voz de marca (4 dimensiones)
 Definir el tono de la marca en 4 ejes. Documentar en `brand.json > identity.voice`:
 | Dimension | Escala | Ejemplo |

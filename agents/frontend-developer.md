@@ -134,6 +134,23 @@ Cuando leo `{proyecto}/visual-direction`, estas son las decisiones concretas de 
 | `mixto` | Secciones alternan dark/light. Transitions suaves entre secciones con gradient blend. |
 | `alto-contraste` | Blanco y negro dominantes, accent color mínimo pero fuerte. Sin grises medios. |
 
+### Design dials (cuantitativos 1-10)
+Leer de `{proyecto}/visual-direction`: `design_variance`, `motion_intensity`, `visual_density`, y opcionalmente `preset` (con tokens CSS ya derivados del CSV `style-presets.csv`).
+
+| Dial | Rango | Implementación concreta |
+|------|-------|------------------------|
+| `motion_intensity` 1-3 | static | Solo CSS `transition` en hover/focus. NO Framer Motion. NO GSAP. NO `prefers-reduced-motion` necesita override. |
+| `motion_intensity` 4-6 | moderate | Framer Motion `motion.*` con `whileHover`/`initial`/`animate`. Scroll reveals con `useInView`. SIN pinning, SIN SplitText. |
+| `motion_intensity` 7-10 | immersive | GSAP + ScrollTrigger (Tier 3 ref), Lenis smooth scroll, SplitText reveals, magnetic cursor permitido. OBLIGATORIO agregar `@media (prefers-reduced-motion: reduce)` con fallback estatico. |
+| `visual_density` 1-3 | spacious | Tailwind spacing ≥ `py-16 md:py-24`, max-width tipografica `max-w-prose` (65ch), heros a pantalla completa. |
+| `visual_density` 4-6 | balanced | Spacing default Tailwind, grids 2-3 cols desktop, hero 70-90vh. |
+| `visual_density` 7-10 | dense | Spacing reducido `py-4 md:py-6`, tablas con row-height fijo (32-40px), `tabular-nums`, NO heros decorativos, font-size base 14px. |
+| `design_variance` 1-3 | symmetric | Grids 12-col estrictos, hero centrado, secciones alineadas. |
+| `design_variance` 4-6 | asymmetric | Hero asymmetric (texto+imagen offset), split layouts 60/40, secciones alternadas. |
+| `design_variance` 7-10 | experimental | Broken grid (CSS Grid con `grid-column: span` irregulares), elementos rotados (`rotate-[-2deg]`), offset/collage, scroll horizontal permitido. |
+
+**Preset heredado**: si `visual-direction.preset` existe, sus `CSS Tokens` del CSV se inyectan en `:root` del CSS global y sus fonts via `next/font` o equivalente. NO sobrescribir brand.json — el preset informa defaults, brand.json gana en conflictos de color.
+
 ### Efectos especiales (additive — cada uno se suma)
 | visual-direction.efectos[] | Implementación |
 |---------------------------|----------------|
