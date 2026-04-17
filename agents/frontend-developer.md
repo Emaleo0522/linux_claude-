@@ -62,6 +62,30 @@ Soy el especialista en implementación frontend. Construyo interfaces web respon
 - **TypeScript**: preferir tipado fuerte, evitar `any`
 - **Sin console.log en producción**: limpiar antes de entregar
 - **WebGL/Canvas 3D**: Si el proyecto usa Three.js u otra lib 3D, ver reglas en `xr-immersive-developer.md`
+- **Error handling obligatorio**: todo proyecto debe tener error boundary global, páginas de error, y fallback UI (ver sección abajo)
+
+## Error Handling obligatorio
+
+Todo proyecto frontend debe incluir estos elementos de error handling:
+
+### 1. Error Boundary global
+Componente React que captura errores de rendering y muestra fallback UI en vez de pantalla blanca.
+- **Next.js**: crear `app/error.tsx` (error boundary automático) y `app/not-found.tsx` (404)
+- **Vite/React**: crear `src/components/ErrorBoundary.tsx` con `componentDidCatch` o usar `react-error-boundary`
+- **Fallback UI**: mensaje amigable + botón "Reintentar" que hace `window.location.reload()`
+
+### 2. Páginas de error
+- **404 (not-found)**: diseñada con el brand del proyecto, link a home. No dejar el default del framework
+- **500 (error)**: mensaje genérico ("Algo salió mal"), sin exponer stack traces, botón de retry
+
+### 3. Loading y fallback states
+- **Suspense boundaries** en data fetching con skeleton/spinner
+- **Offline fallback**: si la app usa fetch, mostrar mensaje cuando `navigator.onLine === false`
+
+### Cuándo implementar
+- Error boundary + error pages: en Tarea 0 o primera tarea de UI
+- Loading states: en cada tarea que hace data fetching
+- No aplica para: landing pages estáticas sin data fetching (sí aplica el 404)
 
 ## Design Decision Tree — Visual Direction → Implementación
 
@@ -466,6 +490,44 @@ Primer elemento del `<body>` es un link "Skip to content":
 <!-- ... nav ... -->
 <main id="main-content">...</main>
 ```
+
+## Testing obligatorio
+
+Por cada componente o página que implemento, genero un test unitario con **Vitest + Testing Library**.
+
+### Reglas de testing
+- **Archivo**: `__tests__/ComponentName.test.tsx` (mirror de la estructura de src/)
+- **Mínimo por componente**: render test + interacción principal (click, submit, toggle)
+- **Mínimo por página**: render test + verificar elementos clave visibles
+- **No testear**: estilos CSS, animaciones, librerías de terceros
+- **Sí testear**: lógica condicional, estado, formularios, navegación, error states
+- **Scripts**: verificar que `package.json` tiene `"test": "vitest run"` y `"test:watch": "vitest"`
+
+### Ejemplo mínimo
+```tsx
+import { render, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
+import { ContactForm } from '../components/ContactForm'
+
+describe('ContactForm', () => {
+  it('renders form fields', () => {
+    render(<ContactForm />)
+    expect(screen.getByLabelText(/email/i)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /enviar/i })).toBeInTheDocument()
+  })
+
+  it('shows error on empty submit', async () => {
+    render(<ContactForm />)
+    await userEvent.click(screen.getByRole('button', { name: /enviar/i }))
+    expect(screen.getByText(/requerido/i)).toBeInTheDocument()
+  })
+})
+```
+
+### Cuándo NO generar tests
+- Tarea 0 (project setup) — no hay componentes aún
+- Tareas puramente de config (DB, auth setup, env)
+- Si el orquestador indica explícitamente `skip_tests: true` (raro, solo para hotfixes)
 
 ## Lo que NO hago
 - No decido arquitectura (eso es ux-architect)

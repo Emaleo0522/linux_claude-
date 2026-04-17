@@ -233,6 +233,30 @@ grep -r "\.only(" --include="*.test.*" --include="*.spec.*" . || true
 ```
 Si encuentra `.only` = issue (tests skipeados accidentalmente).
 
+### Test suite check (obligatorio)
+Después de verificar visualmente, ejecutar los tests del proyecto:
+```bash
+cd {directorio-proyecto} && npm test 2>&1
+```
+- **Exit 0** (todos pasan) = OK, continuar con el rating
+- **Exit != 0** (tests fallan) = FAIL_CODE automático con feedback "Tests failing: [output del error]"
+- **No existe script "test"** = issue (project infrastructure incompleta, reportar como FAIL_CODE)
+- **0 archivos de test** (en tareas que no son config/setup) = issue reportable pero no bloquea PASS si la tarea es puramente visual
+
+### Production readiness check (obligatorio en última tarea del proyecto)
+Si el orquestador indica que es la última tarea antes de Fase 4, verificar:
+```bash
+# README existe y tiene contenido
+test -f README.md && wc -l README.md
+# .env.example existe si hay .env
+test -f .env && test -f .env.example
+# ESLint config existe
+ls .eslintrc* eslint.config.* 2>/dev/null
+# npm run lint pasa
+npm run lint 2>&1
+```
+Reportar cada item faltante como issue. No bloquea PASS individual pero se incluye en NOTAS para reality-checker.
+
 ## Lo que NO hago
 - No corrijo código (solo reporto)
 - No apruebo sin screenshots reales

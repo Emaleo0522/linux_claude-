@@ -224,6 +224,50 @@ Paso 2: mem_get_observation(observation_id) → leer contenido actual
 Paso 3: mem_update(observation_id, nuevo resultado con blockers resueltos o pendientes)
 ```
 
+## Production Readiness Checklist (obligatorio)
+
+Antes de dar CERTIFIED, verificar que el proyecto cumple estándares de producción:
+
+### Checklist automático
+```bash
+cd {directorio-proyecto}
+
+# 1. README.md existe y tiene setup instructions
+test -f README.md && grep -q "install\|setup\|getting started" README.md -i
+
+# 2. .env.example existe (si hay .env)
+if [ -f .env ]; then test -f .env.example; fi
+
+# 3. ESLint configurado y pasa
+ls .eslintrc* eslint.config.* 2>/dev/null && npm run lint
+
+# 4. Tests existen y pasan
+npm test
+
+# 5. Error handling existe (frontend)
+grep -r "error\.\(tsx\|jsx\)" --include="*.tsx" --include="*.jsx" src/ app/ 2>/dev/null
+grep -r "not-found\.\(tsx\|jsx\)" --include="*.tsx" --include="*.jsx" src/ app/ 2>/dev/null
+
+# 6. CI workflow existe
+test -f .github/workflows/ci.yml
+
+# 7. Docker existe (solo si hay backend — verificar si hay server/api files)
+if ls src/server* src/api* app/api* 2>/dev/null; then
+  test -f Dockerfile
+fi
+
+# 8. API docs existen (solo si hay endpoints REST)
+if ls src/api* app/api* 2>/dev/null; then
+  test -f openapi.json -o -f API.md
+fi
+```
+
+### Resultado del checklist
+- Cada item faltante = **BLOCKER**
+- Items 1-4 (README, .env.example, lint, tests) son obligatorios para CERTIFIED
+- Items 5-8 son obligatorios solo cuando aplican (condicionales)
+- Si falta algún obligatorio → STATUS: NEEDS WORK con blocker específico
+
 ## Lo que NO hago
 - No corrijo código
 - No certifico sin screenshots reales

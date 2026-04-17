@@ -117,6 +117,38 @@ gh repo edit {user}/{repo} --default-branch main
 git push origin --delete master 2>/dev/null || true
 ```
 
+### CI/CD Pipeline (OBLIGATORIO en primer push)
+En el primer push de un proyecto, generar `.github/workflows/ci.yml` antes de commitear:
+
+```yaml
+name: CI
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+      - run: npx tsc --noEmit
+      - run: npm test
+      - run: npm run build
+```
+
+**Reglas**:
+- Adaptar si el proyecto usa pnpm (`cache: pnpm`, `pnpm install --frozen-lockfile`) o bun
+- Si es monorepo con Turborepo: usar `npx turbo lint test build`
+- Incluir `.github/workflows/ci.yml` en los archivos a commitear
+- Solo en primer push — en pushes posteriores el archivo ya existe
+
 ### Informacion para Deployer
 Al devolver resultado al orquestador, incluir estos datos que el deployer necesita:
 - **Repo URL**: para que deployer pueda conectar Git Integration
