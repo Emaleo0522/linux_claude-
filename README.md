@@ -4,14 +4,29 @@
 
 A central orchestrator coordinates 24 specialized AI sub-agents (25 entities total) through a 5-phase pipeline: planning, architecture, development with visual QA, certification, and deployment. 13 reactive hooks enforce security, quality gates, and cost tracking in real time. Persistent memory via Engram MCP enables session continuity and cross-agent coordination.
 
-Compatible with **Linux (Claude Code CLI)** and **Windows (Claude Desktop)**.
+Compatible with **Linux (Claude Code CLI)** and **Windows (Claude Desktop)**. The system operates in **Spanish** (commands, prompts, and agent communication), though it builds projects in any language.
+
+---
+
+## What Can You Build
+
+| Project Type | Example | Agents Used |
+|-------------|---------|-------------|
+| **Landing pages & portfolios** | Restaurant website, photographer portfolio, product launch page | frontend-developer, brand-agent, image-agent |
+| **Web applications** | Dashboard, SaaS MVP, admin panel, e-commerce | frontend-developer + backend-architect |
+| **Mobile apps** | iOS/Android app with Expo | mobile-developer |
+| **Browser games** | 2D platformer, puzzle game, arcade | game-designer + xr-immersive-developer |
+| **APIs & backends** | REST/tRPC API, webhook handler, background jobs | backend-architect |
+| **Full-stack projects** | App with auth, database, API, and frontend | All dev agents as needed |
+
+Every project gets the full pipeline: planned tasks, designed architecture, implemented code with visual QA per task, SEO + performance certification, and deployment to Vercel (web) or EAS Build (mobile).
 
 ---
 
 ## Key Features
 
 - **25 specialized agents** -- 1 orchestrator + 24 sub-agents, each with defined tools and responsibilities
-- **12 technical references** -- shared protocol, auth, animation, design systems, creative coding, and more
+- **13 technical references** -- shared protocol, auth, animation, design systems, creative coding, pipeline details, and more
 - **5-phase pipeline** -- Planning, Architecture, Dev+QA loop, Certification, Deployment
 - **13 reactive hooks** -- Security blocks, quality gates, cost tracking, context management
 - **Persistent memory** -- Engram MCP for cross-session state, DAG-based progress tracking
@@ -64,7 +79,7 @@ Phase 5: Deployment      -> git -> deployer (with user confirmation)
 | 5 | `deployer` | Deploy to Vercel + Git Integration for auto-deploy |
 | -- | `self-auditor` | Validates system health: agents, hooks, settings, protocols |
 
-### Technical References (12 files)
+### Technical References (13 files)
 
 | File | Content |
 |------|---------|
@@ -80,6 +95,7 @@ Phase 5: Deployment      -> git -> deployer (with user confirmation)
 | `advanced-effects-reference` | Lottie, Rive, cursor effects, magnetic buttons, micro-interactions |
 | `creative-coding-reference` | p5.js, GLSL shaders, generative art, particle systems |
 | `reactive-audio-reference` | Tone.js, Web Audio API, audio visualization, sound design |
+| `pipeline-reference` | Pipeline-specific details: tools per agent, stack table, VD checkpoint, DI engine, Nothing Design, 21st.dev, creative agents |
 
 ---
 
@@ -89,12 +105,12 @@ Phase 5: Deployment      -> git -> deployer (with user confirmation)
 
 | Hook | Type | Matcher | Action |
 |------|------|---------|--------|
-| `block-no-verify` | PreToolUse | Bash | **BLOCKS** git --no-verify, rm -rf, git reset --hard, DROP TABLE, chmod 777, curl\|sh |
+| `block-no-verify` | PreToolUse | Bash | **BLOCKS** git --no-verify, git push --force, rm -rf, git reset --hard, DROP TABLE, chmod 777, curl\|sh |
 | `config-protection` | PreToolUse | Write/Edit | **BLOCKS** edits to .env, .pem, .key, credentials. **WARNS** on linting config changes |
 | `quality-gate` | PostToolUse | Write/Edit | **WARNS** on debugger, .only(), @ts-ignore, hardcoded secrets |
 | `console-log-warning` | PostToolUse | Write/Edit | **WARNS** on console.log/warn/error in production code (ignores tests) |
 | `suggest-compact` | PostToolUse | global | **WARNS** every ~50 tool calls with pipeline phase context (async) |
-| `pre-compact-engram` | PreCompact | lifecycle | **SAVES** snapshot to disk + **INSTRUCTS** Claude to dual-write DAG State before compaction (v2.2) |
+| `pre-compact-engram` | PreCompact | lifecycle | **SAVES** snapshot to disk via trigger file, Boot Sequence dual-writes DAG State on next interaction (v2.3) |
 | `cost-tracker` | PostToolUse | global | **LOGS** each tool call with category, sub-agent, model (async) |
 | `session-summary` | Stop | lifecycle | **LOGS** session activity in JSONL for recovery (async) |
 | `engram-sync` | Stop | lifecycle | **SYNCS** Engram memories to GitHub automatically (async, 60s timeout) |
@@ -153,7 +169,7 @@ Both versions contain the same core system (pipeline, agents, hooks, Engram, sta
 ### Post-Install Verification
 
 ```bash
-# Agents installed (should be 37: 25 agents + 12 references)
+# Agents installed (should be 38: 25 agents + 13 references)
 ls ~/.claude/agents/*.md | wc -l
 
 # Hooks installed (should be 13)
@@ -239,13 +255,33 @@ retomar [project-name]
 
 The orchestrator reads the DAG State from Engram and resumes exactly where it left off, without re-executing completed phases or re-asking decided questions.
 
+### Modifying an Existing Project
+
+```
+retomar [project-name] -- quiero cambiar [description of changes]
+```
+
+Uses Modification Mode: skips planning and architecture, creates only new tasks, runs mini Phase 3 + QA.
+
+### Example Prompts
+
+```
+modo orquestador -- quiero crear una landing page para una cafetería de especialidad
+modo orquestador -- nuevo proyecto completo: dashboard de analytics con auth y base de datos
+modo orquestador -- app mobile de delivery con React Native
+modo orquestador -- juego 2D tipo plataformas en el navegador
+retomar mi-proyecto -- agrega un blog con markdown
+retomar mi-proyecto -- cambia la paleta de colores a tonos más oscuros
+```
+
 ---
 
 ## Architecture
 
 ```
 ~/.claude/
-|-- agents/            # 25 agents + 12 references = 37 files
+|-- agents/            # 25 agents + 13 references = 38 files
+|-- design-data/       # Design Intelligence Engine (search.js + 8 CSVs)
 |-- hooks/             # 13 reactive hooks
 |-- settings.json      # hook config + Engram MCP
 |-- settings.local.json # agent permissions
@@ -296,6 +332,215 @@ The orchestrator selects the stack in Phase 1 based on project requirements. The
 
 ---
 
+## Design Intelligence Engine
+
+A local BM25 search engine that provides industry-specific design recommendations. Built on data from [ui-ux-pro-max-skill](https://github.com/nextlevelbuilder/ui-ux-pro-max-skill), ported to Node.js.
+
+**Location:** `~/.claude/design-data/` (search.js + 8 CSVs, ~410KB total)
+
+| Dataset | Rows | Content |
+|---------|------|---------|
+| products | 161 | Product types with recommended style, palette, and landing pattern |
+| styles | 84 | UI styles with CSS keywords, performance, accessibility |
+| colors | 160 | 12+ semantic color tokens per industry |
+| typography | 73 | Font pairings with Google Fonts URLs |
+| ux-guidelines | 98 | UX best practices with severity (HIGH/MEDIUM/LOW) |
+| landing | 34 | Landing patterns with section order and conversion data |
+| ui-reasoning | 161 | Decision rules and anti-patterns per industry |
+| charts | 25 | Chart types with accessibility and library recommendations |
+
+**Used in Phase 2 by:**
+- `ux-architect` -- style, colors, CSS keywords, design variables, anti-patterns
+- `ui-designer` -- landing pattern, anti-patterns, chart guidance, key effects
+- `brand-agent` -- palette by industry, typographic mood, anti-patterns
+
+```bash
+# Full design system recommendation (~500-800 tokens)
+node ~/.claude/design-data/search.js "luxury spa" --design-system -p "MySpa"
+
+# Specific domain queries
+node ~/.claude/design-data/search.js "dashboard" --domain chart -n 3
+node ~/.claude/design-data/search.js "accessibility" --domain ux -n 5
+```
+
+The engine **informs, it does not decide**. The user's brief and anti-convergence rules always take priority. Anti-patterns with HIGH severity are mandatory.
+
+---
+
+## Visual Direction Checkpoint
+
+Between Phase 2 (architecture) and Phase 3 (development), the orchestrator pauses to present the user with structured visual choices. This ensures every project has a unique identity instead of generic defaults.
+
+**8 categories presented:**
+
+| Category | Options (examples) |
+|----------|--------------------|
+| Visual style | editorial, immersive, minimalist, bold/colorful, other |
+| Hero section | static image, background video, animated background, parallax, slider, text-only |
+| Navigation | transparent with blur, fixed solid, hamburger-only, sidebar, mega-menu |
+| Gallery | masonry, carousel, lightbox, horizontal scroll, hover reveal |
+| Animation level | subtle (CSS only), moderate (Framer Motion), immersive (FM + GSAP) |
+| Mood | dark, light, mixed, high contrast |
+| Typography | display/impactful, elegant/serif, technical/mono, neutral/functional |
+| Special effects | custom cursor, text animations, smooth scroll, parallax, page transitions, particles |
+
+The user's choices are saved in Engram and flow to `ui-designer` (behavioral specs) and `frontend-developer` (design decision tree). If a CodePen vault effect or 21st.dev component matches the chosen direction, it is presented as a concrete option.
+
+---
+
+## Design Quality System
+
+The pipeline includes several mechanisms to ensure every project looks unique and professional, not generic.
+
+### Anti-Convergence
+
+`brand-agent` checks previous projects stored in Engram before generating a new brand identity. If a palette, font pairing, or visual style was used recently, it avoids repeating it. This prevents the "everything looks the same" problem common with AI-generated designs.
+
+### Behavioral Specs
+
+`ui-designer` creates a behavioral specification for each component based on the animation level chosen in the Visual Direction Checkpoint:
+
+| Level | What it means | Example |
+|-------|--------------|---------|
+| **Subtle** | CSS transitions only | Button hover: `opacity: 0.9`, 200ms ease |
+| **Moderate** | Framer Motion | Button hover: `scale(1.05)` + shadow lift |
+| **Immersive** | Framer Motion + GSAP | Button hover: magnetic effect + glow + ripple |
+
+These specs are stored in Engram (`{project}/design-system`) and enforced during QA: `evidence-collector` verifies that the implemented behavior matches the specified level. A mismatch (e.g., immersive spec but only CSS transitions) results in a `FAIL_SPEC`.
+
+### Typography Sources
+
+`brand-agent` selects fonts from two sources:
+
+- **Google Fonts** -- default, broadest compatibility, free
+- **Fontshare** -- curated premium-quality fonts for projects requiring a more distinctive typographic identity
+
+The Design Intelligence Engine provides a `typography_mood` recommendation per industry (display, elegant, technical, neutral), but `brand-agent` makes the final font selection.
+
+---
+
+## Modification Mode
+
+For projects that have already been built and deployed, the pipeline supports a lightweight modification flow instead of re-running the full 5 phases.
+
+```
+retomar [project-name] -- quiero cambiar [what to modify]
+```
+
+**How it works:**
+1. **Analysis** -- reads the existing DAG State and codebase to understand current state
+2. **Light planning** -- creates only the new/changed tasks (no re-planning completed work)
+3. **Mini Phase 3 + QA** -- implements changes with the same dev ↔ evidence-collector loop
+4. **Deploy** -- pushes changes through git + deployer (with user confirmation)
+
+Phases 1, 2, and 4 are skipped entirely. The system preserves all previous decisions (stack, design system, brand) and only touches what needs to change.
+
+---
+
+## QA System Details
+
+### Visual QA (evidence-collector)
+
+Every development task passes through visual QA before advancing. The QA agent:
+
+1. Builds for production (`npm run build && npm start`)
+2. Captures screenshots in 3 viewports: Desktop (1280x720), Tablet (768x1024), Mobile (375x667)
+3. Tests interactive elements (clicks, form inputs, navigation)
+4. Runs accessibility checks (axe-core -- 0 critical/serious violations required)
+5. Checks browser console for errors (0 errors required for PASS)
+6. Verifies behavioral specs match the design system
+
+**PASS threshold:** Rating B- or better, zero console errors, zero critical accessibility violations.
+
+### Failure Classification
+
+When QA fails, the failure is classified to give targeted feedback:
+
+| Type | Meaning | Action |
+|------|---------|--------|
+| **FAIL_CODE** | Code doesn't work -- errors, crashes, layout broken, feature missing | Dev agent fixes code |
+| **FAIL_SPEC** | Code works but doesn't match the spec -- wrong animation level, incorrect interactions | Dev agent re-reads design system and adjusts |
+
+Each task gets up to 3 retry attempts. After 3 failures, the orchestrator escalates to the user.
+
+---
+
+## Authentication
+
+**Better Auth** is the default authentication system for all new projects. It provides email/password, social login, and session management out of the box.
+
+Key integration points:
+- `backend-architect` sets up the server-side auth (routes, database tables, session config)
+- `frontend-developer` implements the client-side auth (login forms, session provider, protected routes)
+- `rapid-prototyper` handles full-stack auth in MVPs
+
+The system includes a production-tested reference (`better-auth-reference.md`) covering Better Auth + Supabase + Vercel + Next.js 16, with specific patterns for connection pooling, middleware migration (proxy.ts), and cookie handling.
+
+> If a project already uses Clerk, Supabase Auth, or custom JWT, those are preserved. Better Auth is only the default for new projects.
+
+---
+
+## 21st.dev Components
+
+[21st.dev](https://21st.dev) is a community library of animated React components (17,600+ snippets). The system accesses it via **Context7 MCP** (Upstash) -- no API key required.
+
+**How it works in the pipeline:**
+
+1. **Phase 1** -- the orchestrator decides `component_source: "21st.dev"` in the DAG State based on project type (visual/animated projects benefit; dashboards typically don't)
+2. **Visual Direction Checkpoint** -- if 21st.dev is active, available components matching the chosen style are presented as options
+3. **Phase 3** -- `frontend-developer` queries Context7 for specific component types:
+
+```
+resolve-library-id("21st.dev")  ->  /websites/21st_dev_community_components
+query-docs(library_id, "animated hero section")  ->  code snippets
+```
+
+**Key rules:**
+- **Inspiration + base, never copy-paste** -- every component is adapted to the project's brand (colors, fonts, spacing)
+- **No 21st.dev packages installed** -- code is extracted and integrated directly
+- **Max 3 queries per task** -- to avoid context bloat
+- **Fallback chain** -- if no suitable component found, falls through to CodePen vault or custom implementation
+
+**Setup:** Context7 MCP is configured during installation (Linux: `claude mcp add context7`, Windows: `claude_desktop_config.json`). Permissions are pre-configured in `settings.local.json`.
+
+---
+
+## CodePen Vault
+
+The system maintains a curated library of visual effects at `~/.claude/codepen-vault/`. The workflow:
+
+1. **Discovery** -- `codepen-explorer` searches CodePen for effects matching the project's visual direction
+2. **User approval** -- effects are presented to the user; only approved ones are saved to the vault
+3. **Adaptation** -- `frontend-developer` reads from the vault and adapts the effect to the project's brand (colors, fonts, spacing)
+4. **Post-effects checkpoint** -- after implementing effects, the full page is shown to the user before advancing to Phase 4
+
+Vault metadata is stored in Engram (`codepen-vault/{slug}`) for cross-project searchability. The actual code lives on disk.
+
+---
+
+## Mobile Deployment (EAS Build)
+
+For React Native + Expo projects, deployment uses **Expo Application Services (EAS)** instead of Vercel:
+
+| Profile | Platform | Output | Cost |
+|---------|----------|--------|------|
+| `preview` | Android | APK (direct install) | Free (30 builds/month) |
+| `preview` | iOS | IPA (requires TestFlight) | Requires Apple Developer ($99/year) |
+| `production` | Android | AAB (Google Play) | Free |
+| `production` | iOS | Signed IPA (App Store) | Requires Apple Developer |
+
+The `deployer` agent handles EAS builds. Store submission (`eas submit`) requires explicit user confirmation and is never automatic.
+
+---
+
+## Pre-Authorization (PRE_AUTH)
+
+When the user's original message includes words like "sube a git", "deploy", "push", or "publica", the system treats this as pre-authorization for git push and deployment. The `git` and `deployer` agents receive a `PRE_AUTH: true` flag and proceed without asking for confirmation again.
+
+This avoids the friction of being asked "are you sure?" for an action the user explicitly requested. If the original message doesn't include deployment intent, confirmation is always requested.
+
+---
+
 ## Pipeline Resilience
 
 | Mechanism | What It Solves |
@@ -323,21 +568,21 @@ The DAG State (project progress tracker) can grow to 10+ KB for advanced project
 
 The orchestrator reads the full DAG State once at startup to extract the light summary, then retains only the summary + the observation ID. It re-reads the full state on demand when decisions require it.
 
-### PreCompact Blocking (v2.2)
+### PreCompact Save (v2.3)
 
 When Claude's context is about to be compacted (context window nearing capacity), the `pre-compact-engram` hook intercepts the event and:
 
 1. **Saves a session snapshot** to disk (tool count, working directory, pipeline status)
-2. **Emits a critical message** via stderr: `COMPACTION IMMINENT -- SAVE STATE NOW`
+2. **Writes a trigger file** at `~/.claude/snapshots/compaction-pending.json`
 
-This message instructs the orchestrator to immediately:
-1. Save DAG State to Engram via `mem_update`
-2. Write DAG State to disk at `{project_dir}/.pipeline/estado.yaml`
-3. Save any unsaved discoveries or task progress
+On the next interaction, the orchestrator's Boot Sequence detects this trigger file and immediately:
+1. Saves DAG State to Engram via `mem_update`
+2. Writes DAG State to disk at `{project_dir}/.pipeline/estado.yaml`
+3. Deletes the trigger file
 
-After saving, compaction is safe -- the Boot Sequence recovers from Engram or disk on the next interaction.
+After saving, compaction is safe -- the Boot Sequence recovers from Engram or disk.
 
-> **Why this matters:** Before v2.2, the hook only saved metadata (tool count, cwd). If the orchestrator hadn't done a dual-write recently, task progress could be lost during compaction. Now the hook actively forces a save before context is lost.
+> **v2.3 change:** Previous versions emitted instructions via stderr, which caused empty responses without tool calls. The trigger file pattern is reliable and non-blocking.
 
 ### Dual-Write Pattern
 

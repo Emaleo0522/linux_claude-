@@ -174,33 +174,22 @@ mem_session_summary(
 
 ### Protocolo de Engram — Proteger el contexto
 
-**Lectura en 2 pasos (SIEMPRE así):**
-```
-Paso 1: mem_search("{proyecto}/estado")
-        → retorna: preview truncado + observation_id
+> Protocolo de lectura/escritura 2-pasos: ver `agent-protocol.md` §1-2. Aqui solo las reglas adicionales del orquestador.
 
-Paso 2: mem_get_observation(observation_id)
-        → retorna: contenido COMPLETO
-
-NUNCA usar el resultado de mem_search directamente — es una preview cortada.
-```
-
-**Reglas para proteger la ventana de contexto:**
-1. **Guardar COMPLETO, leer SELECTIVO**: guardar toda la info en Engram, pero al leer solo extraer lo que necesita la tarea actual
-2. **No duplicar en contexto**: si la info está en Engram, no copiarla al prompt del subagente — pasar solo la ruta al cajón
-3. **Cajones atómicos**: cada cajón tiene UN propósito. No mezclar tareas con decisiones ni QA con implementación
-4. **Stack va en estado**: las decisiones de stack se guardan en `{proyecto}/estado`, no en un cajón aparte — se leen al retomar
-5. **Subagentes no leen todo**: cada agente lee SOLO los cajones que necesita (ver tabla abajo)
-6. **Al retomar post-compactación**: leer `{proyecto}/estado` → contiene: fase actual, stack elegido, tareas completadas, bloqueadores. Con esto se reanuda sin inventar
+**Reglas de contexto del orquestador:**
+1. **No duplicar en contexto**: pasar topic_key al subagente, no contenido
+2. **Cajones atómicos**: un propósito por cajón. No mezclar tareas con decisiones
+3. **Stack va en estado**: se guardan en `{proyecto}/estado`, no en cajón aparte
+4. **Subagentes leen solo sus cajones** (ver tabla abajo)
 
 **Qué cajón lee cada agente:**
 | Agente | Lee de Engram | Escribe en Engram |
 |--------|--------------|-------------------|
 | project-manager-senior | nada (recibe spec directa) | `{proyecto}/tareas` |
 | ux-architect | `{proyecto}/tareas` | `{proyecto}/css-foundation` |
-| ui-designer | `{proyecto}/css-foundation` | `{proyecto}/design-system` |
+| ui-designer | `{proyecto}/css-foundation`, `{proyecto}/visual-direction` | `{proyecto}/design-system` |
 | security-engineer | `{proyecto}/tareas` | `{proyecto}/security-spec` |
-| frontend-developer | `{proyecto}/css-foundation`, `{proyecto}/design-system`, `{proyecto}/security-spec`, `{proyecto}/tareas`, `codepen-vault/*` (consulta boveda) | `{proyecto}/tarea-{N}` |
+| frontend-developer | `{proyecto}/css-foundation`, `{proyecto}/visual-direction`, `{proyecto}/design-system`, `{proyecto}/security-spec`, `{proyecto}/tareas`, `codepen-vault/*` (consulta boveda), Context7 MCP (21st.dev, si `component_source: 21st.dev`) | `{proyecto}/tarea-{N}` |
 | mobile-developer | `{proyecto}/design-system`, `{proyecto}/tareas` | `{proyecto}/tarea-{N}` |
 | backend-architect | `{proyecto}/security-spec`, `{proyecto}/tareas` | `{proyecto}/tarea-{N}` |
 | rapid-prototyper | `{proyecto}/tareas` (la tarea específica) | `{proyecto}/tarea-{N}` |
@@ -223,29 +212,7 @@ NUNCA usar el resultado de mem_search directamente — es una preview cortada.
 
 ### Proactive Save Mandate (para subagentes)
 
-Cada subagente DEBE guardar en Engram INMEDIATAMENTE despues de:
-- Tomar una decision arquitectonica no obvia
-- Descubrir un bug, gotcha, o comportamiento inesperado
-- Encontrar un workaround que no es evidente del codigo
-- Aprender algo sobre una libreria/framework que no esta documentado
-
-**Formato para discoveries** (adicional al resultado de tarea — NO lo reemplaza):
-```
-mem_save(
-  title: "{proyecto}/discovery-{descripcion-corta}",
-  topic_key: "{proyecto}/discovery-{descripcion-corta}",
-  content: "**What**: {que descubri}\n**Why**: {por que importa}\n**Where**: {archivos afectados}\n**Learned**: {la leccion para el futuro}",
-  type: "discovery",
-  project: "{proyecto}"
-)
-```
-
-Los discoveries sobreviven compactación y quedan disponibles para:
-- Futuras sesiones del mismo proyecto
-- Otros usuarios que retomen el proyecto
-- El reality-checker para validar que no se repitan errores conocidos
-
-El orquestador NO lee discoveries por defecto — son para busqueda futura (`mem_search`).
+> Formato de discoveries: ver `agent-protocol.md` §4. El orquestador NO lee discoveries por defecto — son para busqueda futura (`mem_search`).
 
 ### DAG State — guardar despues de CADA TAREA completada (no solo fases)
 
@@ -267,11 +234,13 @@ stack:
   game_subsystems: []  # subsistemas del GDD: [entity, event, fsm, scene, sound, pool, ...]
   design_system: "nothing-full | nothing-partial | custom | none"  # nothing-full=todo el proyecto, nothing-partial=solo secciones listadas en nothing_scope, custom=design propio (default), none=sin design system
   nothing_scope: []    # solo si design_system=nothing-partial — lista de secciones/componentes: ["hero", "dashboard", "stats-section", "footer"]
+  component_source: "21st.dev | codepen | custom | none"  # 21st.dev=consultar community components via Context7, codepen=buscar en CodePen vault/explorer, custom=todo manual (default), none=sin componentes pre-hechos
 fase_actual: "fase_1_planificacion | fase_2_arquitectura | fase_2b_assets | fase_3_dev | fase_4_certificacion | fase_5_publicacion | completado | modificacion"
 fases_completadas:
   planificacion: null             # observation_id (numero) o null si no completada
   arquitectura:
     css: null                     # observation_id del css-foundation
+    visual_direction: null        # observation_id del visual-direction (elecciones del usuario)
     design: null                  # observation_id del design-system
     security: null                # observation_id del security-spec
   assets_creativos:
@@ -424,6 +393,14 @@ Para verificar un phase gate:
 
    **Referencia**: `nothing-design-reference.md` — archivo de referencia cargado condicionalmente por agentes de Fase 2 y Fase 3.
 
+   **Decisión de component source** (el orquestador decide junto con stack):
+   - Si el usuario pide "visual", "impactante", "animado", "wow", "21st.dev", "componentes animados" → `component_source: "21st.dev"`
+   - Si el usuario pide efectos específicos de CodePen o dice "busca en CodePen" → `component_source: "codepen"`
+   - Si no menciona ninguno → `component_source: "custom"` (default — todo se construye manual)
+   - `component_source` NO es excluyente: frontend-developer puede consultar 21st.dev puntualmente aunque no sea el source principal
+   
+   **21st.dev via Context7 MCP**: library ID `/websites/21st_dev_community_components`. frontend-developer lo consulta directamente — no necesita agente intermediario (a diferencia de CodePen que usa codepen-explorer).
+
 4. Delega a **project-manager-senior**:
    - Pasa: spec del usuario (texto directo) + **stack decidido** + **estructura** (monorepo/single)
    - Pide que guarde en Engram: `{proyecto}/tareas`
@@ -438,6 +415,7 @@ Para verificar un phase gate:
    Stack: {stack elegido}
    Estructura: {monorepo | single-repo}
    Design System: {nothing-full | nothing-partial (scope: [...]) | custom | none}
+   Componentes: {21st.dev | codepen | custom}
    {N} tareas identificadas
 
    ¿Empezamos con la arquitectura y el desarrollo?
@@ -461,6 +439,7 @@ Para verificar un phase gate:
 
 **Paso 1 — ux-architect** (primero, obligatorio)
 - Recibe: spec del proyecto + ruta al cajón `{proyecto}/tareas`
+- **Design Intelligence**: ux-architect ejecuta `node ~/.claude/design-data/search.js` como Paso 0 para obtener recomendaciones por industria (estilo, colores, tipografía, anti-patterns). No requiere acción del orquestador — el agente lo hace automáticamente.
 - **Si DAG State `tipo: mobile`**: agregar al handoff `TIPO_PROYECTO: mobile` — ux-architect producirá tokens en formato TS/JSON (no CSS)
 - **Si `design_system` es `nothing-full` o `nothing-partial`**: agregar al handoff:
   ```
@@ -468,11 +447,140 @@ Para verificar un phase gate:
   NOTHING_SCOPE: {lista de secciones} (solo si partial)
   REFERENCIA: nothing-design-reference.md
   ```
-- Guarda en: `{proyecto}/css-foundation`
+- Guarda en: `{proyecto}/css-foundation` (incluye campo `Design Intelligence` con categoría, estilo y anti-patterns)
 - Devuelve: resumen (tokens CSS, layout, breakpoints)
 
-**Paso 2 — ui-designer + security-engineer** (paralelo, DESPUÉS de que ux-architect devuelva)
-- **ui-designer**: Recibe spec + ruta a `{proyecto}/css-foundation` + **mismos campos DESIGN_SYSTEM/NOTHING_SCOPE/REFERENCIA si aplica** + **TIPO_PROYECTO si mobile** → Guarda en: `{proyecto}/design-system` → Devuelve: resumen (componentes clave, paleta, tipografía)
+**Paso 1.5 — Visual Direction Checkpoint** (PAUSA OBLIGATORIA para proyectos con UI)
+
+Después de que ux-architect devuelva, el orquestador presenta al usuario las decisiones visuales clave. Esto NO se delega a un subagente — el orquestador lo hace directamente usando los datos del Design Intelligence que ux-architect incluyó en `{proyecto}/css-foundation`.
+
+**Cuándo se ejecuta**: SIEMPRE que el proyecto tiene frontend (web, landing, app, portfolio). NO se ejecuta para: APIs puras, CLIs, o backend-only.
+
+**Antes de presentar las opciones** — consultar recursos disponibles:
+
+1. **Bóveda CodePen**: `mem_search("codepen-vault")` — listar efectos aprobados que podrían aplicar al proyecto. Si hay matches relevantes, mencionarlos como opciones concretas en las categorías correspondientes (ej: un slider de la bóveda se menciona en "Hero", un efecto de galería en "Galería")
+2. **21st.dev**: si `component_source: "21st.dev"` en DAG State, mencionar que hay componentes animados disponibles (aurora backgrounds, parallax heroes, animated cards, etc.)
+3. **Design Intelligence**: ya consultado por ux-architect — usar el estilo y pattern recomendados para informar las sugerencias
+
+**Qué presenta al usuario** (adaptar opciones según tipo de proyecto):
+
+```
+🎨 Dirección Visual — {nombre-proyecto}
+
+Basado en el análisis de industria ({categoría del Design Intelligence}),
+necesito tu input en estas decisiones clave:
+
+💡 RECURSOS DISPONIBLES (lo que ya tenemos listo):
+{si hay efectos en bóveda CodePen}:
+  • Bóveda de efectos probados: {lista con nombre + tipo, ej: "Liquid Morphology Slideshow (slider 3D)",
+    "Draggable Image Gallery (galería con drag)", "Elastic Accordion Cards (cards animadas)"}
+{si component_source es 21st.dev}:
+  • 21st.dev: biblioteca de componentes animados React (aurora backgrounds, parallax heroes,
+    gradient text, magnetic buttons, animated cards, etc.)
+{siempre}:
+  • Animaciones: CSS (básico), Framer Motion (moderado), GSAP + Lenis (inmersivo)
+  • Efectos creativos: partículas, shaders, cursor custom, text reveal, smooth scroll
+
+Podés elegir cualquiera de estos o describir lo que imaginás:
+
+1. ESTILO VISUAL
+   a) Editorial/magazine — layouts asimétricos, tipografía protagonista, whitespace generoso
+   b) Inmersivo/cinematic — full-bleed, video/parallax, scroll storytelling
+   c) Minimalista/funcional — clean, mucho aire, contenido primero
+   d) Bold/colorido — colores vibrantes, formas atrevidas, gradientes llamativos
+   e) Otro: ___
+
+2. HERO / PRIMER IMPACTO
+   a) Imagen estática con overlay de texto
+   b) Video de fondo en loop
+   c) Fondo animado (aurora, partículas, gradient mesh)
+   d) Parallax multi-capa (imagen + texto con profundidad)
+   e) Slider/carrusel de imágenes
+   f) Texto hero puro (sin imagen, tipografía impactante)
+   {si bóveda tiene slider/hero}: g) 🗄️ De la bóveda: {nombre del efecto} — {descripción corta}
+
+3. NAVEGACIÓN
+   a) Transparente con blur al scroll (luxury/modern)
+   b) Fija sólida con logo + links
+   c) Hamburger minimalista (siempre, incluso en desktop)
+   d) Sidebar lateral
+   e) Mega-menu con sub-secciones
+
+4. GALERÍA / SHOWCASE (si aplica)
+   a) Grid masonry (Pinterest-style)
+   b) Carrusel horizontal con drag
+   c) Lightbox con zoom
+   d) Scroll horizontal full-width
+   e) Grid con hover reveal (info aparece al pasar el mouse)
+   {si bóveda tiene galería/cards}: f) 🗄️ De la bóveda: {nombre del efecto} — {descripción corta}
+
+5. NIVEL DE ANIMACIÓN
+   a) Sutil — fade-in al scroll, hovers suaves (rápido de implementar)
+   b) Moderado — stagger reveals, parallax suave, transiciones entre secciones
+   c) Inmersivo — scroll-triggered animations, parallax multi-capa, efectos de cursor, 
+      animaciones de texto (más tiempo de implementación)
+
+6. MOOD / ATMÓSFERA
+   a) Oscuro (dark mode primario)
+   b) Claro (light mode primario)
+   c) Mixto (secciones que alternan)
+   d) Alto contraste (blanco/negro con accent color fuerte)
+
+7. TIPOGRAFÍA (influye en el mood general)
+   a) Display/impactante — fonts grandes, bold, protagonistas (Clash Display, Syne, Bricolage)
+   b) Elegante/serif — serif moderno, editorial (Fraunces, Newsreader, Playfair)
+   c) Técnico/mono — fuentes monospace o grotescas (Space Mono, JetBrains, IBM Plex)
+   d) Neutro/funcional — sans-serif limpia, no protagonista (sin preferencia especial)
+   e) Otro: ___
+
+8. EFECTOS ESPECIALES (opcional, elegir 0-3)
+   [ ] Cursor personalizado / efecto magnetic en botones
+   [ ] Texto animado (typewriter, gradient shimmer, split reveal)
+   [ ] Smooth scroll (Lenis)
+   [ ] Parallax en imágenes/secciones
+   [ ] Transiciones de página / morphing entre secciones
+   [ ] Fondo con partículas / generativo
+   {si bóveda tiene efectos relevantes}: [ ] 🗄️ {nombre}: {descripción corta}
+   [ ] Otro: ___
+
+Si no estás seguro de algo, puedo sugerir lo que mejor encaja con tu proyecto.
+Los items marcados con 🗄️ ya están probados y listos para adaptar a tu proyecto.
+```
+
+**Cómo consultar la bóveda CodePen** (antes de presentar al usuario):
+```
+# Buscar efectos relevantes en Engram
+result = mem_search("codepen-vault")
+# Si hay resultados, listar los que matcheen con el tipo de proyecto:
+# - Sliders/slideshows → categoría Hero
+# - Galerías/cards → categoría Galería
+# - Textos animados → categoría Efectos Especiales
+# - Backgrounds/partículas → categoría Hero o Efectos
+# También revisar disco: ls ~/.claude/codepen-vault/ y leer README.md de cada uno
+```
+Si la bóveda está vacía o no hay matches relevantes, simplemente omitir las líneas `🗄️` del template — no mostrar la sección vacía.
+
+**Reglas del checkpoint**:
+- Si el usuario responde con números/letras concretas → guardar directamente
+- Si el usuario da una respuesta general ("hacelo moderno y llamativo") → traducir a opciones concretas y confirmar: "Entendí: inmersivo + fondo animado + animación inmersiva + oscuro. ¿OK?"
+- Si el usuario dice "decidí vos" → elegir basándose en Design Intelligence + brief, documentar las elecciones y continuar (no re-preguntar)
+- **NO preguntar TODO** si el brief del usuario ya lo especificó. Si dijo "quiero video de fondo" → no preguntar por el hero, ya está decidido. Adaptar las preguntas al contexto.
+- Para proyectos simples (landing de 1 página): agrupar en 2-3 preguntas máximo, no las 7
+- Para proyectos complejos (webapp, portfolio grande): presentar las 7
+
+**Guardar resultado** en Engram:
+```
+mem_save(
+  title: "{proyecto}/visual-direction",
+  topic_key: "{proyecto}/visual-direction",
+  content: "estilo: {elección}\nhero: {elección}\nnav: {elección}\ngaleria: {elección}\nanimacion_nivel: {sutil|moderado|inmersivo}\nmood: {elección}\ntipografia: {display|elegante|tecnico|neutro|custom}\nefectos_especiales: [{lista}]\nrecursos_elegidos: [{si eligió algo de bóveda o 21st.dev, listar: 'vault:slug-name', '21st:component-type'}]\nnotas_usuario: {comentarios adicionales}",
+  type: "architecture",
+  project: "{proyecto}"
+)
+```
+
+**Paso 2 — ui-designer + security-engineer** (paralelo, DESPUÉS del Visual Direction Checkpoint)
+- **ui-designer**: Recibe spec + ruta a `{proyecto}/css-foundation` + **`{proyecto}/visual-direction`** + mismos campos DESIGN_SYSTEM/NOTHING_SCOPE/REFERENCIA si aplica + TIPO_PROYECTO si mobile → Guarda en: `{proyecto}/design-system` → Devuelve: resumen (componentes clave, paleta, tipografía, **behavioral specs alineados a visual-direction**)
 - **security-engineer**: Recibe spec del proyecto → Guarda en: `{proyecto}/security-spec` → Devuelve: resumen (amenazas identificadas, headers requeridos)
 
 Actualiza DAG State. Informa al usuario: "Arquitectura lista. N tareas listas para desarrollo."
@@ -628,11 +736,14 @@ Para **cada tarea** de la lista, en orden:
    TAREA: {N}/{Total} — {titulo}
    PROYECTO: {nombre} @ {directorio}
    LEE: {cajon} (usar mem_search → mem_get_observation)
+   LEE TAMBIÉN: {proyecto}/visual-direction (elecciones visuales del usuario — estilo, hero, nav, galería, nivel animación, mood, efectos)
    CRITERIO: {criterio exacto — 1-2 lineas}
    GUARDA: {proyecto}/tarea-{N}
    DEVUELVE: Return Envelope Dev (ver seccion Return Envelope Standard)
    DESIGN_SYSTEM: {nothing-full | nothing-partial | custom | none} (si nothing-*, agregar linea siguiente)
    NOTHING_SCOPE: {lista de secciones} (solo si partial — el agente aplica Nothing SOLO a estas secciones)
+   COMPONENT_SOURCE: {21st.dev | codepen | custom} (si 21st.dev → frontend-developer consulta Context7 MCP para componentes animados/visuales)
+   VISUAL_DIRECTION: {resumen 1 línea de las elecciones clave — ej: "inmersivo + aurora bg + nav blur + animación inmersiva + dark"}
    ```
 
    **Puerto**: el agente dev DEBE reportar el puerto donde corre el servidor (ej: `Servidor necesario: sí (puerto 3000)`). El orquestador pasa este puerto a evidence-collector en el paso 5.
@@ -825,7 +936,8 @@ solo hay que re-ejecutar `tier: "full"` (el structural ya esta hecho). Ahorra ~1
 
 **Paso 2 — api-tester + performance-benchmarker** (paralelo, despues del paso 1)
 
-**api-tester** (si hay API)
+**api-tester** (CONDICIONAL — solo si hay backend/API)
+- **Skip condition**: si DAG State `stack.backend: "none"` Y no hay tareas de tipo `backend` en `{proyecto}/tareas` → SALTAR api-tester completamente. Marcar `api_tester: "skipped-no-backend"` en DAG State. Esto aplica a: landing pages, portfolios, sitios estáticos, juegos client-side.
 - Lee: `{proyecto}/api-spec` (generado por backend-architect; **sin fallback** — tareas tiene formato incompatible)
 - **ANTES de lanzar**: verificar `mem_search("{proyecto}/api-spec")`. Si no existe y hay tareas backend → re-delegar a backend-architect para que genere SOLO el api-spec. NO lanzar api-tester sin api-spec.
 - Handoff: `PROYECTO: {nombre}, PROJECT_DIR: {directorio}, URL: http://localhost:{puerto}, LEE: {proyecto}/api-spec`
@@ -969,18 +1081,15 @@ Si el Boot Sequence no se ejecuto (ej: la compactación fue mid-conversacion):
 2. `mem_search("{proyecto}/estado")` → `mem_get_observation(id)` → leer DAG State
 3. Continuar desde la tarea/fase indicada en DAG State
 
-## Return Envelope Standard
+## Validación post-retorno de subagente
 
-Cada subagente usa el Return Envelope definido en su propio archivo `.md`. Formato base en `agent-protocol.md`.
+> Formato del Return Envelope: `agent-protocol.md` §3.
 
-### Validación post-retorno de subagente
-Después de que un subagente retorna su envelope:
-1. Verificar que STATUS es uno de: [completado, fallido, PASS, FAIL, CERTIFIED, NEEDS WORK, OK, SAVED, FOUND, NOT_FOUND, BLOCKED]
-   — Los últimos 5 son válidos SOLO para agentes utilitarios (build-resolver, codepen-explorer, self-auditor). Para agentes dev/QA, solo los primeros 6.
-2. Si ARCHIVOS listados → verificar que existen ([ -f path ])
-3. Si ENGRAM reportado → confirmar con mem_search que la observación fue guardada
-4. Si alguna validación falla → pedir al subagente que reformatee/reintente (**máximo 2 intentos de reformateo**). Si tras 2 intentos sigue inválido: loguear la respuesta raw en `{proyecto}/discovery-envelope-fail-{agente}`, marcar tarea como fallida, escalar al usuario. **NUNCA pedir un tercer reformateo** — es un loop infinito garantizado.
-5. Solo ENTONCES actualizar DAG State
+Después de que un subagente retorna:
+1. Verificar STATUS valido (dev/QA: completado/fallido/PASS/FAIL/CERTIFIED/NEEDS WORK; utilitarios: +OK/SAVED/FOUND/NOT_FOUND/BLOCKED)
+2. Si ARCHIVOS → verificar existen. Si ENGRAM → confirmar con mem_search
+3. Si invalido → max 2 intentos de reformateo. Si falla → loguear en `{proyecto}/discovery-envelope-fail-{agente}`, escalar
+4. Solo entonces actualizar DAG State
 
 ---
 
@@ -1015,16 +1124,7 @@ Opciones:
 
 ## Handoff Minimo a Subagentes
 
-Cada subagente recibe **SOLO**:
-- Su tarea especifica (maximo 3 lineas)
-- Topic keys de Engram que debe leer (no el contenido)
-- Criterios de aceptacion exactos
-- Donde guardar su resultado (topic key de Engram)
-- Referencia a su Return Envelope (ver seccion "Return Envelope Standard")
-
-**Template de handoff** (ver Fase 3, paso 3 para el formato exacto).
-
-**NUNCA pasar:** historico de conversacion, resultados completos de otros agentes, codigo inline, contenido de archivos.
+Template de handoff: ver Fase 3, paso 3. NUNCA pasar: historico de conversacion, resultados de otros agentes, codigo inline.
 
 ---
 
@@ -1054,35 +1154,8 @@ Antes de spawnear un subagente, verificar estos 3 puntos (~50 tokens):
 
 ## Graceful Degradation
 
-### Dual-Write para cajones criticos (SIEMPRE activo)
-Los cajones `{proyecto}/estado` y `{proyecto}/tareas` son CRITICOS — sin ellos no se puede continuar.
-
-**Protocolo**: cada vez que se guarda/actualiza `{proyecto}/estado` o `{proyecto}/tareas`:
-1. Guardar en Engram (primario) — `mem_save` o `mem_update`
-2. Escribir copia en disco — `{project_dir}/.pipeline/estado.yaml` o `{project_dir}/.pipeline/tareas.md`
-3. Actualizar DAG State: `backup_disk: "{project_dir}/.pipeline/"`
-
-**Lectura con fallback**:
-- Primero intentar Engram (source of truth)
-- Si Engram falla → leer de disco (`{project_dir}/.pipeline/`)
-- Si disco tambien falta → PAUSAR, pedir al usuario que verifique Engram
-
-**Cajones con dual-write obligatorio**:
-- `estado` y `tareas` → SIEMPRE (sin ellos no se puede continuar)
-- `css-foundation`, `design-system`, `security-spec` → después de que cada agente de Fase 2 retorne OK
-
-Los cajones de Fase 2 son críticos porque bloquean el Phase Gate a Fase 3 y re-ejecutar Fase 2 es costoso. Los demás cajones se pueden reconstruir re-delegando.
-
-**Estructura del directorio `.pipeline/`**:
-```
-{project_dir}/.pipeline/
-  estado.yaml        → copia del DAG State (mismo formato YAML que en Engram)
-  tareas.md          → copia de la lista de tareas (mismo contenido que en Engram)
-  css-foundation.md  → copia de tokens/layout CSS (de ux-architect)
-  design-system.md   → copia del design system visual (de ui-designer)
-  security-spec.md   → copia de la spec de seguridad (de security-engineer)
-```
-Crear el directorio automaticamente con `mkdir -p` al primer dual-write. Agregar `.pipeline/` al `.gitignore` del proyecto.
+### Dual-Write (ver CLAUDE.md §Engram y Boot Sequence §0b)
+Cajones con dual-write obligatorio: `estado`, `tareas` (SIEMPRE) + `css-foundation`, `design-system`, `security-spec` (post-Fase 2). Estructura en `{project_dir}/.pipeline/`. Crear con `mkdir -p` al primer write. Agregar `.pipeline/` a `.gitignore`.
 
 ### Si Engram es inalcanzable (fallback completo)
 Engram es el sistema de memoria persistente. Si falla, el pipeline NO puede operar normalmente.

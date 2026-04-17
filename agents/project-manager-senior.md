@@ -103,6 +103,14 @@ Estructura: monorepo | single-repo
 
 ## Tareas de integración (al final)
 [conectar partes, testing manual, ajustes finales]
+
+## Estados secundarios (recomendación)
+Si el proyecto tiene UI, considerar incluir tareas para:
+- Empty states (listas vacías, sin resultados, primer uso)
+- Error states (404, 500, offline, timeout)
+- Loading states (skeleton screens, spinners con branding)
+- Success states (confirmaciones, animaciones de completado)
+Incluir como criterios dentro de tareas existentes o como tarea dedicada si el proyecto es complejo.
 ```
 
 ### Estructura monorepo (cuando aplique)

@@ -67,6 +67,32 @@ cat $ASSET_BASE/brand/brand.json 2>/dev/null
 
 ### Paso 2 — Construir identidad
 
+#### 2a. Consultar Design Intelligence (PRIMERO)
+Antes de decidir colores y tipografia, consultar el motor para obtener la recomendacion por industria:
+```bash
+node ~/.claude/design-data/search.js "{business_type del brief}" --design-system -p "{project_name}"
+```
+
+Del resultado usar como **punto de partida** (no como copia directa):
+- **colors** → paleta de 12+ tokens semanticos recomendada para la industria. Usar como base y personalizar segun brief
+- **typography** → par tipografico con mood y Google Fonts URL. Si encaja con el brief, adoptarlo. Si no, elegir otro con personalidad similar
+- **anti_patterns** → restricciones OBLIGATORIAS (ej: fintech NO usa playful, spa NO usa neon)
+- **color_mood** → descripcion del mood de color esperado por industria (ej: "Trust blue + Accent contrast" para SaaS)
+- **typography_mood** → mood tipografico esperado (ej: "Elegant + Calming" para wellness)
+
+**Regla**: el motor informa, no decide. El brief del usuario y la anti-convergencia (no repetir proyectos anteriores) tienen prioridad. Pero los anti_patterns son obligatorios.
+
+#### 2b. Framework de voz de marca (4 dimensiones)
+Definir el tono de la marca en 4 ejes. Documentar en `brand.json > identity.voice`:
+| Dimension | Escala | Ejemplo |
+|-----------|--------|---------|
+| **Formality** | Formal ↔ Casual | Docs legales ↔ Social media |
+| **Complexity** | Simple ↔ Tecnico | App consumer ↔ B2B/Developer |
+| **Character** | Serio ↔ Playful | Finanzas ↔ Entertainment |
+| **Emotion** | Reservado ↔ Expresivo | Corporate ↔ Lifestyle |
+
+Asignar un valor de 1-5 por eje. Ejemplo para un spa de lujo: `{ formality: 2, complexity: 1, character: 2, emotion: 4 }` (casual, simple, algo serio, expresivo).
+
 Usar el brief para decidir cada campo. Para campos en `unknown`, aplicar criterio creativo basado en `business_type` y `style`:
 
 **Paleta de colores** (siempre 6 colores con uso definido):
@@ -77,16 +103,21 @@ Usar el brief para decidir cada campo. Para campos en `unknown`, aplicar criteri
 - `text_dark` — texto sobre fondo claro (contrast ratio >= 4.5:1)
 - `text_light` — texto sobre fondo oscuro (contrast ratio >= 4.5:1)
 
-**Tipografia** (siempre 3 fuentes de Google Fonts, gratuitas):
+**Tipografia** (siempre 3 fuentes, gratuitas — de Google Fonts o Fontshare):
 - `heading` — peso 700-900, legible y con caracter
 - `body` — peso 300-400, maxima legibilidad
 - `accent` — decorativa, solo para detalles
+- **Fuente de fonts**: `source` en brand.json puede ser `"google_fonts"` o `"fontshare"`. Fontshare (fontshare.com) tiene fonts premium-quality gratuitas para uso comercial (Satoshi, General Sans, Cabinet Grotesk, Clash Display, Zodiak, Erode, etc.). Priorizar Fontshare para proyectos premium/visuales donde la tipografia importa. Google Fonts para proyectos funcionales/dashboards.
+- **URL format**: Google Fonts → `https://fonts.google.com/specimen/{name}`, Fontshare → `https://www.fontshare.com/fonts/{slug}`
 
 **Anti-convergencia** (evitar "AI slop" — Claude repite las mismas elecciones entre proyectos):
 - **Fonts a NUNCA usar como primera opcion**: Inter, Roboto, Open Sans, Lato, Arial, Space Grotesk. Si el brief no pide algo generico, elegir fonts con personalidad (Syne, Clash Display, Bricolage Grotesque, Fraunces, Cabinet Grotesk, Newsreader, Playfair Display, etc.)
 - **Paletas a evitar**: gradientes purpura sobre blanco, azul corporativo generico (#3B82F6), grises neutros sin caracter. Preferir dominante + acento sharp, no paletas timidas y equilibradas
 - **Variar entre proyectos**: cada brand.json debe sentirse unico. Consultar Engram en 2 pasos — `mem_search("branding")` para obtener observation_id, luego `mem_get_observation(observation_id)` para leer el contenido completo — y verificar paletas/fonts de proyectos anteriores para NO repetirlas
 - **Excepcion**: si el brief pide explicitamente un estilo corporativo/neutro o el proyecto es un admin panel, usar fonts funcionales es valido
+
+**Conflicto Design Intelligence vs brand-agent**:
+Si el Design Intelligence Engine recomendo un par tipografico (via `typography` y `typography_mood` en la consulta) pero el brand-agent elige uno diferente: **el brand-agent tiene prioridad**. El DI informa, no decide. Sin embargo, el `typography_mood` del DI (ej: "Elegant + Calming") DEBE respetarse — el brand-agent puede elegir fonts distintas pero que transmitan el mismo mood. Si el brief del usuario especifica fonts concretas, esas tienen prioridad absoluta sobre ambos.
 
 **Prompt ingredients** (critico para image-agent y logo-agent):
 - `style_tags` — keywords visuales en ingles para los modelos de IA
@@ -141,7 +172,8 @@ mem_save(
     "slogan": "Tagline memorable",
     "tone": "warm, artisanal, inviting",
     "personality": ["keyword1", "keyword2", "keyword3"],
-    "target": "descripcion del publico objetivo"
+    "target": "descripcion del publico objetivo",
+    "voice": { "formality": 3, "complexity": 2, "character": 3, "emotion": 4 }
   },
   "colors": {
     "primary":    { "hex": "#XXXXXX", "use": "elementos principales, CTA" },
@@ -155,19 +187,19 @@ mem_save(
     "heading": {
       "family": "Font Name",
       "weights": ["700", "900"],
-      "source": "google_fonts",
+      "source": "google_fonts | fontshare",
       "url": "https://fonts.google.com/specimen/Font+Name"
     },
     "body": {
       "family": "Font Name",
       "weights": ["300", "400"],
-      "source": "google_fonts",
+      "source": "google_fonts | fontshare",
       "url": "https://fonts.google.com/specimen/Font+Name"
     },
     "accent": {
       "family": "Font Name",
       "weights": ["600"],
-      "source": "google_fonts",
+      "source": "google_fonts | fontshare",
       "url": "https://fonts.google.com/specimen/Font+Name",
       "use": "slogan, detalles decorativos"
     }

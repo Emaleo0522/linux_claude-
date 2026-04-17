@@ -23,6 +23,7 @@ const os = require('os');
 const COUNTER_FILE = path.join(os.tmpdir(), '.claude-tool-call-counter.json');
 const SNAPSHOT_DIR = path.join(os.homedir(), '.claude', 'snapshots');
 const SNAPSHOT_FILE = path.join(SNAPSHOT_DIR, 'pre-compact-latest.json');
+const TRIGGER_FILE = path.join(SNAPSHOT_DIR, 'compaction-pending.json');
 
 let input = '';
 
@@ -74,26 +75,32 @@ process.stdin.on('end', () => {
 
     fs.writeFileSync(SNAPSHOT_FILE, JSON.stringify(snapshot, null, 2));
 
+    // Escribir trigger file — Boot Sequence lo detecta y ejecuta dual-write
+    // Esto reemplaza la instrucción en stderr que causaba respuestas vacías sin tool calls
+    const trigger = {
+      timestamp: snapshot.timestamp,
+      pipelineActive,
+      pipelinePhase,
+      pipelineTask,
+      cwd,
+      instruction: 'dual-write-dag-state',
+    };
+    fs.writeFileSync(TRIGGER_FILE, JSON.stringify(trigger, null, 2));
+
     // Reset tool call counter (nuevo contexto despues de compactar)
     try {
       fs.unlinkSync(COUNTER_FILE);
     } catch (e) {}
 
-    // MENSAJE CRITICO: instruir a Claude a hacer dual-write ANTES de compactar
-    // Este mensaje llega via stderr y Claude lo recibe como contexto
+    // Mensaje informativo (NO instrucción) — solo contexto de diagnóstico
     const pipelineInfo = pipelineActive
       ? ` Pipeline activo: ${pipelinePhase}, tarea ${pipelineTask}.`
       : '';
 
     process.stderr.write(
-      'COMPACTION IMMINENT — SAVE STATE NOW. ' +
-      'Before compaction proceeds, you MUST:' +
-      ' (1) Save DAG State to Engram via mem_update("{proyecto}/estado", currentDagState).' +
-      ' (2) Write DAG State to disk at {project_dir}/.pipeline/estado.yaml.' +
-      ' (3) If you have unsaved discoveries or task progress, save them with mem_save.' +
-      ' After saving, compaction is safe — Boot Sequence will recover from Engram or disk.' +
-      pipelineInfo +
-      ' Snapshot saved to disk. Counter reset.'
+      '[pre-compact-engram] Snapshot guardado.' + pipelineInfo +
+      ' Trigger file escrito en snapshots/compaction-pending.json.' +
+      ' Boot Sequence detectará y ejecutará dual-write al iniciar.'
     );
 
     process.exit(0);

@@ -78,6 +78,12 @@ En Windows: `%TEMP%/qa/` (ej: `C:/Users/.../AppData/Local/Temp/qa/`).
 - Testeo elementos interactivos (botones, forms, nav, toggles) con click/type reales
 - Reviso consola del navegador: 0 errores es el target
 - Verifico responsive: que no se rompa en ningun viewport
+- **Verifico behavioral specs** (si `{proyecto}/design-system` existe en Engram):
+  - Leo `{proyecto}/design-system` → busco la tabla de interacciones por componente
+  - Para cada componente en la tarea, verifico que el comportamiento implementado coincide con el nivel de animación elegido (sutil/moderado/inmersivo)
+  - Ejemplo: si behavioral spec dice "botones: scale(1.05) + shadow en hover" → verifico que el hover tenga transformación visual, no solo color change
+  - Si el nivel es "inmersivo" y la implementación solo tiene CSS transitions básicas → reportar como issue: "Behavioral spec indica nivel inmersivo pero implementación es sutil"
+  - Si no hay behavioral specs en el design-system (proyecto simple) → saltar este check
 - Si hay animaciones scroll-driven: scrolleo la pagina y verifico que se disparen (no quedarse en estado inicial)
 - Si hay pinning (seccion fija): verifico que la seccion se quede fija al scrollear y se suelte al terminar
 - Si hay animaciones de texto (SplitText): verifico que el texto sea legible despues de la animacion
@@ -109,6 +115,11 @@ Mi default es encontrar problemas. Las implementaciones perfectas a la primera N
 - **PASS**: Rating B- o superior (issues menores que no bloquean funcionalidad)
 - **FAIL**: Rating C+ o inferior (problemas notables, funcionalidad rota, o errores en consola)
 - **0 errores en consola** es OBLIGATORIO para PASS — cualquier error → FAIL automático
+
+### Clasificación de FAIL (incluir en FEEDBACK PARA DEV)
+- **FAIL_CODE**: el código no funciona — errores en consola, crash, layout roto, feature no implementada. El dev agent debe arreglar código.
+- **FAIL_SPEC**: el código funciona pero no cumple la spec — behavioral specs no respetadas, nivel de animación incorrecto, interacción diferente a lo definido en design-system. El dev agent debe re-leer el design-system y ajustar.
+Esta clasificación ayuda al orquestador a dar feedback más preciso al dev agent en reintentos.
 
 ## Cómo guardo resultado
 

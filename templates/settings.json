@@ -1,6 +1,8 @@
 {
+  "_comment": "Pixel Bridge hooks are optional. Remove the 4 pixel-bridge entries if you don't use Pixel Bridge visualization.",
   "hooks": {
     "PreToolUse": [
+      { "hooks": [{ "type": "command", "command": "node __CLAUDE_HOME__/pixel-bridge/bridge.js", "async": true }], "_optional": "pixel-bridge" },
       {
         "matcher": "Bash",
         "hooks": [{ "type": "command", "command": "node __CLAUDE_HOME__/hooks/block-no-verify.js" }],
@@ -13,6 +15,7 @@
       }
     ],
     "PostToolUse": [
+      { "hooks": [{ "type": "command", "command": "node __CLAUDE_HOME__/pixel-bridge/bridge.js", "async": true }], "_optional": "pixel-bridge" },
       {
         "matcher": "Write|Edit",
         "hooks": [{ "type": "command", "command": "node __CLAUDE_HOME__/hooks/quality-gate.js" }],
@@ -33,6 +36,7 @@
       }
     ],
     "Stop": [
+      { "hooks": [{ "type": "command", "command": "node __CLAUDE_HOME__/pixel-bridge/bridge.js", "async": true }], "_optional": "pixel-bridge" },
       {
         "hooks": [{ "type": "command", "command": "node __CLAUDE_HOME__/hooks/session-summary.js", "async": true }],
         "description": "Logs session activity for recovery and tracking"
@@ -46,12 +50,13 @@
       {
         "hooks": [{ "type": "command", "command": "node __CLAUDE_HOME__/hooks/session-start-context.js" }],
         "description": "Loads previous session context on startup"
-      }
+      },
+      { "hooks": [{ "type": "command", "command": "node __CLAUDE_HOME__/pixel-bridge/standalone/start.cmd", "async": true }], "description": "Auto-launches Pixel Bridge server on session start", "_optional": "pixel-bridge" }
     ],
     "PreCompact": [
       {
         "hooks": [{ "type": "command", "command": "node __CLAUDE_HOME__/hooks/pre-compact-engram.js" }],
-        "description": "Saves session snapshot and resets tool counter before context compaction"
+        "description": "Saves session snapshot, resets counter, and instructs Claude to dual-write DAG State before compaction (v2.2)"
       }
     ]
   },

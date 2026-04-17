@@ -1,7 +1,7 @@
 #!/bin/bash
 # ============================================================
 # Claude Code — Vibecoding Agent System v3
-# 25 agentes + 12 referencias = 37 archivos | Pipeline de 5 fases
+# 25 agentes + 13 referencias = 38 archivos | Pipeline de 5 fases
 # Instalacion automatica para Linux / Claude Code
 # ============================================================
 
@@ -20,7 +20,7 @@ error() { echo -e "${RED}[X]${NC} $1"; exit 1; }
 echo ""
 echo -e "${CYAN}============================================${NC}"
 echo -e "${CYAN}  Claude Code — Vibecoding Agent System v3${NC}"
-echo -e "${CYAN}  25 agentes + 12 referencias = 37 archivos${NC}"
+echo -e "${CYAN}  25 agentes + 13 referencias = 38 archivos${NC}"
 echo -e "${CYAN}  Pipeline de 5 fases | 13 hooks reactivos${NC}"
 echo -e "${CYAN}  Instalacion automatica (Linux)${NC}"
 echo -e "${CYAN}============================================${NC}"
@@ -152,7 +152,7 @@ else
   info "Clave SSH existente: $SSH_KEY"
 fi
 
-# -- 8. Instalar 25 agentes + 12 referencias en ~/.claude/agents/ --
+# -- 8. Instalar 25 agentes + 13 referencias en ~/.claude/agents/ --
 CLAUDE_AGENTS="$HOME/.claude/agents"
 mkdir -p "$CLAUDE_AGENTS/skills"
 
@@ -165,7 +165,17 @@ fi
 AGENT_COUNT=$(ls "$CLAUDE_AGENTS/"*.md 2>/dev/null | wc -l)
 info "Agentes instalados en $CLAUDE_AGENTS ($AGENT_COUNT archivos)"
 
-# -- 8b. Instalar hooks reactivos en ~/.claude/hooks/ --
+# -- 8b. Instalar Design Intelligence Engine en ~/.claude/design-data/ --
+DESIGN_DATA="$HOME/.claude/design-data"
+mkdir -p "$DESIGN_DATA"
+if [[ -d "$REPO_ROOT/design-data" ]]; then
+  cp "$REPO_ROOT/design-data/"* "$DESIGN_DATA/"
+  info "Design Intelligence Engine instalado en $DESIGN_DATA (search.js + 8 CSVs)"
+else
+  warn "No se encontro design-data/ en el repo — saltando"
+fi
+
+# -- 8c. Instalar hooks reactivos en ~/.claude/hooks/ --
 CLAUDE_HOOKS="$HOME/.claude/hooks"
 mkdir -p "$CLAUDE_HOOKS"
 
@@ -242,6 +252,19 @@ PYEOF
   else
     warn "python3 no disponible y no se encontro template de settings.json — configurar manualmente"
   fi
+fi
+
+# -- 11b. Configurar Context7 MCP (21st.dev + docs) --
+echo ""
+echo "Context7 MCP provee acceso a documentacion de librerias y componentes 21st.dev."
+echo "Se configura via Claude Code CLI."
+echo ""
+if command -v claude &>/dev/null; then
+  claude mcp add context7 -- npx -y @upstash/context7-mcp 2>/dev/null && \
+    info "Context7 MCP configurado" || \
+    warn "No se pudo configurar Context7 automaticamente. Ejecuta manualmente: claude mcp add context7 -- npx -y @upstash/context7-mcp"
+else
+  warn "Claude Code CLI no disponible — configura Context7 manualmente despues: claude mcp add context7 -- npx -y @upstash/context7-mcp"
 fi
 
 # -- 12. Instalar settings.local.json (permisos) --
@@ -401,9 +424,10 @@ echo -e "${CYAN}============================================${NC}"
 echo ""
 info "Git:       $GIT_NAME <$GIT_EMAIL>"
 info "GitHub:    $GH_USER"
-info "Agentes:   $CLAUDE_AGENTS ($AGENT_COUNT archivos: 25 agentes + 12 referencias)"
+info "Agentes:   $CLAUDE_AGENTS ($AGENT_COUNT archivos: 25 agentes + 13 referencias)"
 info "Hooks:     ~/.claude/hooks/ ($HOOK_COUNT hooks reactivos)"
-info "MCPs:      Engram (memoria) configurado en settings.json"
+info "MCPs:      Engram (memoria) + Context7 (21st.dev/docs)"
+info "Design:    ~/.claude/design-data/ (Design Intelligence Engine)"
 info "Permisos:  settings.local.json con permisos para todos los agentes"
 info "CLAUDE.md: $GLOBAL_CLAUDE (instrucciones del sistema)"
 echo ""
@@ -415,7 +439,7 @@ echo ""
 echo "Para empezar, abri Claude Code y escribi:"
 echo "  modo orquestador — quiero crear [tu idea]"
 echo ""
-echo "Agentes disponibles (25 agentes + 12 referencias = 37 archivos):"
+echo "Agentes disponibles (25 agentes + 13 referencias = 38 archivos):"
 echo "  Fase 1: project-manager-senior"
 echo "  Fase 2: ux-architect, ui-designer, security-engineer"
 echo "  Fase 2B: brand-agent, image-agent, logo-agent, video-agent"
@@ -429,5 +453,5 @@ echo "  Misc: self-auditor"
 echo "  Refs: agent-protocol, better-auth, better-gsap, react-patterns,"
 echo "        redis-patterns, pocketbase, devops-vps, nothing-design,"
 echo "        scroll-storytelling, advanced-effects, creative-coding,"
-echo "        reactive-audio"
+echo "        reactive-audio, pipeline-reference"
 echo ""

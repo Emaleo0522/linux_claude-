@@ -21,9 +21,12 @@ No lee de Engram. Trabaja directamente con los archivos del proyecto.
   "project_dir": "/path/to/project",
   "commit_message": "feat: ...",
   "archivos": ["src/...", "public/..."],
-  "branch": "main"
+  "branch": "main",
+  "PRE_AUTH": true
 }
 ```
+
+**PRE_AUTH**: si es `true`, el usuario ya autorizó git push en su mensaje original (ej: "sube a git", "push", "publica"). No pedir confirmación adicional — proceder directamente.
 
 ## Lo que hago
 1. Recibo del orquestador: directorio, rama, mensaje de commit, archivos a stagear
@@ -42,7 +45,7 @@ No lee de Engram. Trabaja directamente con los archivos del proyecto.
 - No depliego (eso es deployer)
 
 ## Reglas no negociables
-- **Solo con confirmacion**: nunca hago commit/push sin que el orquestador confirme que el usuario aprobo
+- **Solo con confirmacion**: nunca hago commit/push sin que el orquestador confirme que el usuario aprobo (o `PRE_AUTH: true` en el input)
 - **QA antes del push**: el orquestador debe haber recibido PASS de evidence-collector antes de activarme. Si no hay confirmacion de QA, rechazar y pedirla al orquestador.
 - **HTTPS + token**: usar `gh auth token` para autenticacion, nunca SSH
 - **Commits especificos**: `git add` de archivos especificos, nunca `git add -A` (puede incluir .env, secrets)

@@ -6,7 +6,7 @@ Esta guia te lleva paso a paso desde cero hasta tener el sistema completo funcio
 
 ## Lo que vas a instalar
 
-- **37 archivos de agentes** (25 agentes + 12 referencias tecnicas): los especialistas del sistema + documentacion tecnica que usan internamente
+- **38 archivos de agentes** (25 agentes + 13 referencias tecnicas): los especialistas del sistema + documentacion tecnica que usan internamente
 - **13 hooks reactivos**: interceptan operaciones en tiempo real para seguridad y calidad
 - **CLAUDE.md global**: le dice a Claude como coordinar el pipeline de 5 fases
 - **MCPs**: Engram (memoria persistente), Context7 (docs), Playwright (QA visual)
@@ -97,26 +97,41 @@ cd claude-vibecoding
 
 ---
 
-## Paso 7: Copiar los 37 archivos de agentes (25 agentes + 12 referencias)
+## Paso 7: Copiar los 38 archivos de agentes (25 agentes + 13 referencias)
 
 En Git Bash, **dentro de la carpeta `claude-vibecoding`**:
 ```bash
 # Crear la carpeta de agentes
 mkdir -p ~/.claude/agents/skills
 
-# Copiar los 37 archivos
+# Copiar los 38 archivos
 cp agents/*.md ~/.claude/agents/
 
 # Copiar skills si hay
 cp agents/skills/*.md ~/.claude/agents/skills/ 2>/dev/null
 
-# Verificar — debe decir 37
+# Verificar — debe decir 38
 ls ~/.claude/agents/*.md | wc -l
 ```
 
 Los 25 agentes: orquestador, project-manager-senior, ux-architect, ui-designer, security-engineer, frontend-developer, backend-architect, rapid-prototyper, mobile-developer, game-designer, xr-immersive-developer, codepen-explorer, build-resolver, brand-agent, image-agent, logo-agent, video-agent, evidence-collector, reality-checker, seo-discovery, api-tester, performance-benchmarker, git, deployer, self-auditor.
 
-Las 12 referencias: agent-protocol, better-auth-reference, better-gsap-reference, react-patterns-reference, redis-patterns-reference, pocketbase-reference, devops-vps-reference, nothing-design-reference, scroll-storytelling-reference, advanced-effects-reference, creative-coding-reference, reactive-audio-reference.
+Las 13 referencias: agent-protocol, better-auth-reference, better-gsap-reference, react-patterns-reference, redis-patterns-reference, pocketbase-reference, devops-vps-reference, nothing-design-reference, scroll-storytelling-reference, advanced-effects-reference, creative-coding-reference, reactive-audio-reference, pipeline-reference.
+
+---
+
+## Paso 7a-bis: Copiar Design Intelligence Engine
+
+```bash
+# Copiar el motor de diseño (search.js + 8 CSVs)
+mkdir -p ~/.claude/design-data
+cp design-data/* ~/.claude/design-data/
+
+# Verificar — debe listar search.js y 8 archivos .csv
+ls ~/.claude/design-data/
+```
+
+El Design Intelligence Engine provee recomendaciones de diseño por industria (161 tipos de producto, 84 estilos, 160 paletas). Los agentes de Fase 2 lo consultan automáticamente.
 
 ---
 
@@ -224,6 +239,20 @@ Pega este contenido (reemplaza `{TU_USUARIO}` con tu nombre de usuario de Window
 
 Cerrar y volver a abrir Claude Desktop para que cargue los MCPs.
 
+### Paso 9d: Verificar MCPs
+
+Despues de reiniciar Claude Desktop, abri una nueva conversacion y escribi:
+
+```
+Verifica que los MCPs estan funcionando: ejecuta mem_context(scope="personal") para Engram y resolve-library-id("21st.dev") para Context7.
+```
+
+**Resultado esperado:**
+- Engram: responde con perfil personal (puede estar vacio si es la primera vez)
+- Context7: responde con el library ID `/websites/21st_dev_community_components`
+
+Si alguno falla, verifica que `claude_desktop_config.json` tenga JSON valido y que las rutas sean correctas.
+
 ### MCPs opcionales (via Claude Desktop Extensions)
 
 Dentro de Claude Desktop puedes instalar MCPs adicionales desde **Settings > Extensions**:
@@ -279,7 +308,7 @@ echo "HF_TOKEN=tu-token-aqui" >> ~/.claude/.env
 
 En Git Bash:
 ```bash
-# Agentes instalados (deben ser 37)
+# Agentes instalados (deben ser 38)
 ls ~/.claude/agents/*.md | wc -l
 
 # Hooks instalados (deben ser 13)
@@ -337,8 +366,8 @@ El sistema se encarga del resto:
 **Claude no reconoce los agentes**
 -> Reinicia Claude Desktop. Los agentes se cargan al iniciar.
 
-**No aparecen los 37 archivos de agentes**
--> Verifica con `ls ~/.claude/agents/*.md | wc -l`. Debe dar **37** (25 agentes + 12 referencias).
+**No aparecen los 38 archivos de agentes**
+-> Verifica con `ls ~/.claude/agents/*.md | wc -l`. Debe dar **38** (25 agentes + 13 referencias).
 
 **MCPs no aparecen en Claude Desktop**
 -> Verifica que `claude_desktop_config.json` tenga JSON valido y reinicia. Verificar rutas absolutas.
@@ -363,7 +392,8 @@ El sistema se encarga del resto:
 ~/CLAUDE.md                                      <- instrucciones globales del sistema
 ~/.claude/
 |-- launch.json                                  <- configuracion de preview servers
-|-- agents/                                      <- 25 agentes + 12 referencias = 37 archivos
+|-- design-data/                                 <- Design Intelligence Engine (search.js + 8 CSVs)
+|-- agents/                                      <- 25 agentes + 13 referencias = 38 archivos
 |   |-- orquestador.md                           <- coordinador central
 |   |-- project-manager-senior.md                <- Fase 1: spec a tareas
 |   |-- ux-architect.md                          <- Fase 2: CSS tokens, layout
@@ -401,6 +431,7 @@ El sistema se encarga del resto:
 |   |-- advanced-effects-reference.md            <- ref: Lottie, Rive, cursor effects
 |   |-- creative-coding-reference.md             <- ref: p5.js, GLSL, generative art
 |   |-- reactive-audio-reference.md              <- ref: Tone.js, Web Audio
+|   |-- pipeline-reference.md                    <- ref: pipeline details, tools, stack
 |-- hooks/
 |   |-- block-no-verify.js                       <- bloquea git --no-verify, rm -rf
 |   |-- config-protection.js                     <- protege .env, secrets
