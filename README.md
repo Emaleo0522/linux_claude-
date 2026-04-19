@@ -39,13 +39,64 @@ Every project gets the full pipeline: planned tasks, designed architecture, impl
 ## Pipeline
 
 ```
-Phase 1: Planning        -> project-manager-senior
-Phase 2: Architecture    -> ux-architect -> ui-designer + security-engineer
+Phase 1: Planning        -> Step 0: Intent Clarifier (mandatory for new projects)
+                          -> project-manager-senior
+Phase 2: Architecture    -> ux-architect -> (Visual Direction Checkpoint) -> ui-designer + security-engineer
 Phase 2B: Visual Assets  -> brand-agent -> (user approval) -> logo + image -> video
 Phase 3: Dev <-> QA Loop -> dev-agents <-> evidence-collector (max 3 retries)
 Phase 4: Certification   -> seo + api-tester + performance + reality-checker
 Phase 5: Deployment      -> git -> deployer (with user confirmation)
 ```
+
+### Intent Clarifier (Phase 1, Step 0 — NEW 2026-04-19)
+
+Before planning, the orchestrator evaluates if the user brief is clear or vague using a clarity score heuristic (word count + design vocabulary + references + concrete features + audience mentioned). For vague briefs, it asks 6 multiple-choice questions with options:
+
+- **Q1 Project type**: landing / website / webapp / mobile / API / game
+- **Q2 Industry**: top 5 matches from `search.js` (161 indexed industries) + "other"
+- **Q3 Visual vibe** (MANDATORY): editorial premium / swiss minimal / soft luxury / neo-brutalism / immersive cinematic / playful illustrated / Y2K revival / monochrome industrial
+- **Q4 Visual reference** (optional): Figma URL / image path / "like {site}" / brand name / none
+- **Q5 Originality** (MANDATORY): conservative / balanced / experimental — calibrates design variance + motion intensity dials
+- **Q6 Audience**: B2B / B2C / creatives / Gen Z / luxury / other
+
+**No bypass**: the orchestrator refuses "you decide" — at minimum Q3 + Q5 must be answered explicitly. This prevents the pipeline from defaulting to generic "SaaS teal + Inter" outputs when the user doesn't have design vocabulary. Result stored in Engram as `{project}/intent` with `mood_preset`, `dials_suggested`, `anti_patterns_HIGH` inherited from `style-presets.csv` row.
+
+### Anti-Generic Guardrails (NEW 2026-04-19)
+
+Executable guardrails prevent generic "SaaS template" outputs:
+
+- **brand.json schema v2**: `mood_vector` (8 quantitative dimensions 0-10), `reference_ids`, `anti_patterns_HIGH` as executable blocklist, `typography_pair` with rationale
+- **ui-designer Step 0e — SaaS Teal Default Detector**: 6 rules T1-T6 that BLOCK before returning:
+  - T1 No teal/cyan primary (HSL hue 175-205, sat>40) except swiss-minimal mood
+  - T2 No Inter/Roboto/Open Sans/Lato/Arial/SF Pro/Segoe UI as heading
+  - T3 Typographic contrast mandatory (heading.family ≠ body.family) except swiss-minimal
+  - T4 No generic hero structure (centered + 2 CTAs + 3 feature cards) outside swiss/dashboard moods
+  - T5 Border radius coherent with mood (brutalism=0-2px, luxury=8-16px warm, etc.)
+  - T6 Shadow coherent with mood (brutalism=offset-hard, luxury=subtle-warm, y2k=chrome)
+- **frontend-developer Pre-return Audit**: 5 grep commands on generated code:
+  - No hardcoded `text-teal-/bg-teal-/cyan-*` in non-dashboard files
+  - No `font-family: Inter/Roboto/...` as heading in hero/landing
+  - Hero has `<img>/<video>/<Image>` when `visual-direction.hero ≠ text-only`
+  - Shadow coherent with mood (brutalism requires offset-hard)
+  - Motion tier matches `motion_intensity` dial (≤3 = CSS only, 4-6 = Framer, ≥7 = GSAP)
+
+Both agents return `AUTO_AUDIT` in Return Envelope so reality-checker can verify upstream.
+
+### QA Hardening — 9 layers of defense against false positives (NEW 2026-04-19)
+
+Previous audit revealed the QA could approve projects with broken auth + generic design (case VetConnect). Now:
+
+1. **evidence-collector Step 4b**: Verifies upstream AUTO_AUDIT from ui-designer + frontend-developer PASS before screenshots
+2. **evidence-collector Step 4c — Visual Fidelity**: LLM-as-judge compares screenshot vs `visual-direction.reference_for_qa` on 5 dimensions (palette, typography, composition, mood, density). Threshold ≥7/10 for PASS. Mood Vector divergence L1 ≤10. Anti-derivative guardrail.
+3. **evidence-collector Step 4d — E2E flows**: Mandatory user journeys for auth/CRUD/forms tasks (signup → email verify → login → dashboard → action → logout). Error states (wrong password, expired token, rate limit, offline fallback).
+4. **evidence-collector Step 4e — Network inspection**: Mandatory (was optional). Detects Mixed Content, status 0, local leaks (localhost calls from deployed frontend).
+5. **evidence-collector Step 4f**: Tests against `deploy_url` if available (Netlify/Vercel), not just localhost.
+6. **reality-checker Step 2B — False Positive Guardrail**: Re-executes 2-3 random `qa-{N}` PASS tasks. If reality's re-run fails, evidence-collector's PASS was false.
+7. **reality-checker Step 4B — Mixed Content DYNAMIC**: Browser-level runtime inspection (not static grep). Detects undefined env vars like `NEXT_PUBLIC_API_URL` causing silent localhost fallback.
+8. **reality-checker Step 8 — Design Tools Usage Audit**: Verifies intent exists with full schema, visual-direction has extraction_status, brand.json is schema v2, all AUTO_AUDITs PASS.
+9. **reality-checker Step 9 — Evidence Trail Mandatory**: Every PASS cites specific evidence (screenshot path, request URL, log line). No more "looks good to me".
+
+Plus: **api-tester ESCALATES** if `api-spec` is missing (no silent fallback to `tareas.md`), **performance-benchmarker** uses PageSpeed Insights on `deploy_url` when available.
 
 ---
 

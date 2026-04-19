@@ -177,3 +177,102 @@ agent-protocol.md, api-tester.md, codepen-explorer.md, deployer.md, evidence-col
 - [x] Inter-session continuity en CLAUDE.md: confirmado
 - [x] 23 archivos copiados a ~/.claude/agents/: confirmado
 - [x] CLAUDE.md copiado a ~/CLAUDE.md: confirmado
+
+---
+
+## Fix Arquitectura 2026-04-19 — Anti-Generic + QA Hardening ✅
+
+**Trigger**: auditoría reveló que el pipeline podía aprobar proyectos con landing visualmente genérico Y bugs de auth sin detectar ninguno (caso VetConnect). 7 fases sistémicas para cerrar los 2 agujeros.
+
+### Fase 1: Intent Clarifier Layer ✅
+- Archivo: agents/orquestador.md (FASE 1 Paso 0, +162 líneas)
+- Heurística clarity score 0-10 (word count + design vocab + referencias + features)
+- 6 preguntas con opciones múltiples (Q1 tipo, Q2 industria dinámica, Q3 mood preset, Q4 referencia opcional, Q5 originalidad, Q6 audiencia)
+- Q3 + Q5 obligatorias — bloquea "decidí vos" en proyectos UI
+- Mapping directo a style-presets.csv rows (8 presets)
+- Nuevo topic_key: `{proyecto}/intent` con anti_patterns_HIGH heredados
+
+### Fase 2: Visual Direction Checkpoint polimórfico ✅
+- Archivo: agents/orquestador.md (Fase 2 Paso 1.5a/b/c, reescrito)
+- Extractor polimórfico — 6 fuentes: figma (detecta raster-only), image, url_website, brand_textual, preset, none
+- Pre-fill obligatorio desde intent (no arranca de cero)
+- Schema extendido: reference_for_qa, extracted_palette, extracted_typography, awesome_design_md_refs
+- WebFetch automático a awesome-design-md según mood_preset (tokens abstractos, nunca logos)
+- Eliminada ruta "decidí vos"
+
+### Fase 3: brand-agent schema v2 ✅
+- Archivo: agents/brand-agent.md (326 → 440 líneas)
+- Lee intent + visual-direction con 2-pasos obligatorio
+- Deriva colors/typography de extracted_palette si extraction_status=success (no inventa)
+- brand.json schema_version=2: mood_vector (8 dim), reference_ids, anti_patterns_HIGH ejecutables, typography_pair, extraction_metadata
+- Validación anti-genérico pre-return (FAIL si Inter en mood editorial, si teal en mood warm, etc.)
+
+### Fase 4: Guardrails anti-generic ejecutables ✅
+- Archivo: agents/ui-designer.md (313 → 404 líneas)
+  - Paso 0e SaaS Teal Default Detector con 6 reglas T1-T6
+  - AUTO_AUDIT pre-return obligatorio
+- Archivo: agents/frontend-developer.md (583 → 661 líneas)
+  - Pre-return Audit con 5 grep commands sobre código generado
+  - Taste-skill dials → Tier de animación (1/2/3) + constraints de layout/density
+  - AUTO_AUDIT en Return Envelope
+
+### Fase 5: QA Hardening — 9 capas de defensa ✅
+- Archivo: agents/evidence-collector.md (311 → 501 líneas)
+  - Paso 4b AUTO_AUDIT verification upstream
+  - Paso 4c Visual Fidelity LLM-as-judge (5 dims, threshold ≥7/10)
+  - Paso 4d E2E flows obligatorios (signup→login→dashboard→logout, error states)
+  - Paso 4e Network inspection OBLIGATORIA (antes opcional)
+  - Paso 4f Testing contra deploy_url
+  - Return Envelope: VISUAL_FIDELITY, NETWORK_AUDIT, E2E_FLOWS, FAIL_TYPE
+- Archivo: agents/reality-checker.md (420 → 601 líneas)
+  - Default STRICT NEEDS WORK con evidencia positiva citada
+  - Paso 2B False Positive Guardrail (re-ejecuta 2-3 qa-{N} PASS)
+  - Paso 4B Mixed Content DINÁMICO (no grep estático)
+  - Paso 8 Design Tools Usage Audit (verifica intent, VDC, brand v2, AUTO_AUDITs)
+  - Paso 9 Evidence Trail Mandatory (cada PASS cita path/URL/log)
+- Archivo: agents/api-tester.md
+  - ESCALATE si api-spec missing (antes fallback silencioso a tareas.md)
+  - Testing contra deploy_url si existe
+- Archivo: agents/performance-benchmarker.md
+  - PageSpeed Insights contra deploy_url OBLIGATORIO cuando existe
+
+### Archivos modificados (resumen fix 2026-04-19)
+
+| Archivo | Δ líneas | Cambio clave |
+|---------|----------|--------------|
+| orquestador.md | +325 | Intent Clarifier + VDC polimórfico |
+| pipeline-reference.md | +81 | Docs Intent + anti-generic + QA hardening |
+| brand-agent.md | +114 | Lee Engram + schema v2 |
+| ui-designer.md | +91 | 6 reglas T1-T6 + AUTO_AUDIT |
+| frontend-developer.md | +78 | Pre-return audit + dials |
+| evidence-collector.md | +190 | 4b-f: AUTO_AUDIT, Visual Fidelity, E2E, Network, deploy_url |
+| reality-checker.md | +181 | 2B False Positive + 4B dinámico + 8 + 9 |
+| api-tester.md | +13 | ESCALATE + deploy_url |
+| performance-benchmarker.md | +20 | PSI deploy_url |
+| CLAUDE.md | +35 | Secciones Intent Clarifier + Anti-Generic + QA |
+
+**Total**: ~1128 líneas añadidas al pipeline.
+
+### Verificación
+
+- [x] Intent Clarifier con heurística clarity score operativo
+- [x] Visual Direction Checkpoint pre-filleado obligatorio
+- [x] brand.json schema v2 implementado
+- [x] ui-designer AUTO_AUDIT con 6 reglas T1-T6
+- [x] frontend-developer Pre-return Audit con 5 grep checks
+- [x] evidence-collector Visual Fidelity LLM-as-judge
+- [x] evidence-collector E2E flows obligatorios en auth/CRUD
+- [x] reality-checker False Positive Guardrail
+- [x] reality-checker Mixed Content dinámico
+- [x] reality-checker Design Tools Usage Audit
+- [x] reality-checker Evidence Trail Mandatory
+- [x] api-tester ESCALATE sin api-spec
+- [x] performance-benchmarker deploy_url PSI
+
+**Nuevos topic keys en Engram**:
+- `{proyecto}/intent` (nuevo)
+- `{proyecto}/visual-direction` (schema extendido)
+- `{proyecto}/branding` (schema v2)
+- `{proyecto}/design-system` (+AUTO_AUDIT)
+- `{proyecto}/qa-{N}` (+VISUAL_FIDELITY, NETWORK_AUDIT, E2E_FLOWS, FAIL_TYPE)
+- `{proyecto}/certificacion` (+DESIGN_TOOLS_AUDIT, FALSE_POSITIVE_GUARDRAIL, MIXED_CONTENT_DYNAMIC, EVIDENCE_TRAIL)

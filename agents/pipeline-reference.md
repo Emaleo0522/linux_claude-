@@ -8,9 +8,49 @@ model: sonnet
 
 > Este archivo complementa CLAUDE.md. Solo es relevante durante el pipeline (modo orquestador). En modo normal Claude no necesita este contenido.
 
-## Visual Direction Checkpoint (Fase 2, Paso 1.5)
+## Intent Clarifier (Fase 1, Paso 0 — NUEVO 2026-04-19)
 
-Despues de que ux-architect crea la fundacion CSS y antes de lanzar ui-designer, el orquestador presenta al usuario opciones visuales estructuradas:
+Antes de todo, para proyectos nuevos el orquestador evalúa si el brief del usuario es claro o vago:
+- **Heurística clarity score 0-10**: word count + design vocab + referencias + features concretos + audiencia
+- **Score 0-3**: muy vago → 6 preguntas obligatorias (Q1-Q6)
+- **Score 4-6**: parcial → preguntas filtradas
+- **Score 7-10**: claro → solo Q3 (mood preset) + Q5 (originalidad) para confirmar
+
+**Preguntas** (todas con opciones múltiples, no abiertas):
+- Q1: tipo proyecto (landing/website/webapp/mobile/API/juego)
+- Q2: industria (top 5 dinámicas via `node ~/.claude/design-data/search.js`)
+- Q3 OBLIGATORIA: mood preset (8 opciones mapped 1:1 a `style-presets.csv` rows)
+- Q4: referencia visual opcional (figma/image/url_website/brand_textual/preset/none)
+- Q5 OBLIGATORIA: originalidad (conservador/balanceado/experimental) → dials
+- Q6: audiencia (B2B/B2C/creatives/GenZ/luxury/otra)
+
+**Resultado**: `{proyecto}/intent` con mood_preset, preset_row, dials_suggested, anti_patterns_HIGH (heredados del preset CSV), reference_source, audience. Consumido por todos los agentes downstream (PM, ux-architect, VDC, brand-agent, ui-designer, evidence-collector).
+
+**Bloqueo "decidí vos"**: el usuario NO puede skipear Q3+Q5 en proyectos con UI. Si insiste, el orquestador rechaza con mensaje explícito.
+
+**Excepción**: proyectos API/backend/CLI saltean Q3/Q4/Q6.
+
+Detalles completos en `orquestador.md` § FASE 1 Paso 0.
+
+## Visual Direction Checkpoint (Fase 2, Paso 1.5 — REFORZADO 2026-04-19)
+
+Despues de que ux-architect crea la fundacion CSS y antes de lanzar ui-designer, el orquestador presenta al usuario opciones visuales estructuradas. **AHORA es obligatorio y pre-filleado desde `{proyecto}/intent`**:
+
+**Paso 1.5a — Extractor polimórfico de referencia** (nuevo): según `intent.reference_source`:
+- `figma`: `get_metadata` detecta design real vs raster-only. Si raster → `get_screenshot` + color quantization.
+- `image`: color quantization + inferencia mood/tipografía vía vision.
+- `url_website`: Playwright screenshot + mismo flujo que image.
+- `brand_textual`: WebFetch `awesome-design-md/{slug}.md`.
+- `preset`: row de `style-presets.csv`.
+- `none`: solo preset del intent.
+
+Consulta complementaria a awesome-design-md siempre (mapped por mood_preset). Extracción persistida en `.pipeline/references/`.
+
+**Paso 1.5b — Pre-fill + confirmación**: las 8 decisiones se pre-seleccionan desde intent + extracción. Usuario solo confirma "ok" o ajusta puntualmente. Bloqueado "decidí vos".
+
+**Paso 1.5c — Schema extendido**: `{proyecto}/visual-direction` ahora incluye `reference_source`, `extraction_status`, `extracted_palette`, `extracted_typography`, `extracted_mood_tags`, `reference_images_paths`, `reference_for_qa` (para LLM-as-judge Fase 4), `awesome_design_md_refs`, `anti_patterns_HIGH` merged, `dials` confirmados.
+
+**Las 8 decisiones cualitativas** (igual que antes, solo cambia cómo se llenan — pre-fill vs pregunta abierta):
 1. **Estilo visual**: editorial, inmersivo, minimalista, bold/colorido, otro
 2. **Hero**: imagen estatica, video de fondo, fondo animado, parallax, slider, solo texto
 3. **Navegacion**: transparente con blur, fija solida, solo hamburger, sidebar, mega-menu
@@ -46,9 +86,50 @@ Antes de presentar las opciones, el orquestador consulta:
 - **Boveda CodePen** (`~/.claude/codepen-vault/`): efectos probados se muestran como opciones concretas
 - **21st.dev**: si `component_source: "21st.dev"`, se mencionan componentes animados disponibles
 - **Animaciones disponibles**: CSS (Tier 1), Framer Motion (Tier 2), GSAP+Lenis (Tier 3)
-- **Style presets** (`~/.claude/design-data/style-presets.csv`): si el usuario elige un preset nombrado (brutalist, editorial, soft-luxury, etc.), los dials se setean automaticamente desde el CSV
+- **Style presets** (`~/.claude/design-data/style-presets.csv`): heredados automáticamente de `intent.preset_row` (ya no solo "si el usuario elige preset nombrado" — ahora siempre viene del Intent Clarifier Paso 0)
+- **awesome-design-md** (`raw.githubusercontent.com/VoltAgent/awesome-design-md/main/design-md/{slug}.md`): 68 marcas con tokens abstractos (paleta/tipografía/motion). El orquestador fetchea 1-3 refs automáticamente según `intent.mood_preset`. NUNCA copiar logos/layouts — solo tokens.
 
-Las respuestas (7 campos + 3 dials + preset opcional) se guardan en Engram como `{proyecto}/visual-direction` y fluyen a ui-designer (behavioral specs) y frontend-developer (design decision tree).
+Las respuestas (7 campos + 3 dials + mood_preset obligatorio + referencia opcional) se guardan en Engram como `{proyecto}/visual-direction` con schema extendido (ver Paso 1.5c) y fluyen a ui-designer, brand-agent, frontend-developer, evidence-collector y reality-checker.
+
+## Anti-generic Guardrails (Fase 2-3 — NUEVO 2026-04-19)
+
+Guardrails ejecutables instalados en ui-designer + frontend-developer para bloquear outputs genéricos (caso VetConnect):
+
+**ui-designer Paso 0e — SaaS Teal Default Detector** (6 reglas T1-T6):
+- T1: paleta primary no teal/cyan (hue 175-205, sat>40) salvo mood=swiss-minimal
+- T2: heading no Inter/Roboto/Open Sans/Lato/Arial/SF Pro/Segoe UI
+- T3: heading.family ≠ body.family (excepto swiss-minimal)
+- T4: hero no "centered+2CTAs+3cards" para moods no-swiss
+- T5: border radius coherente con mood (brutalism=0-2px, etc.)
+- T6: shadow coherente (brutalism=offset-hard, luxury=subtle-warm, y2k=chrome)
+
+**frontend-developer Pre-return Audit** (5 grep commands sobre código generado):
+- Teal/cyan hardcoded en archivos no-dashboard
+- Inter/Roboto como heading en hero/landing
+- Pattern lucide-react + grid-cols-3 en main page (ALERT)
+- Shadow suave en brutalism
+- Hero sin `<img>`/`<video>`/`<Image>` cuando visual-direction.hero ≠ text-only
+- Motion: motion_intensity≥7 requiere gsap/ScrollTrigger/framer-motion
+
+Ambos agentes devuelven `AUTO_AUDIT` estructurado en su Return Envelope. reality-checker verifica que AUTO_AUDIT PASS en Paso 2 + Paso 8.
+
+## QA Hardening (Fase 3-4 — NUEVO 2026-04-19)
+
+7 capas de defensa anti-falso-positivo (orden de ejecución):
+
+1. **evidence-collector Paso 4b** (Fase 3): AUTO_AUDIT verification upstream
+2. **evidence-collector Paso 4c**: Visual Fidelity LLM-as-judge (5 dim, threshold ≥7/10)
+3. **evidence-collector Paso 4d**: E2E flows (signup→login→dashboard→logout, error states)
+4. **evidence-collector Paso 4e**: Network inspection obligatoria
+5. **evidence-collector Paso 4f**: Testing contra deploy_url
+6. **reality-checker Paso 2B** (Fase 4): False Positive Guardrail — re-ejecuta 2-3 qa-{N} PASS
+7. **reality-checker Paso 4B**: Mixed Content dinámico (no grep estático)
+8. **reality-checker Paso 8**: Design Tools Usage Audit
+9. **reality-checker Paso 9**: Evidence Trail Mandatory
+
+Plus:
+- **api-tester**: ESCALATE si api-spec missing (no fallback silencioso)
+- **performance-benchmarker**: PageSpeed Insights contra deploy_url obligatorio
 
 ## Herramientas por agente
 
