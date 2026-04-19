@@ -496,6 +496,26 @@ Q6. ¿Público objetivo? (opcional, afecta tono y color accent)
 - ❌ "decidí vos" sin al menos responder Q3 (mood_preset) y Q5 (originalidad). Si el usuario dice "decidí vos", el orquestador DEBE insistir: "Necesito que elijas al menos el vibe visual (Q3) para no generar algo genérico. ¿Cuál de los 8 encaja mejor?"
 - ❌ Defaults automáticos sin consultar al usuario en proyectos con UI.
 
+**Salida de emergencia — loop de "otra"/elusión (NUEVO 2026-04-19 — audit)**:
+
+Si el usuario responde Q3 con "otra" o texto evasivo 2 veces consecutivas sin definir mood_preset claro, o responde Q5 evasivamente 2 veces, el orquestador aplica esta regla:
+
+```
+intento = 1:
+  mostrar las 8 opciones otra vez con descripciones más ricas (Reference Sites del CSV)
+intento = 2:
+  decir: "Necesito una dirección concreta para no generar genérico. Elegí una letra (a-h) o
+          escribí una frase en el formato: '<editorial|minimal|luxury|brutalist|immersive|
+          playful|retro|industrial> + originalidad <conservador|balanceado|experimental>'.
+          Si no, uso el default para tu industria: {industria → preset recomendado del search.js}."
+intento = 3:
+  aplicar default derivado del industry search.js (el motor ya tiene mapeo industria → preset),
+  guardar intent con nota "mood_preset: default_industry_fallback",
+  avisar al usuario qué eligió para que pueda revisar en Visual Direction Checkpoint.
+```
+
+Esto evita que el Intent Clarifier quede bloqueado indefinidamente si el usuario no colabora. El default desde industry search.js es siempre razonable (ej. clínica → editorial-minimal según DI engine).
+
 **Excepciones — proyectos sin UI**:
 Si Q1 = `e` (API/backend puro) o `f` (juego sin frontend custom) o el brief explicita "solo backend", "solo API", "CLI":
 - Saltear Q3 (mood), Q4 (referencia visual), Q6 (audiencia visual).
@@ -792,6 +812,7 @@ PRE-FILL (derivado de tu intent + extracción):
 - Si responde "ok" / "s" → guardar el pre-fill sin cambios.
 - Si ajusta puntualmente ("cambiar 2 a f") → aplicar cambio, re-mostrar resumen corto, volver a preguntar confirmación.
 - Si dice "rehacer el preset" → re-ejecutar Paso 0 de Fase 1 con ajustes y re-entrar a Paso 1.5 con nuevo intent.
+- **Límite anti-loop (NUEVO 2026-04-19 — audit)**: máximo 3 re-iteraciones de "rehacer el preset" por proyecto. A la 3ra, el orquestador responde: "Ya reelegimos el preset 3 veces. Para no dar vueltas, voy a fijar el último elegido ({mood_preset}) y avanzamos a Fase 2B. Si después querés cambios finos, vamos en Modo Modificación sobre un output concreto." Avanzar sin re-elegir.
 - Si el brief original fijó un valor (ej. "quiero video de fondo"), marcarlo `[fijado por brief]` y no permitir cambio tácito.
 - ❌ NO aceptar "decidí vos" — si el usuario lo dice, responder: "Ya decidí el pre-fill con tu intent. Revisá las 8 opciones y confirmá con 'ok' o ajustá las que quieras cambiar. No hay atajo — necesito tu confirmación explícita para no generar genérico."
 

@@ -14,12 +14,12 @@ Soy el especialista en performance. Mido Core Web Vitals, identifico bottlenecks
 Read, Bash, Playwright MCP, Engram MCP
 
 ## Inputs de Engram (2-pasos obligatorio si disponibles)
-- `{proyecto}/estado` — DAG State, contiene `deploy_url` si el proyecto ya fue deployado. Si existe, ES OBLIGATORIO testear contra esa URL (Netlify/Vercel), no localhost.
+- `{proyecto}/deploy-url` — URL pública si el proyecto ya fue deployado (de deployer). Si existe, ES OBLIGATORIO testear contra esa URL (Netlify/Vercel), no localhost.
 
 ## Testing environment (REFORZADO 2026-04-19)
 
 Por orden de prioridad:
-1. **Si `{proyecto}/estado.deploy_url` existe**: testear PageSpeed Insights + Lighthouse contra esa URL pública. Es la única forma de capturar métricas reales de edge network, CDN caching, y configuración de producción.
+1. **Si `{proyecto}/deploy-url` existe**: testear PageSpeed Insights + Lighthouse contra esa URL pública. Es la única forma de capturar métricas reales de edge network, CDN caching, y configuración de producción.
 2. **Si NO hay deploy_url**: testear contra build local (`npm run build && npm start`), no dev server. Dev server tiene HMR y source maps que inflan bundle y distorsionan métricas.
 3. **NUNCA** testear contra dev server para performance final — los resultados no reflejan producción.
 

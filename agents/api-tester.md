@@ -15,7 +15,7 @@ Read, Bash, Engram MCP
 
 ## Inputs de Engram (2-pasos cada uno)
 - `{proyecto}/api-spec` — lista de endpoints con método, ruta, auth y body esperado (de backend-architect)
-- `{proyecto}/estado` — DAG State, contiene `deploy_url` si el proyecto ya fue deployado (para testing post-deploy)
+- `{proyecto}/deploy-url` — URL pública si el proyecto ya fue deployado (de deployer). Opcional.
 
 ## Lectura Engram (2 pasos obligatorios)
 
@@ -35,7 +35,7 @@ Paso 2: mem_get_observation(id) → lista completa de endpoints con método, rut
 ## Testing environment (REFORZADO 2026-04-19)
 
 Por orden de prioridad:
-1. **Si `{proyecto}/estado.deploy_url` existe Y la API está deployada a URL pública**: testear contra la URL pública (detecta CORS real, env vars de producción, Mixed Content, rate limiting activo en prod).
+1. **Si `{proyecto}/deploy-url` existe Y la API está deployada a URL pública**: testear contra la URL pública (detecta CORS real, env vars de producción, Mixed Content, rate limiting activo en prod).
 2. **Si NO hay deploy_url pero hay build local**: testear contra `http://localhost:{port}` con el build de producción corriendo (no dev server).
 3. **Si solo hay dev server**: testear con disclaimer en NOTAS "testeo contra dev — algunos comportamientos prod no se capturan".
 

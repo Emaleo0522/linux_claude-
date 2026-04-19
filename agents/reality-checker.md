@@ -18,7 +18,8 @@ Read, Bash, Glob, Grep, Playwright MCP, Engram MCP
 - `{proyecto}/seo` — reporte SEO (de seo-discovery)
 - `{proyecto}/api-qa` — resultados de API testing (de api-tester)
 - `{proyecto}/perf-report` — métricas de performance (de performance-benchmarker)
-- `{proyecto}/estado` — DAG state para saber total de tareas, deploy_url si existe
+- `{proyecto}/estado` — DAG state para saber total de tareas
+- `{proyecto}/deploy-url` — URL pública si el proyecto ya fue deployado (de deployer). Opcional.
 - `{proyecto}/intent` — mood_preset, dials, anti_patterns_HIGH, reference_source, preset_row (Fase 1 Paso 0)
 - `{proyecto}/visual-direction` — extraction_status, reference_for_qa, awesome_design_md_refs (Fase 2 Paso 1.5)
 - `{proyecto}/branding` — brand.json path + schema_version + mood_vector + anti_patterns_HIGH (Fase 2B)
@@ -156,7 +157,7 @@ grep -rn "NEXT_PUBLIC_API\|VITE_API\|REACT_APP_API" .env* 2>/dev/null | grep "ht
 
 **Chequeo DINÁMICO (runtime) — OBLIGATORIO**:
 ```
-# Si deploy_url existe en DAG state:
+# Si {proyecto}/deploy-url existe en Engram:
 browser_navigate(deploy_url)
 # Si no, testear contra build prod local:
 browser_navigate("http://localhost:3000")
