@@ -183,7 +183,15 @@ if ls "$REPO_ROOT/hooks/"*.js &>/dev/null; then
   cp "$REPO_ROOT/hooks/"*.js "$CLAUDE_HOOKS/"
   chmod +x "$CLAUDE_HOOKS/"*.js
   HOOK_COUNT=$(ls "$CLAUDE_HOOKS/"*.js 2>/dev/null | wc -l)
-  info "Hooks instalados en $CLAUDE_HOOKS ($HOOK_COUNT hooks reactivos)"
+  # Utility scripts .sh (ej. frontend-audit.sh) — no son reactive hooks pero se invocan desde agentes
+  if ls "$REPO_ROOT/hooks/"*.sh &>/dev/null; then
+    cp "$REPO_ROOT/hooks/"*.sh "$CLAUDE_HOOKS/"
+    chmod +x "$CLAUDE_HOOKS/"*.sh
+    UTIL_COUNT=$(ls "$CLAUDE_HOOKS/"*.sh 2>/dev/null | wc -l)
+    info "Hooks instalados en $CLAUDE_HOOKS ($HOOK_COUNT reactivos + $UTIL_COUNT utility scripts)"
+  else
+    info "Hooks instalados en $CLAUDE_HOOKS ($HOOK_COUNT hooks reactivos)"
+  fi
 else
   HOOK_COUNT=0
   warn "No se encontraron hooks en $REPO_ROOT/hooks/ — saltando"

@@ -169,6 +169,7 @@ Plus: **api-tester ESCALATES** if `api-spec` is missing (no silent fallback to `
 | `audit-system` | Manual | -- | Validates system integrity: agents, hooks, settings, protocols |
 | `cost-report` | Manual | -- | Tool usage breakdown by category, sub-agent, frequency |
 | `learning-index` | Manual | -- | Local discovery index with auto-tagging by technology |
+| `frontend-audit.sh` | Utility (bash) | invoked by agent | Pre-return anti-generic audit — deterministic grep checks for SaaS teal, heading fonts, hero media, motion coherence, shadow coherence |
 
 ---
 
