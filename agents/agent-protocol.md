@@ -69,6 +69,27 @@ Paso 4: mem_update(observation_id, contenido_mergeado)
 
 **REGLA**: `topic_key` es OBLIGATORIO en todo `mem_save`. Sin él, los reintentos crean duplicados.
 
+### Manejo de error `ambiguous_project` (Engram v1.15.9+)
+
+Si `mem_save({proyecto}/...)` retorna error con código `ambiguous_project` o mensaje `Project %q is not backed by known context`:
+
+1. **NO retry inmediato con mismo payload** — fallaría idéntico
+2. **Causa**: el proyecto no está enrolled (sin git remote conocido, sin `.engram/config.json`, sin sessions previas)
+3. **Quién resuelve**: el orquestador es responsable de enrollment ANTES de delegar al agente. Ver `orquestador.md` § "Project Enrollment"
+4. **Si el agente ya recibió la delegación y el orquestador no enrolló**: el error trae `recovery_token` y `available_projects` en el envelope. Reintentar UNA vez con:
+   ```
+   mem_save(
+     title: "...",
+     content: "...",
+     type: "...",
+     topic_key: "{proyecto}/...",
+     project: "{proyecto}",
+     project_choice_reason: "user_selected_after_ambiguous_project",
+     recovery_token: "{token-recibido-en-error}"
+   )
+   ```
+5. Si el reintento también falla → Return Envelope con `BLOQUEADORES: project '{proyecto}' no enrolled — orquestador debe crear .engram/config.json antes de re-delegar`
+
 ### Fallback a disco (si Engram no responde)
 
 Si `mem_save` o `mem_update` falla (timeout, MCP no disponible, error):

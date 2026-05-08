@@ -115,7 +115,7 @@ El pipeline tiene capas de defensa ejecutables contra outputs genéricos y falso
 
 ### Guardrails anti-generic
 - **brand.json schema v2** (brand-agent): `mood_vector` 8-dim, `reference_ids`, `anti_patterns_HIGH` ejecutables, `typography_pair`, `extraction_metadata`. Ver `brand-agent.md` § "Estructura de brand.json (schema v2)".
-- **ui-designer Paso 0e — SaaS Teal Default Detector**: 6 reglas T1-T6 que bloquean paleta teal+Inter+cards-genéricas+shadow-sm para moods editorial/luxury/brutalist/immersive/playful/y2k/industrial. Self-audit pre-return con `AUTO_AUDIT` en Return Envelope.
+- **ui-designer Paso 0e — SaaS Teal Default Detector**: 7 reglas T1-T7 que bloquean paleta teal+Inter+cards-genéricas+shadow-sm+envelope-contenido-en-moods-bold para moods editorial/luxury/brutalist/immersive/playful/y2k/industrial. Self-audit pre-return con `AUTO_AUDIT` en Return Envelope.
 - **frontend-developer Pre-return Audit**: 5 grep commands sobre código generado (teal hardcoded, Inter heading, shadow uniforme, hero media, motion coherente con dials). `AUTO_AUDIT` en tarea-{N}.
 - **Taste-skill dials obligatorios**: frontend-developer consulta `intent.dials_suggested` antes de elegir Tier de animación (CSS/Framer/GSAP) y layout (simétrico/asimétrico).
 
@@ -136,13 +136,14 @@ El pipeline tiene capas de defensa ejecutables contra outputs genéricos y falso
 - `{proyecto}/intent` — Fase 1 Paso 0 (Intent Clarifier): mood_preset, dials_suggested, reference_source, anti_patterns_HIGH
 - `{proyecto}/visual-direction` (schema extendido) — Fase 2 Paso 1.5: extraction_status, extracted_palette, extracted_typography, reference_for_qa, awesome_design_md_refs
 - `{proyecto}/branding` (schema v2) — Fase 2B: mood_vector, reference_ids, anti_patterns_HIGH ejecutables
-- `{proyecto}/design-system` (extendido con AUTO_AUDIT) — Fase 2: 6 reglas T1-T6 PASS
+- `{proyecto}/design-system` (extendido con AUTO_AUDIT) — Fase 2: 7 reglas T1-T7 PASS
 - `{proyecto}/qa-{N}` (extendido con AUTO_AUDIT_VERIFIED, VISUAL_FIDELITY, NETWORK_AUDIT, E2E_FLOWS) — Fase 3
 - `{proyecto}/certificacion` (extendido con DESIGN_TOOLS_AUDIT, FALSE_POSITIVE_GUARDRAIL, MIXED_CONTENT_DYNAMIC, EVIDENCE_TRAIL) — Fase 4
 
 ## Reglas clave
 - Solo el **orquestador** guarda DAG State en Engram
 - Los subagentes guardan sus propios resultados en Engram con topic keys del proyecto
+- **Excepción modo Claude normal**: si el usuario pide explícitamente guardar algo ("guarda esto", "guardalo en engram", "guarda aquí", "remember this"), Claude normal SÍ puede llamar `mem_save` directamente. La regla "solo orquestador guarda" aplica a flujos automáticos (subagentes, pipelines) para evitar ruido — no a pedidos directos del usuario en conversación 1-a-1. Topic key: usar uno descriptivo y, si es info personal/cross-project, `scope="personal"`.
 - Solo **evidence-collector** y **reality-checker** hacen QA visual
 - Solo **git** hace commits/push — nunca un agente dev
 - Solo **deployer** despliega (Vercel para web, EAS Build para mobile)

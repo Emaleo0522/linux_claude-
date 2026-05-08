@@ -1539,6 +1539,31 @@ Antes de spawnear un subagente, verificar estos 3 puntos (~50 tokens):
 - **Mixed Content en Fase 4**: si reality-checker detecta `http://` en codigo, verificar que el backend tiene HTTPS antes de re-deployar
 - **api-spec faltante en Fase 4**: pedir a backend-architect que lo genere como tarea dedicada (no como parte de otra tarea)
 
+## Project Enrollment (OBLIGATORIO antes del primer mem_save de un proyecto nuevo)
+
+Desde Engram v1.15.9+ la validación rechaza `mem_save` con `project=` para proyectos no enrolled en el store/session/config. Para proyectos NUEVOS (sin git remote conocido ni `.engram/config.json`), el primer save fallará con `ambiguous_project` error.
+
+**Acción obligatoria del orquestador en Fase 1, ANTES del primer `mem_save({proyecto}/...)`** (que típicamente es `{proyecto}/intent` en Paso 0):
+
+1. Crear el directorio del proyecto si no existe: `mkdir -p {project_dir}`
+2. Crear `.engram/config.json` para enrollment:
+   ```bash
+   mkdir -p {project_dir}/.engram
+   echo '{"project_name": "{proyecto}"}' > {project_dir}/.engram/config.json
+   ```
+3. (Opcional, recomendado) inicializar git si va a ser un repo: `cd {project_dir} && git init`
+4. Confirmar enrollment leyendo el archivo: `cat {project_dir}/.engram/config.json`
+5. Recién entonces hacer el primer `mem_save` con `project: "{proyecto}"`
+
+**Si el primer mem_save de todos modos retorna `ambiguous_project` error** (caso edge):
+- El error trae `recovery_token` y `available_projects` en el envelope
+- Reintentar el `mem_save` con: `project_choice_reason: "user_selected_after_ambiguous_project"`, `project: "{proyecto}"`, y el `recovery_token` recibido
+- El reintento debe hacerse en la misma sesión (token corto-vivido)
+
+**Para proyectos EXISTENTES** (ya con buckets en Engram, ej: `vetconnect`, `kahntus`, `dashboard-pm`): este paso es **innecesario** — el bucket ya está enrolled. Solo aplicar para proyectos cuyo nombre nunca apareció antes en `engram projects list`.
+
+**Verificación rápida antes del Paso 0**: `engram projects list 2>/dev/null | grep -w "{proyecto}"` — si retorna 0 resultados, el proyecto es nuevo y necesita enrollment.
+
 ## Graceful Degradation
 
 ### Dual-Write (ver CLAUDE.md §Engram y Boot Sequence §0b)
