@@ -33,6 +33,11 @@
       {
         "hooks": [{ "type": "command", "command": "node __CLAUDE_HOME__/hooks/cost-tracker.js", "async": true }],
         "description": "Logs tool calls by category for cost/usage analysis"
+      },
+      {
+        "matcher": "Write|Edit",
+        "hooks": [{ "type": "command", "command": "bash __CLAUDE_HOME__/hooks/pre-return-audit.sh", "async": true }],
+        "description": "Auditoría universal CSS/HTML/JSX: container ≤1280 (SaaS feel), fuentes declaradas sin link, anchor scroll sin scroll-padding, navbar mobile sin hamburger, prefers-reduced-motion ausente. Fail-open."
       }
     ],
     "Stop": [

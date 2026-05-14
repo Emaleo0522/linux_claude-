@@ -135,6 +135,9 @@ El CSS foundation NO es un template fijo. Los valores de tipografía, spacing, m
   --container-md: 768px;
   --container-lg: 1024px;
   --container-xl: [spec]; /* 1280px normal, 1440px para inmersivo, 960px para editorial */
+
+  /* Scroll behavior — evita que el sticky header tape los anchor targets */
+  --scroll-pad-top: 5.5rem; /* ajustar a la altura real del header sticky + 1rem de aire */
 }
 
 ### Container strategy by mood (NUEVO — 2026-05-08, refinado 2026-05-08)
@@ -193,6 +196,7 @@ Reglas:
 - Patrones de grid CSS para cada sección
 - Breakpoints: 320px / 768px / 1024px / 1280px
 - Flexbox utilities para alineación
+- **Anchor scroll con sticky header** (OBLIGATORIO en proyectos con `.site-header { position: sticky; top: 0 }`): aplicar `html { scroll-padding-top: var(--scroll-pad-top); }`. Sin esto, los `<a href="#section">` quedan ocultos detrás del header sticky al hacer scroll — bug clásico que el agente NUNCA debe ignorar. El token `--scroll-pad-top` se define en `:root` (ver bloque de variables arriba). Ajustar valor a la altura real del header.
 - **Composicion espacial por tipo de proyecto**:
   - Landing pages / portfolios / productos consumer → considerar layouts no-convencionales: asimetria, overlap de elementos, diagonal flow, grid-breaking deliberado, negative space generoso. El layout ES parte de la identidad visual
   - Dashboards / admin panels / apps de productividad → grids funcionales y predecibles. La consistencia es la estetica

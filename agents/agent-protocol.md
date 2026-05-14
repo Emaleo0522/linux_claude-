@@ -115,6 +115,7 @@ ARCHIVOS: [lista de paths creados/modificados]
 ENGRAM: {proyecto}/{mi-cajon} (topic_key usado)
 SERVIDOR: puerto {N} (solo si levantaste servidor)
 VERIFICACION: typo | layout | config | none
+VISUAL_IMPACT: high | medium | low | none   ← obligatorio en agentes que tocan UI/CSS
 BLOQUEADORES: [lista] (solo si hay impedimentos para continuar)
 NOTAS: {texto libre, máx 3 líneas}
 ```
@@ -123,6 +124,7 @@ NOTAS: {texto libre, máx 3 líneas}
 - **ARCHIVOS** lista paths SIEMPRE relativos al proyecto (ej: `src/app/page.tsx`, NO `/home/user/project/src/app/page.tsx`)
 - **ENGRAM** indica el cajón donde guardaste tu resultado
 - **VERIFICACION** indica qué nivel de verificación requiere el cambio (ver tabla abajo)
+- **VISUAL_IMPACT** dispara checkpoint humano (ver tabla abajo). Obligatorio en frontend-developer, ui-designer, brand-agent, image-agent, logo-agent, xr-immersive-developer. Opcional pero recomendado en cualquier agente que toque archivos `.css|.html|.tsx|.jsx|.vue|.svelte`.
 - Omitir campos vacíos (no poner "SERVIDOR: N/A")
 
 ### Tabla de valores para VERIFICACION
@@ -133,6 +135,17 @@ NOTAS: {texto libre, máx 3 líneas}
 | `typo` | Corrección de texto/copy en string estático, empty state, texto condicional | Un solo `preview_eval`: `document.body.innerText.includes("texto_nuevo")` → si `true`, PASS |
 | `config` | Cambios en archivos no-UI: configs, tipos, API routes, env vars | Saltar verificación completamente |
 | `none` | Sin servidor de preview activo, o cambio no observable en browser | Saltar verificación completamente |
+
+### Tabla de valores para VISUAL_IMPACT (dispara checkpoint humano)
+
+| Valor | Cuándo usarlo | Acción del orquestador |
+|-------|--------------|----------------------|
+| `high` | Hero/landing redesign, identidad visual nueva, animaciones principales, layout estructural mayor, decisión visual interpretable (multi-opción válida) | **OBLIGATORIO**: mostrar screenshot/preview al usuario con recomendación antes de marcar tarea completa. Ver § "Checkpoint humano" en `~/.claude/CLAUDE.md` |
+| `medium` | Sección secundaria nueva, componentes visibles, ajustes de tipografía/color en zonas no críticas | Opcional: mostrar al usuario si fue la segunda iteración del mismo elemento |
+| `low` | Microajustes (spacing, focus rings, dark mode tweaks, sombras secundarias) | No checkpoint. Solo mencionar en NOTAS si vale la pena |
+| `none` | Sin impacto visual (config, types, lógica interna, refactor de selectores sin cambio visible) | Saltar checkpoint |
+
+**Regla clave**: si tuviste **2+ iteraciones sobre el mismo elemento** en la misma sesión, escalar a `high` aunque inicialmente parezca `medium` — es señal de local minimum y necesita ojo humano.
 
 **Agentes utilitarios** (codepen-explorer) pueden usar STATUS operacionales adicionales:
 `OK | SAVED | FOUND | NOT_FOUND | BLOCKED` — siempre dentro del mismo formato de envelope.

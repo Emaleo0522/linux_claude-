@@ -1,748 +1,325 @@
-# Claude Vibecoding System
+# Claude Vibecoding
 
-**An autonomous multi-agent system for building complete software projects from idea to deployment.**
+> Un sistema multiagente para construir software de principio a fin con Claude. Desde una landing simple hasta una app con auth + base de datos. **Te acompaña en cada decisión clave, sin pedirte permiso para cada coma.**
 
-A central orchestrator coordinates 24 specialized AI sub-agents (25 entities total) through a 5-phase pipeline: planning, architecture, development with visual QA, certification, and deployment. 13 reactive hooks enforce security, quality gates, and cost tracking in real time. Persistent memory via Engram MCP enables session continuity and cross-agent coordination.
-
-Compatible with **Linux (Claude Code CLI)** and **Windows (Claude Desktop)**. The system operates in **Spanish** (commands, prompts, and agent communication), though it builds projects in any language.
-
----
-
-## What Can You Build
-
-| Project Type | Example | Agents Used |
-|-------------|---------|-------------|
-| **Landing pages & portfolios** | Restaurant website, photographer portfolio, product launch page | frontend-developer, brand-agent, image-agent |
-| **Web applications** | Dashboard, SaaS MVP, admin panel, e-commerce | frontend-developer + backend-architect |
-| **Mobile apps** | iOS/Android app with Expo | mobile-developer |
-| **Browser games** | 2D platformer, puzzle game, arcade | game-designer + xr-immersive-developer |
-| **APIs & backends** | REST/tRPC API, webhook handler, background jobs | backend-architect |
-| **Full-stack projects** | App with auth, database, API, and frontend | All dev agents as needed |
-
-Every project gets the full pipeline: planned tasks, designed architecture, implemented code with visual QA per task, SEO + performance certification, and deployment to Vercel (web) or EAS Build (mobile).
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+![Status](https://img.shields.io/badge/status-stable-success)
+![Platforms](https://img.shields.io/badge/platforms-Linux%20%7C%20Windows-lightgrey)
 
 ---
 
-## Key Features
+## ¿Esto es para mí?
 
-- **25 specialized agents** -- 1 orchestrator + 24 sub-agents, each with defined tools and responsibilities
-- **13 technical references** -- shared protocol, auth, animation, design systems, creative coding, pipeline details, and more
-- **5-phase pipeline** -- Planning, Architecture, Dev+QA loop, Certification, Deployment
-- **13 reactive hooks** -- Security blocks, quality gates, cost tracking, context management
-- **Persistent memory** -- Engram MCP for cross-session state, DAG-based progress tracking
-- **Visual agent office** -- Pixel Bridge (optional pixel art visualization of agent activity)
-- **Adaptive stack** -- Next.js, React Native, Phaser.js, Hono, Drizzle, and more, chosen per project
-- **Creative pipeline** -- AI-generated brand identity, logos, images, and video with fallback chains
+Hay dos perfiles típicos que sacan provecho del sistema. Si te identificás con alguno, seguí leyendo.
 
----
+**Si nunca programaste** y tenés una idea que querés ver hecha (la landing de tu emprendimiento, una app para tu equipo, un juego para regalar a tu sobrina), este sistema te lleva de la idea al deploy. Vos describís qué querés en español natural; el sistema te pregunta lo que necesita saber con opciones múltiples, y al final tenés un proyecto online. No tenés que aprender a programar para empezar a usarlo.
 
-## Pipeline
+**Si sos developer** y estás cansado de hacer las mismas tareas repetitivas (setup, scaffolding, QA visual, headers de seguridad, SEO, deploy), este sistema te las quita de encima. Vos te quedás con las decisiones que importan; el resto lo hacen 25 agentes especializados que se coordinan entre sí.
 
-```
-Phase 1: Planning        -> Step 0: Intent Clarifier (mandatory for new projects)
-                          -> project-manager-senior
-Phase 2: Architecture    -> ux-architect -> (Visual Direction Checkpoint) -> ui-designer + security-engineer
-Phase 2B: Visual Assets  -> brand-agent -> (user approval) -> logo + image -> video
-Phase 3: Dev <-> QA Loop -> dev-agents <-> evidence-collector (max 3 retries)
-Phase 4: Certification   -> seo + api-tester + performance + reality-checker
-Phase 5: Deployment      -> git -> deployer (with user confirmation)
-```
-
-### Intent Clarifier (Phase 1, Step 0 — NEW 2026-04-19)
-
-Before planning, the orchestrator evaluates if the user brief is clear or vague using a clarity score heuristic (word count + design vocabulary + references + concrete features + audience mentioned). For vague briefs, it asks 6 multiple-choice questions with options:
-
-- **Q1 Project type**: landing / website / webapp / mobile / API / game
-- **Q2 Industry**: top 5 matches from `search.js` (161 indexed industries) + "other"
-- **Q3 Visual vibe** (MANDATORY): editorial premium / swiss minimal / soft luxury / neo-brutalism / immersive cinematic / playful illustrated / Y2K revival / monochrome industrial
-- **Q4 Visual reference** (optional): Figma URL / image path / "like {site}" / brand name / none
-- **Q5 Originality** (MANDATORY): conservative / balanced / experimental — calibrates design variance + motion intensity dials
-- **Q6 Audience**: B2B / B2C / creatives / Gen Z / luxury / other
-
-**No bypass**: the orchestrator refuses "you decide" — at minimum Q3 + Q5 must be answered explicitly. This prevents the pipeline from defaulting to generic "SaaS teal + Inter" outputs when the user doesn't have design vocabulary. Result stored in Engram as `{project}/intent` with `mood_preset`, `dials_suggested`, `anti_patterns_HIGH` inherited from `style-presets.csv` row.
-
-### Anti-Generic Guardrails (NEW 2026-04-19)
-
-Executable guardrails prevent generic "SaaS template" outputs:
-
-- **brand.json schema v2**: `mood_vector` (8 quantitative dimensions 0-10), `reference_ids`, `anti_patterns_HIGH` as executable blocklist, `typography_pair` with rationale
-- **ui-designer Step 0e — SaaS Teal Default Detector**: 6 rules T1-T6 that BLOCK before returning:
-  - T1 No teal/cyan primary (HSL hue 175-205, sat>40) except swiss-minimal mood
-  - T2 No Inter/Roboto/Open Sans/Lato/Arial/SF Pro/Segoe UI as heading
-  - T3 Typographic contrast mandatory (heading.family ≠ body.family) except swiss-minimal
-  - T4 No generic hero structure (centered + 2 CTAs + 3 feature cards) outside swiss/dashboard moods
-  - T5 Border radius coherent with mood (brutalism=0-2px, luxury=8-16px warm, etc.)
-  - T6 Shadow coherent with mood (brutalism=offset-hard, luxury=subtle-warm, y2k=chrome)
-- **frontend-developer Pre-return Audit**: 5 grep commands on generated code:
-  - No hardcoded `text-teal-/bg-teal-/cyan-*` in non-dashboard files
-  - No `font-family: Inter/Roboto/...` as heading in hero/landing
-  - Hero has `<img>/<video>/<Image>` when `visual-direction.hero ≠ text-only`
-  - Shadow coherent with mood (brutalism requires offset-hard)
-  - Motion tier matches `motion_intensity` dial (≤3 = CSS only, 4-6 = Framer, ≥7 = GSAP)
-
-Both agents return `AUTO_AUDIT` in Return Envelope so reality-checker can verify upstream.
-
-### QA Hardening — 9 layers of defense against false positives (NEW 2026-04-19)
-
-Previous audit revealed the QA could approve projects with broken auth + generic design (case VetConnect). Now:
-
-1. **evidence-collector Step 4b**: Verifies upstream AUTO_AUDIT from ui-designer + frontend-developer PASS before screenshots
-2. **evidence-collector Step 4c — Visual Fidelity**: LLM-as-judge compares screenshot vs `visual-direction.reference_for_qa` on 5 dimensions (palette, typography, composition, mood, density). Threshold ≥7/10 for PASS. Mood Vector divergence L1 ≤10. Anti-derivative guardrail.
-3. **evidence-collector Step 4d — E2E flows**: Mandatory user journeys for auth/CRUD/forms tasks (signup → email verify → login → dashboard → action → logout). Error states (wrong password, expired token, rate limit, offline fallback).
-4. **evidence-collector Step 4e — Network inspection**: Mandatory (was optional). Detects Mixed Content, status 0, local leaks (localhost calls from deployed frontend).
-5. **evidence-collector Step 4f**: Tests against `deploy_url` if available (Netlify/Vercel), not just localhost.
-6. **reality-checker Step 2B — False Positive Guardrail**: Re-executes 2-3 random `qa-{N}` PASS tasks. If reality's re-run fails, evidence-collector's PASS was false.
-7. **reality-checker Step 4B — Mixed Content DYNAMIC**: Browser-level runtime inspection (not static grep). Detects undefined env vars like `NEXT_PUBLIC_API_URL` causing silent localhost fallback.
-8. **reality-checker Step 8 — Design Tools Usage Audit**: Verifies intent exists with full schema, visual-direction has extraction_status, brand.json is schema v2, all AUTO_AUDITs PASS.
-9. **reality-checker Step 9 — Evidence Trail Mandatory**: Every PASS cites specific evidence (screenshot path, request URL, log line). No more "looks good to me".
-
-Plus: **api-tester ESCALATES** if `api-spec` is missing (no silent fallback to `tareas.md`), **performance-benchmarker** uses PageSpeed Insights on `deploy_url` when available.
+En ambos casos, **el sistema te pregunta cuando hay decisiones interpretables** (visual, multi-opción, irreversible) y **decide solo cuando la respuesta es única**. No te quema con un "¿estás seguro?" por cada commit, pero tampoco te deja por fuera de lo importante.
 
 ---
 
-## Agent Catalog
+## Qué podés construir
 
-| Phase | Agent | Role |
-|:-----:|-------|------|
-| * | `orquestador` | Central coordinator, manages all 5 phases, never does real work |
-| 1 | `project-manager-senior` | Converts ideas into granular tasks with acceptance criteria |
-| 2 | `ux-architect` | CSS foundation: tokens, layout, themes, breakpoints |
-| 2 | `ui-designer` | Visual design system, components, WCAG AA accessibility |
-| 2 | `security-engineer` | STRIDE threat model, OWASP Top 10, security headers |
-| 2B | `brand-agent` | Brand identity: palette, typography, tone, personality |
-| 2B | `image-agent` | Hero images via Gemini/HuggingFace FLUX.1 |
-| 2B | `logo-agent` | SVG logos (FLUX.1 + vtracer vectorization) |
-| 2B | `video-agent` | Background videos (Replicate LTXVideo / CSS fallback) |
-| 3 | `frontend-developer` | React/Vue/TS, Tailwind, shadcn/ui, Zustand, TanStack Query |
-| 3 | `backend-architect` | Hono/Express, Drizzle/Prisma, tRPC, PostgreSQL, Better Auth |
-| 3 | `rapid-prototyper` | Multi-stack MVPs for fast validation |
-| 3 | `mobile-developer` | React Native + Expo SDK 52+, NativeWind 4, Expo Router |
-| 3 | `game-designer` | Game Design Document: mechanics, loops, economy, balance |
-| 3 | `xr-immersive-developer` | Phaser.js, PixiJS, Canvas API, WebGL standalone games |
-| 3 | `codepen-explorer` | Searches and extracts visual effects from CodePen via Playwright |
-| 3 | `build-resolver` | Diagnoses and fixes build failures automatically |
-| 3 | `evidence-collector` | Visual QA with Playwright MCP, screenshots across 3 viewports |
-| 4 | `seo-discovery` | SEO audit, meta tags, JSON-LD, sitemap, llms.txt, AI discovery |
-| 4 | `api-tester` | Endpoint coverage, OWASP API Top 10, P95 latency |
-| 4 | `performance-benchmarker` | Core Web Vitals, Lighthouse, bundle analysis |
-| 4 | `reality-checker` | Final pre-production gate with visual evidence |
-| 5 | `git` | Commit + push to GitHub, branch management |
-| 5 | `deployer` | Deploy to Vercel + Git Integration for auto-deploy |
-| -- | `self-auditor` | Validates system health: agents, hooks, settings, protocols |
+| Tipo de proyecto | Ejemplo concreto | Stack que el sistema usa |
+|---|---|---|
+| **Landing / sitio público** | Página de un restaurante, portfolio, lanzamiento de producto | Vite + React + Tailwind o HTML estático |
+| **Web app con auth** | Dashboard, CRM, SaaS MVP, panel de admin | Next.js + Better Auth + Drizzle + PostgreSQL |
+| **App móvil iOS + Android** | Delivery, fitness tracker, app de tu negocio | React Native + Expo SDK 52+ |
+| **Juego de navegador** | Plataformero 2D, puzzle, arcade | Phaser.js o PixiJS |
+| **API / backend** | Endpoints REST/tRPC, webhooks, jobs | Hono + Drizzle + PostgreSQL |
+| **Full-stack completo** | Producto entero con frontend + backend + auth + DB | Combinación según necesidad |
 
-### Technical References (13 files)
-
-| File | Content |
-|------|---------|
-| `agent-protocol` | Shared protocol: Engram 2-step reads, Return Envelope, universal rules |
-| `better-auth-reference` | Better Auth 1.5 + Supabase + Vercel integration |
-| `better-gsap-reference` | GSAP Tier 3: useGSAP, ScrollTrigger, SplitText, Next.js gotchas |
-| `react-patterns-reference` | React 19, Next.js 15/16, Tailwind 4, Zustand 5 |
-| `redis-patterns-reference` | Cache-aside, Pub/Sub, HyperLogLog, cursor pagination |
-| `pocketbase-reference` | PocketBase boolean gotchas, rules, auth, Docker, HTTPS |
-| `devops-vps-reference` | Mixed Content HTTPS, Oracle Cloud, nginx, Let's Encrypt |
-| `nothing-design-reference` | Nothing Design System v3.0.0 -- tokens, components, platform mapping |
-| `scroll-storytelling-reference` | Lenis, GSAP ScrollTrigger pinning, snap, horizontal scroll, parallax |
-| `advanced-effects-reference` | Lottie, Rive, cursor effects, magnetic buttons, micro-interactions |
-| `creative-coding-reference` | p5.js, GLSL shaders, generative art, particle systems |
-| `reactive-audio-reference` | Tone.js, Web Audio API, audio visualization, sound design |
-| `pipeline-reference` | Pipeline-specific details: tools per agent, stack table, VD checkpoint, DI engine, Nothing Design, 21st.dev, creative agents |
+El stack no está fijo: el orquestador decide en la primera fase según lo que pidas. Para una landing simple no monta una arquitectura de microservicios; para una app multi-tenant no te entrega una página HTML.
 
 ---
 
-## Hook System
+## Instalación
 
-13 reactive hooks intercept tool calls in real time. Configured in `~/.claude/settings.json`, scripts live in `~/.claude/hooks/`.
+### Requisitos previos
 
-| Hook | Type | Matcher | Action |
-|------|------|---------|--------|
-| `block-no-verify` | PreToolUse | Bash | **BLOCKS** git --no-verify, git push --force, rm -rf, git reset --hard, DROP TABLE, chmod 777, curl\|sh |
-| `config-protection` | PreToolUse | Write/Edit | **BLOCKS** edits to .env, .pem, .key, credentials. **WARNS** on linting config changes |
-| `quality-gate` | PostToolUse | Write/Edit | **WARNS** on debugger, .only(), @ts-ignore, hardcoded secrets |
-| `console-log-warning` | PostToolUse | Write/Edit | **WARNS** on console.log/warn/error in production code (ignores tests) |
-| `suggest-compact` | PostToolUse | global | **WARNS** every ~50 tool calls with pipeline phase context (async) |
-| `pre-compact-engram` | PreCompact | lifecycle | **SAVES** snapshot to disk via trigger file, Boot Sequence dual-writes DAG State on next interaction (v2.3) |
-| `cost-tracker` | PostToolUse | global | **LOGS** each tool call with category, sub-agent, model (async) |
-| `session-summary` | Stop | lifecycle | **LOGS** session activity in JSONL for recovery (async) |
-| `engram-sync` | Stop | lifecycle | **SYNCS** Engram memories to GitHub automatically (async, 60s timeout) |
-| `session-start-context` | Notification | lifecycle | **LOADS** previous session context + hook health check at startup |
-| `audit-system` | Manual | -- | Validates system integrity: agents, hooks, settings, protocols |
-| `cost-report` | Manual | -- | Tool usage breakdown by category, sub-agent, frequency |
-| `learning-index` | Manual | -- | Local discovery index with auto-tagging by technology |
-| `frontend-audit.sh` | Utility (bash) | invoked by agent | Pre-return anti-generic audit — deterministic grep checks for SaaS teal, heading fonts, hero media, motion coherence, shadow coherence |
+| Plataforma | Lo que necesitás antes | Dónde bajarlo |
+|---|---|---|
+| **Linux + Claude Code** | Claude Code CLI, git, Node.js | [Claude Code](https://docs.anthropic.com/en/docs/claude-code/overview) |
+| **Windows + Claude Desktop** | Claude Desktop, Git for Windows (trae Git Bash), Node.js | [Claude Desktop](https://claude.ai/download) · [Git](https://git-scm.com/download/win) · [Node.js](https://nodejs.org) |
 
----
+> **Importante:** este sistema *extiende* a Claude — no lo reemplaza. Si no tenés Claude Code (Linux) o Claude Desktop (Windows) instalado, los agentes y hooks no se ejecutan en ningún lado.
 
-## Installation
+### Linux (Claude Code) — 30 segundos
 
-### Prerequisites
-
-Before starting, you need:
-
-| Platform | You need installed first | Download |
-|----------|------------------------|----------|
-| **Linux** | **Claude Code CLI**, git, Node.js | [Claude Code](https://docs.anthropic.com/en/docs/claude-code/overview) |
-| **Windows** | **Claude Desktop**, Git for Windows (includes Git Bash), Node.js | [Claude Desktop](https://claude.ai/download), [Git](https://git-scm.com/download/win), [Node.js](https://nodejs.org) |
-
-> **Important:** Claude Code (Linux) or Claude Desktop (Windows) must be installed first. This system extends Claude with agents and hooks -- it does not work without it.
-
-### Linux (Claude Code)
-
-Open a terminal and run:
+Abrí una terminal y corré:
 ```bash
 git clone https://github.com/Emaleo0522/claude-vibecoding.git
 cd claude-vibecoding
 bash install/linux.sh
 ```
 
-The script installs agents, hooks, CLAUDE.md, settings, and configures git/GitHub/Vercel authentication. Restart Claude Code when done.
+El script instala los 25 agentes + 13 referencias, los 14 hooks, el `CLAUDE.md` global, y configura git/GitHub/Vercel. Te va preguntando los datos que necesita (tu nombre, email, usuario de GitHub). **Reiniciá Claude Code** cuando termine y ya estás listo.
 
-### Windows (Claude Desktop)
+### Windows (Claude Desktop) — 20-30 minutos guiados
 
-Open **Git Bash** (installed with Git for Windows) and run:
+Abrí **Git Bash** (se instala con Git for Windows) y corré:
 ```bash
 git clone https://github.com/Emaleo0522/claude-vibecoding.git
 cd claude-vibecoding
 ```
 
-Then follow the step-by-step guide in [`install/windows.md`](install/windows.md). It walks you through everything with screenshots-friendly instructions.
+Después seguí la guía paso a paso en [`install/windows.md`](install/windows.md). Te lleva desde cero hasta tener todo funcionando, incluyendo descargar el binario de Engram (la memoria persistente del sistema) que en Windows requiere un paso extra.
 
-### CLAUDE.md -- Where It Lives
+### Otros entornos (Cursor, Aider, Codex CLI, Claude API directa, otros LLMs)
 
-CLAUDE.md contains all system instructions. Claude reads it automatically from the **working directory** (project folder).
+El sistema **está formalmente soportado en Claude Code (Linux) y Claude Desktop (Windows)**. Si querés usarlo con otro runtime o IDE (Cursor, Aider, Codex CLI, llamadas directas a la Claude API, otros modelos), tenés que adaptarlo:
 
-| Platform | Installed to | Template | Notes |
-|----------|-------------|----------|-------|
-| **Linux** | `~/CLAUDE.md` (global) | `templates/global-claude.md` | Claude Code reads it from any directory |
-| **Windows** | `~/CLAUDE.md` (global) | `templates/windows-claude.md` | Includes Windows overrides (preview servers, ports, launch.json) |
+- Los **hooks** (interceptores de tool calls) son específicos del runtime de Claude Code/Desktop. En otros entornos vas a necesitar otro mecanismo equivalente (extensión de IDE, wrapper de CLI, etc.) o desactivar la parte reactiva.
+- **Engram** (la memoria persistente) corre como MCP, lo que requiere que tu runtime soporte MCPs. Si no, podés sustituirlo por archivos JSON en disco con menor robustez.
+- Los **agentes** son archivos `.md` con frontmatter YAML. La sintaxis de subagentes es específica de Claude Code. Para usarlos como prompts en otro runtime, vas a necesitar adaptar el formato.
 
-Both versions contain the same core system (pipeline, agents, hooks, Engram, stack). The Windows version adds the `Overrides Windows` section with `preview_start`, `cmd /c` wrappers, and port management via `netstat/taskkill`.
+Si te animás a portarlo, abrí un issue o PR contando qué runtime estás usando — la idea es ir armando una guía colaborativa de portabilidad. **No prometemos soporte oficial fuera de Claude Code/Desktop**, pero la arquitectura es lo bastante modular como para que sea viable.
 
-### Post-Install Verification
+### Verificación post-instalación
 
 ```bash
-# Agents installed (should be 38: 25 agents + 13 references)
+# Agentes (debería ser 38: 25 agentes + 13 referencias)
 ls ~/.claude/agents/*.md | wc -l
 
-# Hooks installed (should be 13)
-ls ~/.claude/hooks/*.js | wc -l
+# Hooks (debería ser 14)
+ls ~/.claude/hooks/ | wc -l
 
-# CLAUDE.md present
+# CLAUDE.md presente en ~
 head -3 ~/CLAUDE.md
 
-# Tools available
-git --version && node --version && gh --version && vercel --version
-
-# Full system health check (optional but recommended)
+# Health check completo (recomendado)
 node ~/.claude/hooks/audit-system.js
 ```
 
 ---
 
-## Configuration
+## Tu primer proyecto en 5 minutos
 
-### Engram MCP (required)
-
-Engram is the persistent memory system that lets the orchestrator and agents remember decisions, progress, and context across sessions. Without it, every conversation starts from scratch.
-
-It is configured automatically during installation via `settings.json`. On Windows, it also requires downloading the Engram binary separately (see `install/windows.md`).
-
-### Engram Sync (optional)
-
-The `engram-sync` hook automatically pushes Engram memories to a private GitHub repo when a session ends. This enables:
-- **Cross-machine continuity** -- start on your desktop, resume on laptop
-- **Backup** -- memories survive even if your local Engram DB is deleted
-
-To set it up:
-1. Create a private GitHub repo (e.g., `my-engram-sync`)
-2. Initialize it in `~/.engram/`: `cd ~/.engram && git init && git remote add origin https://github.com/YOUR_USER/my-engram-sync.git`
-3. The `engram-sync` hook (already installed) handles the rest automatically
-
-### Creative Pipeline Environment Variables (optional)
-
-Required only if your project uses AI-generated visual assets (Phase 2B: logos, images, videos).
-
-| Variable | Service | Cost | How to get it |
-|----------|---------|------|---------------|
-| `GEMINI_API_KEY` | Google AI Studio | ~$0.02-0.04/image | [aistudio.google.com/apikey](https://aistudio.google.com/apikey) -- requires billing enabled |
-| `HF_TOKEN` | HuggingFace | Free | [huggingface.co/settings/tokens](https://huggingface.co/settings/tokens) |
-| `REPLICATE_API_TOKEN` | Replicate | ~$0.05/video | [replicate.com/account/api-tokens](https://replicate.com/account/api-tokens) |
-
-At least one image key (`GEMINI_API_KEY` or `HF_TOKEN`) is needed for the creative pipeline. If both are set, Gemini is primary with HuggingFace as fallback.
-
-**Where to put them:**
-- **Linux:** Add to `~/.bashrc` or `~/.zshrc`: `export GEMINI_API_KEY="your-key-here"`
-- **Windows:** Add to system environment variables (Settings -> System -> About -> Advanced system settings -> Environment Variables), or create a file at `~/.claude/.env` with one variable per line: `GEMINI_API_KEY=your-key-here`
-
-### Pixel Bridge (optional)
-
-A pixel art office where agents walk to their desks when assigned tasks, report back to the orchestrator, and idle when inactive. Purely visual, does not affect pipeline operation.
-
-Install during `linux.sh` (prompted) or follow the instructions in `install/windows.md`.
-
----
-
-## Usage
-
-The system operates in two modes:
-
-| Mode | When to Use | How to Activate |
-|------|------------|----------------|
-| **Normal** | Questions, fixes, reviews, technical chat | Default -- just talk |
-| **Orchestrator** | Complete software projects end-to-end | Say: "modo orquestador", "activa el pipeline", or "nuevo proyecto completo: X" |
-
-### Starting a Project
+Abrí Claude Code y escribí:
 
 ```
-modo orquestador -- quiero crear [your idea]
+modo orquestador — quiero crear una landing para mi cafetería de especialidad
 ```
 
-The system handles everything: plans tasks, designs architecture, implements with visual QA (max 3 retries per task), certifies (SEO, API, performance, final gate), and deploys to Vercel -- with your confirmation before git push and deploy.
+Lo que pasa a continuación:
 
-### Resuming a Project
+1. **El sistema te hace 6 preguntas con opciones múltiples** (tipo de proyecto, industria, estilo visual, referencia opcional, originalidad, audiencia). Tarda 1-2 minutos. **No podés saltarlas con "decidí vos"** — la pregunta 3 (estilo visual) y 5 (originalidad) son obligatorias. Esto evita que el output salga genérico.
+2. **Genera el plan**: lista de tareas con criterios de aceptación, en español.
+3. **Diseña la arquitectura** (CSS tokens, paleta, tipografía, layout) y te muestra un **checkpoint visual** con 8 decisiones interpretables (hero, navegación, mood, animaciones, efectos). Vos elegís o aceptás las recomendaciones.
+4. **Genera assets visuales** (paleta de marca, logo SVG, imagen del hero, video opcional de fondo) — con tu aprobación antes de gastar créditos en APIs de IA.
+5. **Implementa cada tarea** con un loop dev → QA visual (Playwright a 3 viewports) → reintento si falla. Hasta 3 intentos por tarea.
+6. **Certifica** SEO, performance (Core Web Vitals), accesibilidad, security headers, antes de declarar "listo".
+7. **Te muestra el resultado**, y si das OK, hace commit + push + deploy a Vercel.
 
-```
-retomar [project-name]
-```
+Al final tenés un repo en GitHub, una URL pública en Vercel, y un proyecto que ya pasó por 4 capas de QA. El proceso completo dura entre 20 minutos (landing simple) y 4-6 horas (web app full-stack con auth).
 
-The orchestrator reads the DAG State from Engram and resumes exactly where it left off, without re-executing completed phases or re-asking decided questions.
-
-### Modifying an Existing Project
-
-```
-retomar [project-name] -- quiero cambiar [description of changes]
-```
-
-Uses Modification Mode: skips planning and architecture, creates only new tasks, runs mini Phase 3 + QA.
-
-### Example Prompts
+### Otros prompts útiles
 
 ```
-modo orquestador -- quiero crear una landing page para una cafetería de especialidad
-modo orquestador -- nuevo proyecto completo: dashboard de analytics con auth y base de datos
-modo orquestador -- app mobile de delivery con React Native
-modo orquestador -- juego 2D tipo plataformas en el navegador
-retomar mi-proyecto -- agrega un blog con markdown
-retomar mi-proyecto -- cambia la paleta de colores a tonos más oscuros
+retomar mi-cafeteria — agrega un blog con markdown
+retomar mi-cafeteria — cambia la paleta a tonos más oscuros
+modo orquestador — app mobile de delivery con React Native
+modo orquestador — juego 2D tipo plataformas en el navegador
 ```
 
 ---
 
-## Architecture
+## Cómo funciona (resumen)
+
+El sistema tiene **un orquestador central** que coordina **24 subagentes especializados**, cada uno con una responsabilidad acotada. El orquestador nunca hace trabajo real — solo delega y junta resultados.
+
+### Pipeline de 5 fases
+
+```
+Fase 1  Planificación  →  Intent Clarifier (6 preguntas) + project-manager-senior
+Fase 2  Arquitectura   →  ux-architect (CSS tokens) + ui-designer + security-engineer
+                          ↳ Visual Direction Checkpoint (decidís estilo)
+Fase 2B Assets visuales →  brand-agent + logo-agent + image-agent + video-agent
+Fase 3  Dev ↔ QA       →  frontend-developer, backend-architect, etc. ↔ evidence-collector
+Fase 4  Certificación  →  seo-discovery + api-tester + performance-benchmarker + reality-checker
+Fase 5  Publicación    →  git (con tu confirmación) + deployer (con tu confirmación)
+```
+
+Para **modificar un proyecto que ya está hecho**, el sistema entra en modo modificación: corre un *Paso 0 de auditoría* sobre el código heredado (detecta defaults problemáticos antes de tocar nada), después solo ejecuta los agentes afectados por el cambio.
+
+### Lo que te protege en el camino
+
+- **14 hooks reactivos** bloquean cosas peligrosas en tiempo real: `git --no-verify`, `git push --force`, `rm -rf`, `DROP TABLE`, `chmod 777`, edición de archivos secretos (`.env`, claves privadas), uso de `--no-gpg-sign`. Otros avisan: `debugger` o `console.log` en código de producción, `@ts-ignore`, animaciones excesivas, container CSS con cap "SaaS feel", fuentes declaradas sin cargar, navegación móvil sin hamburger.
+- **AUTO_AUDIT pre-return**: antes de devolver código, el `frontend-developer` corre 5 reglas grep ejecutables (no paleta teal por default, no Inter como heading en moods bold, hero con media coherente, motion según dial, shadow según mood). Si falla → regenera. Si pasa → marca cambio como `VISUAL_IMPACT: high|medium|low`.
+- **Checkpoint humano automático**: cuando el cambio tiene `VISUAL_IMPACT: high`, el orquestador te muestra el resultado antes de marcar la tarea como completa. La doctrina: el agente decide solo cuando hay UNA respuesta correcta; en todo lo demás (visual, multi-opción, irreversible, iterado 2+ veces) te pregunta con su recomendación incluida.
+- **9 capas de defensa anti-falso-positivo** en QA: visual fidelity LLM-as-judge (5 dimensiones contra referencia), network inspection (Mixed Content, status 0, leaks de localhost), E2E flows obligatorios en auth/CRUD, reality-checker re-corre 2-3 PASS al azar.
+
+---
+
+## Configuración
+
+### Engram MCP (memoria persistente) — obligatorio
+
+Engram es lo que hace que el sistema *recuerde* entre sesiones. Sin él, cada conversación arranca de cero. Se instala automáticamente con el script de Linux y con la guía de Windows.
+
+### Engram Sync (memoria cross-machine) — opcional
+
+Si trabajás desde varias computadoras, el hook `engram-sync` empuja automáticamente la memoria a un repo privado de GitHub al cerrar sesión. Así arrancás en el desktop y seguís en la laptop sin perder contexto.
+
+```bash
+# 1. Creá un repo privado en GitHub (ej: mi-engram-sync)
+# 2. Inicializalo en ~/.engram/:
+cd ~/.engram && git init && git remote add origin https://github.com/TU_USUARIO/mi-engram-sync.git
+# El hook engram-sync (ya instalado) hace el resto
+```
+
+### Variables de entorno para assets generativos — opcional
+
+Solo necesarias si tu proyecto va a generar logos, imágenes hero o videos con IA.
+
+| Variable | Servicio | Costo aprox | Cómo obtenerla |
+|---|---|---|---|
+| `GEMINI_API_KEY` | Google AI Studio | $0.02-0.04 por imagen | [aistudio.google.com/apikey](https://aistudio.google.com/apikey) |
+| `HF_TOKEN` | HuggingFace | Gratis | [huggingface.co/settings/tokens](https://huggingface.co/settings/tokens) |
+| `REPLICATE_API_TOKEN` | Replicate | $0.05 por video | [replicate.com/account/api-tokens](https://replicate.com/account/api-tokens) |
+
+Alcanza con **una** clave de imagen (Gemini o HuggingFace). Si seteás las dos, Gemini es primary y HuggingFace es fallback automático.
+
+Dónde ponerlas: agregalas a `~/.bashrc` (Linux), o a Environment Variables del sistema (Windows), o a un archivo `~/.claude/.env` con una variable por línea.
+
+### Pixel Bridge — opcional, decorativo
+
+Una oficina pixel art donde los agentes caminan a sus escritorios cuando se les asigna una tarea, reportan al orquestador, y descansan cuando no hay trabajo. **Puramente visual**, no afecta el pipeline. Te lo ofrece el instalador.
+
+---
+
+## Modo Claude normal vs Modo Orquestador
+
+| Modo | Cuándo usarlo | Cómo activarlo |
+|---|---|---|
+| **Claude normal** | Preguntas, fixes puntuales, revisar código, chat técnico | Default — solo hablar |
+| **Orquestador** | Proyecto completo de principio a fin | Decí: *"modo orquestador — [tu idea]"* |
+
+En modo normal, Claude responde como siempre pero tiene acceso a los hooks, AUTO_AUDIT y memoria. En modo orquestador, adopta el rol de coordinador y delega a los 24 subagentes.
+
+---
+
+## Documentación técnica completa
+
+Para developers que quieran ir más allá:
+
+| Archivo | Para qué |
+|---|---|
+| [`agents/orquestador.md`](agents/orquestador.md) | Comportamiento completo del orquestador: detección de modos, pipeline detallado, DAG State, fallbacks |
+| [`agents/agent-protocol.md`](agents/agent-protocol.md) | Protocolo compartido entre subagentes: Engram (2 pasos), Return Envelope, VISUAL_IMPACT, reglas universales |
+| [`agents/pipeline-reference.md`](agents/pipeline-reference.md) | Detalles de cada fase, tools por agente, stack adaptable, Design Intelligence Engine |
+| [`templates/global-claude.md`](templates/global-claude.md) | El `CLAUDE.md` que se instala — toda la doctrina del sistema (Checkpoint humano, Engram, hooks, mod mode) |
+| [`agents/ux-architect.md`](agents/ux-architect.md) | Tokens de diseño, container strategy, anchor scroll con sticky |
+| [`agents/ui-designer.md`](agents/ui-designer.md) | Design system, SaaS Teal Default Detector (T1-T7), accesibilidad |
+| [`agents/frontend-developer.md`](agents/frontend-developer.md) | Implementación frontend, AUTO_AUDIT pre-return, design decision tree |
+| [`agents/evidence-collector.md`](agents/evidence-collector.md) | QA visual con Playwright, 9 capas anti-falso-positivo |
+| [`hooks/`](hooks/) | Los 14 hooks reactivos: bloqueos, advertencias, auditorías, tracking |
+| [`design-data/`](design-data/) | Design Intelligence Engine: 8 CSVs con 161 industrias indexadas via BM25 |
+
+---
+
+## Arquitectura en disco
 
 ```
 ~/.claude/
-|-- agents/            # 25 agents + 13 references = 38 files
-|-- design-data/       # Design Intelligence Engine (search.js + 8 CSVs)
-|-- hooks/             # 13 reactive hooks
-|-- settings.json      # hook config + Engram MCP
-|-- settings.local.json # agent permissions
-|-- codepen-vault/     # approved CodePen effects
-|-- pixel-bridge/      # optional visual system
-{working-directory}/
-|-- CLAUDE.md          # system instructions (auto-read by Claude from the project dir)
+├── agents/            # 25 agentes + 13 referencias = 38 archivos .md
+├── design-data/       # Design Intelligence Engine (search.js + 8 CSVs)
+├── hooks/             # 14 hooks reactivos
+├── settings.json      # config de hooks + Engram MCP
+├── settings.local.json # permisos para agentes
+├── codepen-vault/     # efectos CodePen aprobados (decorativo)
+└── pixel-bridge/      # sistema visual opcional
+
+~/CLAUDE.md            # instrucciones globales del sistema (auto-leído por Claude)
 ```
 
-### Model Routing
+### Model routing
 
-| Model | Agents | Criteria |
-|-------|--------|----------|
-| **Opus** | orchestrator, project-manager-senior, security-engineer, game-designer, reality-checker | Complex architectural decisions, planning, threat modeling, final certification |
-| **Sonnet** | All others (20 agents) | Defined task execution, QA, utilities, creative |
-
-### Key Rules
-
-- The orchestrator **never** does real work -- only coordinates
-- Sub-agents return **only short summaries** (status + files + issues)
-- Only `evidence-collector` and `reality-checker` perform visual QA
-- Only `git` makes commits/pushes -- never a dev agent
-- Only `deployer` deploys to Vercel
-- `git` and `deployer` act **only with user confirmation**
-- Each dev task passes through `evidence-collector` before advancing (max 3 retries)
-- The orchestrator does not activate `git` until `evidence-collector` returns PASS
+| Modelo | Agentes | Por qué |
+|---|---|---|
+| **Opus** | orquestador, project-manager-senior, security-engineer, game-designer, reality-checker | Decisiones arquitectónicas complejas, planificación, threat modeling, certificación final |
+| **Sonnet** | Los otros 20 agentes | Ejecución de tareas definidas, QA, utilidades, creativos |
 
 ---
 
-## Adaptive Stack
+## Stack adaptable
 
-The orchestrator selects the stack in Phase 1 based on project requirements. There is no fixed stack.
+El orquestador elige el stack en Fase 1 según el proyecto. **No hay stack fijo.** Estos son los defaults preferidos:
 
-| Layer | Options | Default Preference |
-|-------|---------|--------------------|
-| Frontend | Next.js, SvelteKit, Nuxt, Astro, Vite+React | Next.js (apps), Vite+React (landing) |
+| Capa | Opciones | Default |
+|---|---|---|
+| Frontend | Next.js, SvelteKit, Astro, Vite+React | Next.js (apps), Vite+React (landings) |
 | Backend | Hono, Express, Fastify | Hono (edge-ready) |
 | Database | PostgreSQL, SQLite, Supabase | PostgreSQL (prod), Supabase (MVP) |
-| ORM | Drizzle, Prisma | Drizzle (type-safe, edge) |
-| Auth | Better Auth | Always (unless project has existing auth) |
-| Mobile | React Native + Expo SDK 52+ | Expo (iOS + Android from one repo) |
-| Games 2D | Phaser.js 3, PixiJS, Canvas API | Phaser.js |
-| Games 3D | Three.js, Babylon.js | Three.js |
-| Animation | CSS (Tier 1), Framer Motion (Tier 2), GSAP (Tier 3) | Escalate by complexity |
-| Scroll | Lenis + GSAP ScrollTrigger | Lenis (storytelling), GSAP (pinning) |
-| Creative | p5.js, GLSL shaders, Canvas 2D | p5.js (2D), Three.js shaders (3D) |
-| Audio | Tone.js, Web Audio API | Tone.js (complete), Web Audio (simple) |
+| ORM | Drizzle, Prisma | Drizzle |
+| Auth | Better Auth | Siempre (salvo proyecto con auth pre-existente) |
+| Mobile | React Native + Expo SDK 52+ | Expo |
+| Juegos 2D | Phaser.js, PixiJS, Canvas | Phaser.js |
+| Juegos 3D | Three.js, Babylon.js | Three.js |
+| Animación | CSS (T1), Framer Motion (T2), GSAP (T3) | Escala según `motion_intensity` |
+| Audio reactivo | Tone.js, Web Audio API | Tone.js |
 
 ---
 
-## Design Intelligence Engine
+## Troubleshooting
 
-A local BM25 search engine that provides industry-specific design recommendations. Built on data from [ui-ux-pro-max-skill](https://github.com/nextlevelbuilder/ui-ux-pro-max-skill), ported to Node.js.
+**El comando `bash install/linux.sh` falla.** Verificá que tenés `git`, `curl`, `node` y `gh` instalados. El script intenta detectar el gestor de paquetes (apt, dnf, pacman, brew) pero a veces falla en distros menos comunes. Instalá manualmente lo que falte y volvé a correrlo.
 
-**Location:** `~/.claude/design-data/` (search.js + 8 CSVs, ~410KB total)
+**Claude no encuentra los agentes después de instalar.** Reiniciá Claude Code (Linux) o Claude Desktop (Windows). Los agentes se cargan al iniciar el cliente.
 
-| Dataset | Rows | Content |
-|---------|------|---------|
-| products | 161 | Product types with recommended style, palette, and landing pattern |
-| styles | 84 | UI styles with CSS keywords, performance, accessibility |
-| colors | 160 | 12+ semantic color tokens per industry |
-| typography | 73 | Font pairings with Google Fonts URLs |
-| ux-guidelines | 98 | UX best practices with severity (HIGH/MEDIUM/LOW) |
-| landing | 34 | Landing patterns with section order and conversion data |
-| ui-reasoning | 161 | Decision rules and anti-patterns per industry |
-| charts | 25 | Chart types with accessibility and library recommendations |
+**Engram no responde / "MCP not found".** Verificá que `~/.claude/settings.json` tenga la sección `enabledPlugins.engram@engram: true` y que reiniciaste Claude. En Windows, además, necesitás haber instalado el binario de Engram (ver `install/windows.md`).
 
-**Used in Phase 2 by:**
-- `ux-architect` -- style, colors, CSS keywords, design variables, anti-patterns
-- `ui-designer` -- landing pattern, anti-patterns, chart guidance, key effects
-- `brand-agent` -- palette by industry, typographic mood, anti-patterns
+**El orquestador no me deja decir "decidí vos" en el Intent Clarifier.** Es intencional. Las preguntas 3 (estilo visual) y 5 (originalidad) bloquean el bypass para evitar outputs genéricos. Si realmente no tenés preferencia, elegí "balanced" en originalidad y "minimalist" en estilo — son los defaults seguros.
 
-```bash
-# Full design system recommendation (~500-800 tokens)
-node ~/.claude/design-data/search.js "luxury spa" --design-system -p "MySpa"
+**El AUTO_AUDIT del hook `pre-return-audit` me bloquea cambios legítimos.** El hook es **fail-open** (advierte pero no bloquea). Si te avisa de un falso positivo recurrente, podés ajustar las reglas en `~/.claude/hooks/pre-return-audit.sh` o desactivar la entrada en `~/.claude/settings.json`.
 
-# Specific domain queries
-node ~/.claude/design-data/search.js "dashboard" --domain chart -n 3
-node ~/.claude/design-data/search.js "accessibility" --domain ux -n 5
-```
-
-The engine **informs, it does not decide**. The user's brief and anti-convergence rules always take priority. Anti-patterns with HIGH severity are mandatory.
+**Quiero usar el sistema con otro runtime (Cursor, Aider, etc.).** Ver sección [Otros entornos](#otros-entornos-cursor-aider-codex-cli-claude-api-directa-otros-llms) arriba. No hay soporte oficial — la arquitectura es portable pero requiere adaptación de hooks y MCP.
 
 ---
 
-## Visual Direction Checkpoint
+## FAQ rápida
 
-Between Phase 2 (architecture) and Phase 3 (development), the orchestrator pauses to present the user with structured visual choices. This ensures every project has a unique identity instead of generic defaults.
+**¿Es seguro para producción?** Los proyectos generados pasan por 4 capas de certificación (SEO + API testing + performance + reality check) antes del deploy. Headers de seguridad, validaciones OWASP Top 10 y cache configurado vienen de fábrica.
 
-**8 categories presented:**
+**¿Cuánto cuesta usar el sistema?** El sistema en sí es gratis y open source. Los costos son: 1) tu suscripción a Claude (Pro/Max o API), 2) opcionalmente APIs de IA para imágenes (Gemini ~$0.04/img, HuggingFace gratis) y videos (Replicate ~$0.05/video), 3) hosting si no usás el free tier de Vercel.
 
-| Category | Options (examples) |
-|----------|--------------------|
-| Visual style | editorial, immersive, minimalist, bold/colorful, other |
-| Hero section | static image, background video, animated background, parallax, slider, text-only |
-| Navigation | transparent with blur, fixed solid, hamburger-only, sidebar, mega-menu |
-| Gallery | masonry, carousel, lightbox, horizontal scroll, hover reveal |
-| Animation level | subtle (CSS only), moderate (Framer Motion), immersive (FM + GSAP) |
-| Mood | dark, light, mixed, high contrast |
-| Typography | display/impactful, elegant/serif, technical/mono, neutral/functional |
-| Special effects | custom cursor, text animations, smooth scroll, parallax, page transitions, particles |
+**¿Funciona con la API directa de Anthropic, sin Claude Code?** No directamente. El sistema depende de los subagentes de Claude Code y los hooks. Para portarlo a la API directa necesitarías reimplementar la coordinación tú mismo (es viable pero no trivial).
 
-The user's choices are saved in Engram and flow to `ui-designer` (behavioral specs) and `frontend-developer` (design decision tree). If a CodePen vault effect or 21st.dev component matches the chosen direction, it is presented as a concrete option.
+**¿Puedo modificar los agentes para personalizarlos?** Sí. Los agentes son archivos `.md` en `~/.claude/agents/`. Podés editar el comportamiento de cualquiera. Si querés conservar tus cambios al actualizar el sistema, hacé fork del repo y aplicale tus modificaciones a tu fork.
 
-### Design Dials (quantitative 1-10)
+**¿Cómo actualizo el sistema cuando salga una nueva versión?** Hacé `git pull` en el repo clonado y volvé a correr `bash install/linux.sh` (o seguí los pasos de Windows). El instalador hace backup de tus archivos antes de sobrescribir (`*.bak` files).
 
-After the 8 qualitative categories, the orchestrator asks for three numeric dials (or infers them from the chosen style with sensible defaults). These translate directly into implementation decisions:
-
-| Dial | Range | What it controls |
-|------|-------|-----------------|
-| `DESIGN_VARIANCE` | 1 (clean/centered) -> 10 (asymmetric/experimental) | Layout experimentation -- 1-3 symmetric 12-col grids, 4-6 asymmetric heros + split layouts, 7-10 broken grid + rotated elements + collage |
-| `MOTION_INTENSITY` | 1 (static) -> 10 (magnetic/scroll-triggered) | Animation sophistication -- 1-3 CSS transitions only, 4-6 Framer Motion enter/exit + scroll reveals, 7-10 GSAP timelines + pinning + SplitText + magnetic cursor |
-| `VISUAL_DENSITY` | 1 (spacious/luxury) -> 10 (dense/dashboard) | Content concentration -- 1-3 editorial whitespace, 4-6 balanced marketing, 7-10 data-heavy multi-column with tabular figures |
-
-**Defaults by style:** editorial `variance:4 motion:3 density:3`, immersive `variance:7 motion:8 density:4`, minimalist `variance:2 motion:2 density:2`, bold/colorful `variance:6 motion:6 density:6`.
-
-**Consumed by agents:** `ui-designer` adjusts behavioral specs, `frontend-developer` selects the correct animation Tier (1 CSS / 2 Framer Motion / 3 GSAP), `ux-architect` scales the spacing base. Anti-patterns HIGH from the Design Intelligence Engine always override the dials on conflict.
-
-### Style Presets
-
-If the user picks a named preset instead of answering dial-by-dial, all three values plus CSS tokens, fonts, border-radius and motion curves are seeded from `design-data/style-presets.csv` (10 presets). Examples: `soft-luxury`, `neo-brutalism`, `editorial-magazine`, `dashboard-dense`, `glass-morphism`, `cyber-neon`.
-
-The preset is loaded by `ui-designer` (Paso 0b-bis) and `frontend-developer` injects the CSS tokens into `:root` of the global stylesheet. `brand.json` still wins on color conflicts -- the preset informs defaults, not identity.
+**¿El sistema escribe en español o en inglés?** Los agentes se comunican entre sí en español, te hablan en español, pero **el código que generan está en el idioma estándar de programación (inglés)** — nombres de variables, comentarios, commits, etc. Esto es importante para que tu proyecto sea legible internacionalmente.
 
 ---
 
-## Design Quality System
+## Contribuir
 
-The pipeline includes several mechanisms to ensure every project looks unique and professional, not generic.
+Pull requests bienvenidos. Antes de mandar uno:
 
-### Anti-Convergence
+1. Si es un cambio en agentes, hooks o reglas de la arquitectura, corré `node ~/.claude/hooks/audit-system.js` para validar que no rompiste nada.
+2. Si agregás un hook nuevo, sumalo a la tabla en `templates/global-claude.md` y al script `install/linux.sh`.
+3. Si modificás el README o la documentación, mantenete en el tono accesible — el sistema lo usan también personas no programadoras.
 
-`brand-agent` checks previous projects stored in Engram before generating a new brand identity. If a palette, font pairing, or visual style was used recently, it avoids repeating it. This prevents the "everything looks the same" problem common with AI-generated designs.
-
-### Behavioral Specs
-
-`ui-designer` creates a behavioral specification for each component based on the animation level chosen in the Visual Direction Checkpoint:
-
-| Level | What it means | Example |
-|-------|--------------|---------|
-| **Subtle** | CSS transitions only | Button hover: `opacity: 0.9`, 200ms ease |
-| **Moderate** | Framer Motion | Button hover: `scale(1.05)` + shadow lift |
-| **Immersive** | Framer Motion + GSAP | Button hover: magnetic effect + glow + ripple |
-
-These specs are stored in Engram (`{project}/design-system`) and enforced during QA: `evidence-collector` verifies that the implemented behavior matches the specified level. A mismatch (e.g., immersive spec but only CSS transitions) results in a `FAIL_SPEC`.
-
-### Typography Sources
-
-`brand-agent` selects fonts from two sources:
-
-- **Google Fonts** -- default, broadest compatibility, free
-- **Fontshare** -- curated premium-quality fonts for projects requiring a more distinctive typographic identity
-
-The Design Intelligence Engine provides a `typography_mood` recommendation per industry (display, elegant, technical, neutral), but `brand-agent` makes the final font selection.
-
-### Brand Inspiration On-Demand
-
-When the user's brief explicitly references a known brand ("Linear feel", "Stripe docs style", "Apple vibe"), `brand-agent` fetches the corresponding design profile from the public [awesome-design-md](https://github.com/VoltAgent/awesome-design-md) repository (68+ brand DESIGN.md files: Apple, Stripe, Linear, Notion, Vercel, Figma, Cursor, OpenAI, Claude, Ferrari, Tesla, Spotify, Airbnb, Nike, etc.).
-
-**Only abstract tokens are extracted** -- color hues, spacing scale, motion curves, typography mood. **Never extracted:** logos, brand signatures, exact layouts, distinctive imagery. A guardrail enforces that the final result looks *inspired*, not *cloned* -- if the project is recognizable as "a fake Linear" the brand is rejected and regenerated.
-
-When the brief has no brand reference, this step is skipped entirely and `design-data/style-presets.csv` is used instead -- cheaper in tokens and zero derivative risk.
-
-### UI Audit Checklist (Modification Mode)
-
-When the user asks for a redesign or says "this looks generic", the orchestrator runs a structured audit before delegating to `ui-designer`/`frontend-developer`:
-
-1. **Spacing audit** -- stack gap consistency, density coherence with declared dial
-2. **Typography hierarchy audit** -- max 4 font-sizes, heading vs body font consistency, line-height 1.5-1.75 on body
-3. **Motion coherence audit** -- implemented intensity matches dial, `prefers-reduced-motion` fallback present when motion >= 4
-4. **Color coherence audit** -- all colors exist in brand.json, WCAG AA contrast, no "5 shades of gray" drift
-5. **Layout variance audit** -- variance dial matches implementation, no "every section is a centered div" when variance >= 5
-
-The audit produces concrete fix instructions, not vague suggestions.
+Para reportar bugs o discutir features, [abrí un issue](https://github.com/Emaleo0522/claude-vibecoding/issues).
 
 ---
 
-## Modification Mode
+## Créditos
 
-For projects that have already been built and deployed, the pipeline supports a lightweight modification flow instead of re-running the full 5 phases.
-
-```
-retomar [project-name] -- quiero cambiar [what to modify]
-```
-
-**How it works:**
-1. **Analysis** -- reads the existing DAG State and codebase to understand current state
-2. **Light planning** -- creates only the new/changed tasks (no re-planning completed work)
-3. **Mini Phase 3 + QA** -- implements changes with the same dev ↔ evidence-collector loop
-4. **Deploy** -- pushes changes through git + deployer (with user confirmation)
-
-Phases 1, 2, and 4 are skipped entirely. The system preserves all previous decisions (stack, design system, brand) and only touches what needs to change.
+- **Engram MCP** — [Gentleman-Programming/engram](https://github.com/Gentleman-Programming/engram) (memoria persistente)
+- **Design Intelligence Engine** — basado en [ui-ux-pro-max-skill](https://github.com/nextlevelbuilder/ui-ux-pro-max-skill), portado a Node.js
+- **Pixel Bridge** — basado en [pablodelucca/pixel-agents](https://github.com/pablodelucca/pixel-agents) (visualización opcional)
+- **Nothing Design System** — referencia tomada de [dominikmartn/nothing-design-skill](https://github.com/dominikmartn/nothing-design-skill) v3.0.0
 
 ---
 
-## QA System Details
+## Licencia
 
-### Visual QA (evidence-collector)
-
-Every development task passes through visual QA before advancing. The QA agent:
-
-1. Builds for production (`npm run build && npm start`)
-2. Captures screenshots in 3 viewports: Desktop (1280x720), Tablet (768x1024), Mobile (375x667)
-3. Tests interactive elements (clicks, form inputs, navigation)
-4. Runs accessibility checks (axe-core -- 0 critical/serious violations required)
-5. Checks browser console for errors (0 errors required for PASS)
-6. Verifies behavioral specs match the design system
-
-**PASS threshold:** Rating B- or better, zero console errors, zero critical accessibility violations.
-
-### Failure Classification
-
-When QA fails, the failure is classified to give targeted feedback:
-
-| Type | Meaning | Action |
-|------|---------|--------|
-| **FAIL_CODE** | Code doesn't work -- errors, crashes, layout broken, feature missing | Dev agent fixes code |
-| **FAIL_SPEC** | Code works but doesn't match the spec -- wrong animation level, incorrect interactions | Dev agent re-reads design system and adjusts |
-
-Each task gets up to 3 retry attempts. After 3 failures, the orchestrator escalates to the user.
+MIT — ver [LICENSE](LICENSE).
 
 ---
 
-## Security Posture Check
-
-Beyond real-time hooks (`config-protection`, `quality-gate`), `reality-checker` runs a retrospective security scan as **Step 6** of Phase 4 certification. This catches secrets and supply-chain issues that existed in the codebase before the pipeline started, or that hooks may have missed.
-
-### 6.1 -- Secret Scan
-
-Static scan against 9 secret patterns across `.ts/.tsx/.js/.jsx/.mjs/.cjs/.json/.yaml/.yml/.env` files (excluding `node_modules`, `.next`, `build`, `dist`, `__tests__`, `.env.example`, `docs`):
-
-| Pattern | Example match |
-|---------|---------------|
-| AWS Access Key ID | `AKIA[0-9A-Z]{16}` |
-| GitHub Personal Access Token | `ghp_[A-Za-z0-9]{36}` |
-| GitHub OAuth / App Token | `(gho_\|ghu_\|ghs_\|ghr_)[A-Za-z0-9]{36}` |
-| Stripe Live Key | `sk_live_[A-Za-z0-9]{24,}` |
-| Slack Bot Token | `xox[baprs]-...` |
-| Google API Key | `AIza[0-9A-Za-z_-]{35}` |
-| OpenAI / Anthropic | `sk-[A-Za-z0-9]{32,}` / `sk-ant-[A-Za-z0-9_-]{32,}` |
-| Private keys (RSA/EC/DSA/OPENSSH/PGP) | `-----BEGIN ... PRIVATE KEY-----` |
-| JWT in source | `eyJ...eyJ...` three-segment pattern |
-
-Any match in source code is a **BLOCKER**. The reporter outputs file + line + type only -- never the matched value, to avoid re-leaking the secret.
-
-### 6.2 -- Lock File Integrity
-
-Supply-chain checks executed per detected package manager (npm/pnpm/yarn/bun):
-
-1. A lock file **must exist** when `package.json` is present (reproducible builds)
-2. The lock file **must not be gitignored** (CI and collaborators need the same resolution)
-3. For npm: `lockfile-lint` validates allowed hosts, HTTPS schemes, no `file://` resolutions (registry poisoning defense)
-4. `npm audit` / `pnpm audit` / `yarn npm audit` with severity >= HIGH is a **BLOCKER** until the user either runs `audit fix` or documents the accepted risk in `security-notes`
-
-The checks are defensive -- they complement what `security-engineer` declared in Phase 2 (threat model, headers, Better Auth config) rather than duplicating it. No new MCPs, no new dependencies -- everything uses tools already available (Bash + Grep + `npx lockfile-lint`).
-
----
-
-## Authentication
-
-**Better Auth** is the default authentication system for all new projects. It provides email/password, social login, and session management out of the box.
-
-Key integration points:
-- `backend-architect` sets up the server-side auth (routes, database tables, session config)
-- `frontend-developer` implements the client-side auth (login forms, session provider, protected routes)
-- `rapid-prototyper` handles full-stack auth in MVPs
-
-The system includes a production-tested reference (`better-auth-reference.md`) covering Better Auth + Supabase + Vercel + Next.js 16, with specific patterns for connection pooling, middleware migration (proxy.ts), and cookie handling.
-
-> If a project already uses Clerk, Supabase Auth, or custom JWT, those are preserved. Better Auth is only the default for new projects.
-
----
-
-## 21st.dev Components
-
-[21st.dev](https://21st.dev) is a community library of animated React components (17,600+ snippets). The system accesses it via **Context7 MCP** (Upstash) -- no API key required.
-
-**How it works in the pipeline:**
-
-1. **Phase 1** -- the orchestrator decides `component_source: "21st.dev"` in the DAG State based on project type (visual/animated projects benefit; dashboards typically don't)
-2. **Visual Direction Checkpoint** -- if 21st.dev is active, available components matching the chosen style are presented as options
-3. **Phase 3** -- `frontend-developer` queries Context7 for specific component types:
-
-```
-resolve-library-id("21st.dev")  ->  /websites/21st_dev_community_components
-query-docs(library_id, "animated hero section")  ->  code snippets
-```
-
-**Key rules:**
-- **Inspiration + base, never copy-paste** -- every component is adapted to the project's brand (colors, fonts, spacing)
-- **No 21st.dev packages installed** -- code is extracted and integrated directly
-- **Max 3 queries per task** -- to avoid context bloat
-- **Fallback chain** -- if no suitable component found, falls through to CodePen vault or custom implementation
-
-**Setup:** Context7 MCP is configured during installation (Linux: `claude mcp add context7`, Windows: `claude_desktop_config.json`). Permissions are pre-configured in `settings.local.json`.
-
----
-
-## CodePen Vault
-
-The system maintains a curated library of visual effects at `~/.claude/codepen-vault/`. The workflow:
-
-1. **Discovery** -- `codepen-explorer` searches CodePen for effects matching the project's visual direction
-2. **User approval** -- effects are presented to the user; only approved ones are saved to the vault
-3. **Adaptation** -- `frontend-developer` reads from the vault and adapts the effect to the project's brand (colors, fonts, spacing)
-4. **Post-effects checkpoint** -- after implementing effects, the full page is shown to the user before advancing to Phase 4
-
-Vault metadata is stored in Engram (`codepen-vault/{slug}`) for cross-project searchability. The actual code lives on disk.
-
----
-
-## Mobile Deployment (EAS Build)
-
-For React Native + Expo projects, deployment uses **Expo Application Services (EAS)** instead of Vercel:
-
-| Profile | Platform | Output | Cost |
-|---------|----------|--------|------|
-| `preview` | Android | APK (direct install) | Free (30 builds/month) |
-| `preview` | iOS | IPA (requires TestFlight) | Requires Apple Developer ($99/year) |
-| `production` | Android | AAB (Google Play) | Free |
-| `production` | iOS | Signed IPA (App Store) | Requires Apple Developer |
-
-The `deployer` agent handles EAS builds. Store submission (`eas submit`) requires explicit user confirmation and is never automatic.
-
----
-
-## Pre-Authorization (PRE_AUTH)
-
-When the user's original message includes words like "sube a git", "deploy", "push", or "publica", the system treats this as pre-authorization for git push and deployment. The `git` and `deployer` agents receive a `PRE_AUTH: true` flag and proceed without asking for confirmation again.
-
-This avoids the friction of being asked "are you sure?" for an action the user explicitly requested. If the original message doesn't include deployment intent, confirmation is always requested.
-
----
-
-## Pipeline Resilience
-
-| Mechanism | What It Solves |
-|-----------|---------------|
-| **Phase Gates** | Verifies outputs from the previous phase exist before advancing. Re-delegates if missing. |
-| **Error Recovery** | If an agent crashes without returning a result, the orchestrator checks Engram, recovers what it can, and re-delegates. |
-| **Graceful Degradation** | If Engram is down, uses local disk as fallback. If Playwright is unavailable, performs code-only QA. |
-| **Rejection Workflows** | Up to 3 retries for rejected creative assets with escalating strategy changes. |
-| **NEEDS WORK Flow** | If reality-checker does not certify, the orchestrator returns to Phase 3 only for affected tasks. |
-
----
-
-## Context Window Management (v2.2)
-
-The system uses several mechanisms to protect the context window from bloat and ensure state survives compaction events.
-
-### Progressive DAG State Loading
-
-The DAG State (project progress tracker) can grow to 10+ KB for advanced projects. Instead of loading it fully on every interaction, the orchestrator uses 2 levels:
-
-| Level | What it loads | Tokens | When |
-|-------|--------------|--------|------|
-| **Light boot** | Current phase, current task/total, stack (1-liner), last save timestamp | ~50-100 | Always on resume |
-| **Full boot** | Entire DAG State (completed phases, failed tasks, certifications, all decisions) | ~500-2000 | Phase transitions, escalations, scope changes, certification |
-
-The orchestrator reads the full DAG State once at startup to extract the light summary, then retains only the summary + the observation ID. It re-reads the full state on demand when decisions require it.
-
-### PreCompact Save (v2.3)
-
-When Claude's context is about to be compacted (context window nearing capacity), the `pre-compact-engram` hook intercepts the event and:
-
-1. **Saves a session snapshot** to disk (tool count, working directory, pipeline status)
-2. **Writes a trigger file** at `~/.claude/snapshots/compaction-pending.json`
-
-On the next interaction, the orchestrator's Boot Sequence detects this trigger file and immediately:
-1. Saves DAG State to Engram via `mem_update`
-2. Writes DAG State to disk at `{project_dir}/.pipeline/estado.yaml`
-3. Deletes the trigger file
-
-After saving, compaction is safe -- the Boot Sequence recovers from Engram or disk.
-
-> **v2.3 change:** Previous versions emitted instructions via stderr, which caused empty responses without tool calls. The trigger file pattern is reliable and non-blocking.
-
-### Dual-Write Pattern
-
-Critical state is always written to two locations:
-
-```
-Primary:  Engram MCP  ->  {proyecto}/estado  (searchable, cross-session)
-Fallback: Local disk  ->  {project_dir}/.pipeline/estado.yaml
-```
-
-On recovery, the Boot Sequence checks Engram first, then falls back to disk. This survives MCP failures, network issues, and database locks.
-
-### Token Budget Strategy
-
-| Mechanism | Tokens Saved | How |
-|-----------|-------------|-----|
-| Light boot vs full boot | ~400-1900 per resume | Only load full DAG when decisions needed |
-| Short return envelopes | ~500-2000 per delegation | Sub-agents return status + files + issues, never full code |
-| Screenshots to disk | ~5000+ per QA cycle | Images saved as files, only paths passed in context |
-| Selective drawer reads | ~200-500 per agent | Each agent reads only its relevant Engram drawers |
-| PreCompact save-then-compact | 100% context recovery | State persisted before compaction, nothing lost |
-
----
-
-## Credits
-
-- [Engram](https://github.com/Gentleman-Programming/engram) by Gentleman Programming -- persistent memory MCP
-- [pixel-agents](https://github.com/pablodelucca/pixel-agents) by @pablodelucca -- pixel art office (Pixel Bridge adapted from this)
-- [Agency Agents](https://github.com/msitarzewski/agency-agents) -- specialized agents with metrics (inspiration)
-- [Agent Teams Lite](https://github.com/Gentleman-Programming/agent-teams-lite) -- DAG State, minimal handoffs, Engram (inspiration)
-
----
-
-## License
-
-MIT
+*Construido para acompañarte, no para reemplazar tu criterio. El sistema decide lo que tiene UNA respuesta correcta y te pregunta lo que tiene varias. Esa es la línea.*

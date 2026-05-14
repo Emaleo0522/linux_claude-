@@ -308,8 +308,23 @@ El orquestador detecta modo modificación si:
 - El usuario referencia un proyecto existente + pide cambios específicos
 - El usuario dice "agrega X a [proyecto]", "quita Y", "modifica Z"
 
-### Mini-pipeline (3 pasos)
+### Mini-pipeline (4 pasos)
 ```
+0. AUDIT HERENCIA (NUEVO — obligatorio antes de tocar código) — El orquestador detecta
+   defaults heredados que violan reglas vigentes de la arquitectura ANTES de modificar nada.
+   - Identificar archivos CSS/HTML/JSX clave del proyecto (heurística: globals.css,
+     styles.css, layout.tsx, index.html, tailwind.config).
+   - Ejecutar `bash ~/.claude/hooks/pre-return-audit.sh --files="<archivos>"` sobre ellos.
+   - El hook devuelve YAML con WARN/FAIL por regla universal (container ≤1280 = SaaS feel,
+     fuentes declaradas sin <link>, anchor scroll sin scroll-padding, navbar mobile sin
+     hamburger, prefers-reduced-motion ausente cuando hay >5 animaciones).
+   - Si hay FAIL/WARN → reportar al usuario con formato:
+     "Antes de modificar, detecté N violaciones heredadas: [lista]. ¿Las fixeo dentro del
+      scope, las dejo para otra iteración, o las ignoramos explícitamente?"
+   - Esperar decisión. NO avanzar al Paso 1 sin OK del usuario.
+   - Razón: evita el "drag pattern" — arrastrar defaults heredados sin auditarlos. Ver
+     `webcodexatlas/audit-2026-05-14` en Engram (caso paradigmático: --max:1180 arrastrado).
+
 1. ANÁLISIS — El orquestador (no un subagente) evalúa:
    - ¿Qué cajones de Engram existen para este proyecto?
    - ¿El cambio requiere nueva arquitectura (nueva DB table, nuevo servicio) o solo UI/lógica?
