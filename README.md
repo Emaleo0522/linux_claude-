@@ -55,7 +55,7 @@ cd claude-vibecoding
 bash install/linux.sh
 ```
 
-El script instala los 25 agentes + 13 referencias, los 15 hooks, el `CLAUDE.md` global, y configura git/GitHub/Vercel. Te va preguntando los datos que necesita (tu nombre, email, usuario de GitHub). **Reiniciá Claude Code** cuando termine y ya estás listo.
+El script instala los 25 agentes + 15 referencias técnicas, los 16 hooks, el `CLAUDE.md` global, y configura git/GitHub/Vercel. Te va preguntando los datos que necesita (tu nombre, email, usuario de GitHub). **Reiniciá Claude Code** cuando termine y ya estás listo.
 
 ### Windows (Claude Desktop) — 20-30 minutos guiados
 
@@ -80,10 +80,10 @@ Si te animás a portarlo, abrí un issue o PR contando qué runtime estás usand
 ### Verificación post-instalación
 
 ```bash
-# Agentes (debería ser 38: 25 agentes + 13 referencias)
+# Agentes (debería ser 40: 25 agentes + 15 referencias técnicas)
 ls ~/.claude/agents/*.md | wc -l
 
-# Hooks (debería ser 14)
+# Hooks (debería ser 16)
 ls ~/.claude/hooks/ | wc -l
 
 # CLAUDE.md presente en ~
@@ -146,7 +146,7 @@ Para **modificar un proyecto que ya está hecho**, el sistema entra en modo modi
 
 ### Lo que te protege en el camino
 
-- **15 hooks reactivos** bloquean cosas peligrosas en tiempo real: `git --no-verify`, `git push --force`, `rm -rf`, `DROP TABLE`, `chmod 777`, edición de archivos secretos (`.env`, claves privadas), uso de `--no-gpg-sign`. Otros avisan: `debugger` o `console.log` en código de producción, `@ts-ignore`, animaciones excesivas, container CSS con cap "SaaS feel", fuentes declaradas sin cargar, navegación móvil sin hamburger.
+- **16 hooks** bloquean cosas peligrosas en tiempo real: `git --no-verify`, `git push --force`, `rm -rf`, `DROP TABLE`, `chmod 777`, edición de archivos secretos (`.env`, claves privadas), uso de `--no-gpg-sign`. Otros avisan: `debugger` o `console.log` en código de producción, `@ts-ignore`, animaciones excesivas, container CSS con cap "SaaS feel", fuentes declaradas sin cargar, navegación móvil sin hamburger. Otros corren en background: cost tracking, session logging, sync de Engram local→GitHub y local→cloud al cerrar sesión, snapshot pre-compact.
 - **AUTO_AUDIT pre-return**: antes de devolver código, el `frontend-developer` corre 5 reglas grep ejecutables (no paleta teal por default, no Inter como heading en moods bold, hero con media coherente, motion según dial, shadow según mood). Si falla → regenera. Si pasa → marca cambio como `VISUAL_IMPACT: high|medium|low`.
 - **Checkpoint humano automático**: cuando el cambio tiene `VISUAL_IMPACT: high`, el orquestador te muestra el resultado antes de marcar la tarea como completa. La doctrina: el agente decide solo cuando hay UNA respuesta correcta; en todo lo demás (visual, multi-opción, irreversible, iterado 2+ veces) te pregunta con su recomendación incluida.
 - **9 capas de defensa anti-falso-positivo** en QA: visual fidelity LLM-as-judge (5 dimensiones contra referencia), network inspection (Mixed Content, status 0, leaks de localhost), E2E flows obligatorios en auth/CRUD, reality-checker re-corre 2-3 PASS al azar.
@@ -159,9 +159,27 @@ Para **modificar un proyecto que ya está hecho**, el sistema entra en modo modi
 
 Engram es lo que hace que el sistema *recuerde* entre sesiones. Sin él, cada conversación arranca de cero. Se instala automáticamente con el script de Linux y con la guía de Windows.
 
-### Engram Sync (memoria cross-machine) — opcional
+### Engram Cloud (memoria cross-machine) — recomendado
 
-Si trabajás desde varias computadoras, el hook `engram-sync` empuja automáticamente la memoria a un repo privado de GitHub al cerrar sesión. Así arrancás en el desktop y seguís en la laptop sin perder contexto.
+Si trabajás desde varias computadoras y querés que las memorias se crucen entre PCs en tiempo real (no al final de sesión), Engram tiene un modo **cloud** self-hosted. La instancia oficial corre en un VPS Oracle Cloud propio del autor con allowlist por proyecto.
+
+El hook `engram-cloud-sync-on-stop` (incluido) empuja al cloud al cerrar sesión, y el cliente Engram local pull-ea automáticamente al iniciar la siguiente sesión. El servidor mantiene la fuente de verdad.
+
+**Para auto-hospedar tu propio cloud** (recomendado para uso real):
+
+1. Aprovisioná un VPS (Oracle Always Free Tier alcanza).
+2. Cloná [Gentleman-Programming/engram](https://github.com/Gentleman-Programming/engram) y levantá `docker compose up -d cloud`.
+3. En `/opt/engram-cloud/.env` configurá `ENGRAM_CLOUD_ALLOWED_PROJECTS=mi-proyecto,personal,…` (allowlist explícita para evitar bucket explosion).
+4. Apuntá el client local a tu URL: `engram cloud configure --url https://TU-VPS:PUERTO`.
+5. Para cada proyecto que quieras sincronizar: `engram cloud enroll <project-name>`.
+
+**Reglas clave** (validadas en producción 2026-05-15):
+- Todos los `mem_save` cross-PC deben usar `scope="personal"` + `project=` explícito. El auto-detect del MCP routea a buckets distintos según el cwd del cliente y rompe el cruce. Ver el protocolo "guarda en engram" completo en [`templates/global-claude.md`](templates/global-claude.md).
+- Para agregar un bucket nuevo al cloud: SSH al server, editar `.env`, `docker compose up -d cloud`. Sin allowlist explícita el server retorna 403.
+
+### Engram Sync (legacy, git) — opcional
+
+Antes de Engram Cloud, el sync cross-PC se hacía empujando `~/.engram/` a un repo privado de GitHub. Sigue funcionando si preferís un setup más simple sin VPS, pero es **eventually consistent** (solo cruza al cerrar sesión) y requiere resolver conflictos a mano si dos PCs escriben en paralelo.
 
 ```bash
 # 1. Creá un repo privado en GitHub (ej: mi-engram-sync)
@@ -190,14 +208,16 @@ Una oficina pixel art donde los agentes caminan a sus escritorios cuando se les 
 
 ---
 
-## Modo Claude normal vs Modo Orquestador
+## Los 4 modos de trabajo
 
 | Modo | Cuándo usarlo | Cómo activarlo |
 |---|---|---|
 | **Claude normal** | Preguntas, fixes puntuales, revisar código, chat técnico | Default — solo hablar |
-| **Orquestador** | Proyecto completo de principio a fin | Decí: *"modo orquestador — [tu idea]"* |
+| **Orquestador** | Proyecto completo de principio a fin | Decí: *"modo orquestador — [tu idea]"* o *"activa el pipeline"* |
+| **Modificación** | Cambios sobre un proyecto ya completado por el pipeline | Detectado automáticamente cuando decís *"retomar [proyecto] — [cambio]"* |
+| **Diagnóstico** | Auditar código existente sin tocarlo (due diligence, audits de proyectos ajenos) | Decí: *"modo diagnóstico"*, *"audita este código"*, *"evalúa sin tocar"* |
 
-En modo normal, Claude responde como siempre pero tiene acceso a los hooks, AUTO_AUDIT y memoria. En modo orquestador, adopta el rol de coordinador y delega a los 24 subagentes.
+En **modo normal**, Claude responde como siempre pero tiene acceso a los hooks, AUTO_AUDIT y memoria. En **modo orquestador**, adopta el rol de coordinador y delega a los 24 subagentes. En **modo modificación**, corre un mini-pipeline (Paso 0 de auditoría → planificación ligera → dev+QA solo de los agentes afectados). En **modo diagnóstico** es read-only por doctrina: solo lee y devuelve un reporte estructurado con hallazgos por severidad — útil para auditar proyectos que no fueron generados por este sistema (ya validado en auditorías a WebCodexAtlas y Claude-Atlas).
 
 ---
 
@@ -215,7 +235,7 @@ Para developers que quieran ir más allá:
 | [`agents/ui-designer.md`](agents/ui-designer.md) | Design system, SaaS Teal Default Detector (T1-T7), accesibilidad |
 | [`agents/frontend-developer.md`](agents/frontend-developer.md) | Implementación frontend, AUTO_AUDIT pre-return, design decision tree |
 | [`agents/evidence-collector.md`](agents/evidence-collector.md) | QA visual con Playwright, 9 capas anti-falso-positivo |
-| [`hooks/`](hooks/) | Los 15 hooks reactivos: bloqueos, advertencias, auditorías, tracking |
+| [`hooks/`](hooks/) | Los 16 hooks: bloqueos, advertencias, auditorías, tracking, sync Engram (local+cloud) |
 | [`design-data/`](design-data/) | Design Intelligence Engine: 8 CSVs con 161 industrias indexadas via BM25 |
 
 ---
@@ -224,9 +244,9 @@ Para developers que quieran ir más allá:
 
 ```
 ~/.claude/
-├── agents/            # 25 agentes + 13 referencias = 38 archivos .md
+├── agents/            # 25 agentes + 15 referencias técnicas = 40 archivos .md
 ├── design-data/       # Design Intelligence Engine (search.js + 8 CSVs)
-├── hooks/             # 15 hooks reactivos
+├── hooks/             # 16 hooks (bloqueos, warnings, sync background)
 ├── settings.json      # config de hooks + Engram MCP
 ├── settings.local.json # permisos para agentes
 ├── codepen-vault/     # efectos CodePen aprobados (decorativo)
