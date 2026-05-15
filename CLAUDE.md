@@ -68,8 +68,12 @@ Cuando el usuario diga "guarda en engram", "guardalo", "guardá esto", "remember
 1. **Determinar tema** desde contexto reciente de la conversación (qué se estuvo discutiendo)
 2. **Decidir el `project=` ANTES de buscar** (constraint cloud whitelist):
    - Si el tema es específico de un proyecto existente → `project="saldoar"`, `project="claude-vibecoding"`, etc. (debe ser uno YA enrolled en cloud — ver `engram projects list`)
-   - Si es info **truly personal cross-PC** (preferencias, tareas multi-proyecto, decisiones globales) → `project="system32"` (el bucket de-facto, ya tiene 144+ obs y está en whitelist del cloud)
-   - **NUNCA inventar projects nuevos** (`personal`, `cross-pc`, etc.): el cloud server retorna 403 forbidden — solo permite los projects ya en su lista.
+   - Si es info **truly personal cross-PC** (preferencias, tareas multi-proyecto, decisiones globales) → `project="personal"` (bucket limpio, agregado al cloud whitelist el 2026-05-15)
+   - Si es **info de ideas/inbox** → `project="ideas-vault"`
+   - Si es **info de efectos/reels/codepen** → `project="reel-vault"` o `codepen-vault`
+   - Si es **info de tooling/scripts/utilities** → `project="tooling-vault"`
+   - Si es **descubrimiento cross-proyecto** → `project="discoveries"`
+   - **Para nombres nuevos no en la lista actual**: agregar a `ENGRAM_CLOUD_ALLOWED_PROJECTS` en el server Oracle vía SSH. Sin eso, el cloud retorna 403 forbidden. La lista actual incluye los proyectos existentes + 6 buckets clean nuevos (personal, cross-pc, ideas-vault, reel-vault, tooling-vault, discoveries). Ver `/opt/engram-cloud/.env` en server.
 3. **Buscar similares** antes de escribir:
    ```
    results = mem_search(tema, project="<el-decidido-en-paso-2>", scope="personal")
@@ -86,7 +90,7 @@ Cuando el usuario diga "guarda en engram", "guardalo", "guardá esto", "remember
 
 **Razón**: validado empíricamente 2026-05-15 — obs #3111 guardado en casa con auto-detect `project=system32` → invisible desde pc004 con auto-detect `project=dashboard-pm`. Solo después de `mem_search("...", project="system32")` explícito desde pc004, la obs aparece.
 
-**Bug del cloud whitelist** (deferred upstream): `engram cloud enroll <name>` registra el project localmente pero el cloud retorna 403 forbidden para nombres nuevos (`personal`, `cross-pc`, etc.). Solo los projects ya en la lista del cloud server (`system32`, `saldoar`, `claude-vibecoding`, `sistema-vibecoding`, `vetconnect`, `kahntus-portfolio`, etc. — ver `engram projects list` desde casa) sincronizan al cloud. Issue upstream a abrir: github.com/Gentleman-Programming/engram
+**Cloud allowlist** (resuelto self-hosted 2026-05-15): el server Oracle Cloud (`161.153.203.83`) tiene `ENGRAM_CLOUD_ALLOWED_PROJECTS` en `/opt/engram-cloud/.env`. Para agregar un bucket nuevo: SSH al server, editar `.env`, `docker compose up -d cloud`. Backup automático por convención `.env.bak.YYYYMMDD-pre-{razon}`. Issue upstream para auto-allow opt-in: github.com/Gentleman-Programming/engram
 
 **Anti-patrón a evitar**: dejar que el MCP auto-detecte project del cwd. SIEMPRE pasar `project=` explícito en ambos `mem_save` y `mem_search` cross-PC. Si necesitás un bucket personal global, usar `project="system32"` (de-facto convention) hasta que upstream permita nombres custom.
 
