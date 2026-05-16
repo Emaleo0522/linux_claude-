@@ -162,6 +162,29 @@ Cuando el usuario diga "guarda en engram", "guardalo", "guardá esto", "remember
 
 **Anti-patrón a evitar**: dejar que el MCP auto-detecte project del cwd. SIEMPRE pasar `project=` explícito en ambos `mem_save` y `mem_search` cross-PC. Si necesitás un bucket personal global, usar `project="system32"` (de-facto convention) hasta que upstream permita nombres custom.
 
+**Bootstrap de proyecto NUEVO (path limpio cuando no existe en DB todavía)**:
+
+Si el MCP plugin retorna `ambiguous_project` y el proyecto NO aparece en `engram projects list` (es decir, **no existe todavía en el DB local**), el camino correcto NO es recovery_token sino CLI bootstrap:
+
+1. **CLI bootstrap (una vez)**:
+   ```bash
+   engram save "first save title" "first content" \
+     --project NUEVO_NOMBRE --scope personal --type discovery
+   ```
+   El CLI crea el proyecto al vuelo. El MCP plugin no puede (validación estricta de proyecto existente).
+
+2. **Después del bootstrap**, el MCP plugin acepta `project="NUEVO_NOMBRE"` explícito en `mem_save` y `mem_search` aunque `available_projects` no lo liste (esa lista es cwd-scoped, no el full project list).
+
+3. **Para cross-PC sync**: agregar el proyecto al cloud whitelist también (`/opt/engram-cloud/.env` via SSH — ver § "Cloud allowlist" arriba).
+
+**Distinción crítica entre los dos paths**:
+- `recovery_token` path (existing) → proyecto EXISTE en DB, hay ambigüedad de cwd con múltiples git repos
+- `CLI bootstrap` path (NEW) → proyecto NO EXISTE todavía en DB, crearlo
+
+**`available_projects` del MCP es cwd-scoped, NO el listado completo del DB**. El CLI (`engram projects list`) ve ~68 proyectos, el MCP scan solo muestra los que están como sub-repos del cwd donde corre el MCP server (típicamente 2-5). Esta es la diferencia que confunde: proyectos como `discoveries` / `personal` pueden estar en el DB y aceptarse con `project=` explícito en MCP, pero no aparecen en `available_projects`.
+
+Validado 2026-05-16 con vibefx (no en cloud whitelist, no detectado por MCP cwd-scan): SSH agregando vibefx a `ENGRAM_CLOUD_ALLOWED_PROJECTS` + `engram save --project vibefx` via CLI = full operability en una sesión.
+
 ### Lectura Engram — bloque canonico (referencia para todos los agentes)
 ```
 # Leer de Engram (2 pasos OBLIGATORIOS — nunca usar preview truncada)
