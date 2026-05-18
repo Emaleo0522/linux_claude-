@@ -55,6 +55,11 @@ const CSV_CONFIG = {
     searchCols: ["UI_Category"],
     outputCols: ["UI_Category", "Recommended_Pattern", "Style_Priority", "Color_Mood", "Typography_Mood", "Key_Effects", "Decision_Rules", "Anti_Patterns", "Severity"],
   },
+  preset: {
+    file: "style-presets.csv",
+    searchCols: ["Preset Name", "Aesthetic Family", "Keywords", "Best For", "AI Prompt Keywords"],
+    outputCols: ["Preset Name", "Aesthetic Family", "Keywords", "Design Variance", "Motion Intensity", "Visual Density", "Heading Font", "Body Font", "Spacing Scale", "Border Radius", "Motion Curve", "Color Mood", "Best For", "Avoid For", "CSS Tokens", "AI Prompt Keywords", "Reference Sites", "Anti Patterns"],
+  },
 };
 
 // ============ CSV PARSER ============
