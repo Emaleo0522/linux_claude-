@@ -188,7 +188,18 @@ Validado empíricamente: `mem_save` puede retornar OK al cliente y aun así NUNC
 5. `scope="personal"` para cross-PC (regla validada 2026-05-15).
 
 **Capa 1b — Whitelist gate (solo si el project es desconocido)**:
-- Si el `project=` que pensás usar no está entre los buckets ya enrolled, correr `engram projects list | grep '^  <nombre>'` para verificar. Sin enroll, el cloud rechaza con HTTP 403.
+
+Lista sintética de buckets más usados (verificar con `engram projects list` si tu proyecto no está acá):
+- `claude-vibecoding` (sistema)
+- `saldoar`, `saldoar-outreach`
+- `vetconnect`, `kahntus`, `kahntus-portfolio`
+- `dashboard-pm`
+- `personal`, `ideas-vault`, `discoveries`
+- `system32`
+- `cross-claude-mailbox` (canal asíncrono entre instancias — ver § "Cross-Claude Mailbox Protocol")
+
+Si tu proyecto NO está en esta lista → correr `engram projects list | grep -w "{nombre}"` antes del primer save. Si no aparece, es proyecto nuevo (Path B bootstrap CLI).
+
 - Si confirma 403/desconocido: **NO inventar** un bucket. Preguntar al usuario: (a) usar uno existente que aplique, o (b) autorizar agregar el nuevo a la whitelist (requiere SSH al server + edit `/opt/engram-cloud/.env` + `docker compose up -d cloud` + backup `.env.bak.YYYYMMDD-pre-{razon}`).
 - **NUNCA hacer SSH + restart sin confirmación explícita del usuario** — toca infra del server.
 
@@ -208,13 +219,43 @@ engram cloud upgrade doctor --project <proyecto>
 - `status=ready` → OK
 - `status=blocked, class=repairable` → `engram cloud upgrade repair --project X --apply` + `engram sync --cloud --project X`
 - `status=blocked, class=blocked` → identificar la obs problemática (`title required` o `content required`), `mem_update` con título/content válido, repetir doctor
+  - **Excepción `relation/upsert`** (2026-05-18): si el `message` contiene `"relation"/"upsert"` (mutation legacy no soportada por el cloud actual), NO es reparable desde el cliente. Loguear WARN, cerrar sesión OK. Bug upstream engram cloud — el hook `engram-cloud-sync-on-stop.sh` ya filtra este caso defensivamente.
 
 **Anti-patrones detectados (no repetir)**:
 - ❌ `mem_save(content=..., type="decision")` sin `title=` → cloud rechaza 500
 - ❌ `mem_save(title="", ...)` con title vacío string → cloud rechaza 500
 - ❌ Pensar que `mem_save` exitoso = "está en el cloud". Solo significa "está en SQLite local".
 
-**Hook `engram-cloud-sync-on-stop.sh` (patched 2026-05-18)**: ahora corre `engram cloud upgrade doctor` pre-flight y aplica `repair --apply` automáticamente si hay observations reparables antes del push. Regex de detección de errores extendido para incluir `status 500`, `title is required`, `content is required`, `transport_failed`, `upgrade_blocked`, `upgrade_repairable` (antes solo capturaba 403/forbidden).
+**Hook `engram-cloud-sync-on-stop.sh` (patched 2026-05-18)**: ahora corre `engram cloud upgrade doctor` pre-flight y aplica `repair --apply` automáticamente si hay observations reparables antes del push. Regex de detección de errores extendido para incluir `status 500`, `title is required`, `content is required`, `transport_failed`, `upgrade_blocked`, `upgrade_repairable` (antes solo capturaba 403/forbidden). Filtro defensivo añadido tarde 2026-05-18 para `relation/upsert` (bug upstream cloud).
+
+### Cross-Claude Mailbox Protocol (2026-05-18)
+
+Convención asíncrona para que dos instancias de Claude (ej. `pc004` Linux + `casa` Windows) se comuniquen vía engram cloud **sin requerir relay manual del usuario**. Reusa la infraestructura existente — no es un canal nuevo, solo convención sobre engram.
+
+**Bucket dedicado**: `cross-claude-mailbox` (en cloud whitelist).
+
+**Convención de topic keys**:
+- `mailbox/from-{pc-origen}/to-{pc-destino}/{YYYYMMDD-HHMMSS}-{slug}` → query
+- `mailbox/from-{pc-origen}/to-{pc-destino}/{YYYYMMDD-HHMMSS}-{slug}-reply` → respuesta
+- Notación de pc: `pc004` (Linux), `casa` (Windows). Ajustar si hay más instancias.
+
+**Flujo**:
+
+1. **Al inicio de cada turn** en modo Claude normal (no aplica a flujos automáticos del orquestador), ejecutar 1 search barato:
+   ```
+   pending = mem_search(query="to-{mi-pc}", project="cross-claude-mailbox", scope="personal", limit=5)
+   ```
+2. Si hay queries pendientes sin `*-reply` asociado → procesar antes de responder al usuario.
+3. **Para CHECKS** (lecturas, greps, `engram doctor`, `mem_search`, `git status`, etc.) → ejecutar y guardar `*-reply` directamente.
+4. **Para EDITS** (`Edit`, `Write`, `Bash` mutating, `SSH`, push, deploy) → **NO auto-aplicar**. Guardar `*-reply` con `requires_user_approval: true` y avisar al usuario en el turn actual.
+
+**Anti-patrones**:
+- ❌ Auto-aplicar edits sugeridos por el otro Claude sin confirmación del usuario.
+- ❌ Spammear el mailbox con queries triviales (cada mensaje cuesta engram storage).
+- ❌ No identificarse en `from:` (ambigüedad cross-PC).
+- ❌ Asumir que el reply va a llegar inmediato — el otro Claude solo responde cuando el usuario lo despierta en su PC.
+
+**Limitación honesta**: NO es realtime. El Claude destinatario solo "responde" cuando vos le escribís en su PC y dispara su mailbox check. Los mensajes persisten, no se pierden.
 
 ### Lectura Engram — bloque canonico (referencia para todos los agentes)
 ```

@@ -1,5 +1,30 @@
 # Upgrade Log — Context Management + Best Practices
 
+## Engram refinements + Cross-Claude Mailbox — 2026-05-18 tarde ✅
+
+### Summary
+Round de refinements coordinada cross-PC (pc004 ↔ casa vía Ema relay). 3 cambios:
+(1) lista sintética de buckets más usados en Capa 1b para evitar `engram projects list` por defecto;
+(2) excepción `relation/upsert` documentada en Capa 3 (bug upstream cloud no reparable desde cliente);
+(3) Cross-Claude Mailbox Protocol — convención asíncrona entre instancias de Claude usando `cross-claude-mailbox` bucket en engram cloud.
+
+### Cambios
+- **CLAUDE.md + templates/global-claude.md**:
+  - Capa 1b: 11 buckets sintéticos listados (claude-vibecoding, saldoar, saldoar-outreach, vetconnect, kahntus, kahntus-portfolio, dashboard-pm, personal, ideas-vault, discoveries, system32, cross-claude-mailbox). Si project no está en la lista → `engram projects list | grep -w` antes del save.
+  - Capa 3: nueva excepción documentada para `relation/upsert` (bug upstream cloud — el hook ya lo filtra).
+  - Nueva sección "Cross-Claude Mailbox Protocol" — schema de query/reply, flujo (checks auto-resueltos, edits requieren user approval), anti-patrones, limitaciones honestas (no es realtime).
+- **hooks/engram-cloud-sync-on-stop.sh**:
+  - Filtro defensivo añadido: si el bloqueo es por mutation `relation/upsert`, loguear WARN en vez de ERROR + contar como sync OK. Aplicado en 2 lugares (doctor pre-flight + post-sync error detection).
+  - Inline doc: "Filtro defensivo. Bug upstream engram cloud. Cuando upstream arregle, este filtro se vuelve no-op."
+
+### Edge case descubierto (origen del fix de relation/upsert)
+Al hacer `mem_save` de la obs #2731 (`claude-vibecoding/sync-cross-pc-2026-05-18-pc004-side`), engram detectó conflict candidate y aplicó `mem_judge` con relation=related. Doctor post-judge reportó `class: blocked` por `unsupported legacy mutation "relation"/"upsert"`. La observation principal sí sincronizó al cloud; la mutation de relation quedó solo en local SQLite. Bug upstream del cloud server, ya documentado.
+
+### Próximo paso pendiente
+Activar bucket `cross-claude-mailbox` en cloud whitelist — requiere SSH al server Oracle + edit `/opt/engram-cloud/.env` + `docker compose up -d cloud`. Acción separada (gateada por confirmación del usuario, no se ejecuta automáticamente).
+
+---
+
 ## Engram silent-fail cloud fix — 2026-05-18 ✅
 
 ### Summary
