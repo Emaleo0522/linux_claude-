@@ -1,5 +1,65 @@
 # Upgrade Log — Context Management + Best Practices
 
+## Free-first creative pipeline + Cloudflare Workers AI — 2026-05-18 noche ✅
+
+### Summary
+Refactor del stack de assets generativos (image-agent, logo-agent, video-agent, brand-agent) a política **free-first verificada con curl real contra fuentes primarias 2026**. Motivado por usuario sin tarjeta de crédito disponible.
+
+Hallazgo principal: muchos "free tiers" promocionados en blogs marketing con fechas "2026" en realidad reflejan políticas viejas (2024-2025) ya retiradas. Validación empírica obligatoria de cada provider antes de incluirlo en el default.
+
+### Cambios
+
+- **agents/image-agent.md** + **agents/logo-agent.md**:
+  - Cadena free-first: `HuggingFace FLUX.1-schnell` (primario, $0.10/mes free) → `Cloudflare Workers AI` (secundario, 10K neurons/día sin tarjeta) → `Pollinations.ai` (fallback, FLUX unlimited free).
+  - Removido del default: `Together AI`. El endpoint "FLUX.1-schnell-Free" que figuraba en blogs 2024-2025 ya **no existe** en su catálogo. Free tier actual exige $5 fondeo con tarjeta. Verificado contra `api.together.xyz/v1/models` el 2026-05-18.
+  - Agregado curl funcional Cloudflare con endpoint `api.cloudflare.com/client/v4/accounts/{ID}/ai/run/@cf/black-forest-labs/flux-1-schnell`. Validado HTTP 200 con respuesta JPEG 1024x1024.
+  - Backends pagos (`gemini`, `recraft`) quedan como opt-in explícito por input `backend: "gemini"` / `backend: "recraft"`.
+
+- **agents/video-agent.md**:
+  - Sin `REPLICATE_API_TOKEN` **ya NO es FAIL**. El agente retorna `STATUS=completado` con solo `fallback.css` animado como output válido. No bloquea el pipeline.
+  - Documenta opciones manuales free para video real: Seedance (web, 100 free/día sin tarjeta), HuggingFace Spaces (Wan 2.1, cold start), LTX-2 self-host.
+
+- **agents/brand-agent.md**:
+  - Sub-tool opcional `dembrandt` MCP para extraer tokens reales de URLs de referencia. Sigue siendo free (texto puro sin API externa).
+
+- **CLAUDE.md**:
+  - Nueva tabla "Política free-first" con primario/secundario/fallback/opt-in por agente.
+  - Setup paso a paso de Cloudflare Workers AI (signup sin tarjeta, Account ID, API Token con permiso `Account → Workers AI → Read`).
+  - Caveat explícito sobre marketing reciclado con fechas "2026".
+
+- **.env.example** (NUEVO archivo):
+  - Template completo con las 6 variables documentadas (HF_TOKEN required, CLOUDFLARE_* recomendadas, REPLICATE/GEMINI/RECRAFT opt-in).
+  - Links de signup directos para cada provider.
+  - Notas claras sobre cuáles requieren tarjeta y cuáles no.
+
+- **README.md** sección "Variables de entorno para assets generativos":
+  - Reescrita con tabla free-first + setup Cloudflare en 3 pasos.
+  - Backends descartados documentados con razón (Together AI).
+  - Referencia a `.env.example` agregada.
+
+### Validación empírica (curl real, 2026-05-18)
+
+| Provider | HTTP | Output | Quota |
+|---|---|---|---|
+| HF FLUX.1-schnell | 200 | JPEG 256x256 (3.9 KB) | $0.10/mes para free users |
+| Cloudflare Workers AI FLUX-schnell | 200 | JPEG 1024x1024 (105 KB) | 10K neurons/día sin tarjeta |
+| Pollinations.ai (sin auth) | 200 | JPEG 256x256 (5.5 KB) | Unlimited FLUX |
+| Together AI FLUX.1-schnell-Free | **402 credit_limit** | — | Endpoint requiere fondeo $5+ |
+
+### Lecciones documentadas en CLAUDE.md y memoria personal
+
+1. Marketing 2024-2025 que se republica con fechas "2026" engaña — siempre validar con curl real contra fuente primaria antes de incluir un provider.
+2. "Free tier" puede significar 3 cosas distintas: (a) sin tarjeta y sin límite real, (b) sin tarjeta pero con quota chica, (c) requiere tarjeta para activar credits gratis. Documentar cuál de las 3.
+3. `canPay: false` en HuggingFace `/whoami-v2` identifica usuarios sin tarjeta y limita el monthly credits a $0.10. Útil para detectar el modo free-first programáticamente.
+
+### Commits relacionados
+
+- `993d785` — sync inicial de los 4 agentes creativos free-first
+- `9da7ed8` — corrección Together AI → Cloudflare en stack default
+- (este commit) — README + UPGRADE_LOG + .env.example
+
+---
+
 ## Engram refinements + Cross-Claude Mailbox — 2026-05-18 tarde ✅
 
 ### Summary

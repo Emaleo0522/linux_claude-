@@ -188,19 +188,46 @@ cd ~/.engram && git init && git remote add origin https://github.com/TU_USUARIO/
 # El hook engram-sync (ya instalado) hace el resto
 ```
 
-### Variables de entorno para assets generativos — opcional
+### Variables de entorno para assets generativos — política free-first
 
-Solo necesarias si tu proyecto va a generar logos, imágenes hero o videos con IA.
+> 🆕 **Actualizado 2026-05-18** — política free-first verificada con curl real contra fuentes primarias, NO con blogs de marketing que reciclan fechas. Con solo `HF_TOKEN` ya podés generar imágenes y logos sin tarjeta de crédito.
 
-| Variable | Servicio | Costo aprox | Cómo obtenerla |
+El sistema prioriza paths **FREE top-tier que no requieren tarjeta**. Las opciones pagas son opt-in.
+
+Hay un archivo [`.env.example`](.env.example) en la raíz del repo con todos los campos comentados y links de signup.
+
+#### Stack free real (ningún provider requiere tarjeta)
+
+| Variable | Servicio | Quota free | Cómo obtenerla |
 |---|---|---|---|
-| `GEMINI_API_KEY` | Google AI Studio | $0.02-0.04 por imagen | [aistudio.google.com/apikey](https://aistudio.google.com/apikey) |
-| `HF_TOKEN` | HuggingFace | Gratis | [huggingface.co/settings/tokens](https://huggingface.co/settings/tokens) |
-| `REPLICATE_API_TOKEN` | Replicate | $0.05 por video | [replicate.com/account/api-tokens](https://replicate.com/account/api-tokens) |
+| **`HF_TOKEN`** ⭐ primario | HuggingFace Inference | $0.10/mes (~150 imgs FLUX-schnell), reset mensual | [huggingface.co/settings/tokens](https://huggingface.co/settings/tokens) → token role `Read` |
+| **`CLOUDFLARE_ACCOUNT_ID`** + **`CLOUDFLARE_AI_TOKEN`** secundario | Cloudflare Workers AI | **10,000 neurons/día** sin tarjeta (cientos de imgs/día) | Setup en 3 pasos abajo ⬇️ |
+| _sin variable_ | Pollinations.ai | **FLUX unlimited free** (FAQ oficial) | No requiere key — fallback automático |
 
-Alcanza con **una** clave de imagen (Gemini o HuggingFace). Si seteás las dos, Gemini es primary y HuggingFace es fallback automático.
+Con solo `HF_TOKEN` el sistema funciona. Si agregás Cloudflare, multiplicás la quota gratis. Pollinations es el safety net automático cuando todo lo demás se agota.
 
-Dónde ponerlas: agregalas a `~/.bashrc` (Linux), o a Environment Variables del sistema (Windows), o a un archivo `~/.claude/.env` con una variable por línea.
+#### Setup Cloudflare Workers AI (3 minutos, sin tarjeta)
+
+1. **Signup**: [dash.cloudflare.com/sign-up](https://dash.cloudflare.com/sign-up) — el plan Free Workers **NO pide tarjeta** ([fuente oficial](https://developers.cloudflare.com/workers-ai/platform/pricing/))
+2. **Account ID**: en el dashboard, scrolleá el sidebar derecho hasta la sección "API" — copialo (32 chars hex)
+3. **API Token**: [dash.cloudflare.com/profile/api-tokens](https://dash.cloudflare.com/profile/api-tokens) → "Create Custom Token" → permiso `Account → Workers AI → Read` → "Continue to summary" → "Create Token" (copialo, se muestra una sola vez)
+
+#### Opt-in paga (solo si tenés billing habilitado)
+
+| Variable | Servicio | Costo | Cuándo usarlo |
+|---|---|---|---|
+| `GEMINI_API_KEY` | Google AI Studio | $0.02-0.04/img + billing | Mejor comprensión LLM-nativa de prompts. Requiere [billing habilitado](https://aistudio.google.com/apikey) en Google Cloud |
+| `REPLICATE_API_TOKEN` | Replicate | $0.03-0.10/video | Solo para video real (LTX-Video 2.3). Sin esta variable, `video-agent` retorna CSS fallback animado como output válido ([replicate.com/account/api-tokens](https://replicate.com/account/api-tokens)) |
+| `RECRAFT_API_KEY` | Recraft V4 Vector | $0.08/img + $5 free/mes via Vercel AI Gateway | Logos SVG **nativos** (sin pérdida raster→vector). Solo si querés logos vectoriales premium |
+
+#### Backends descartados
+
+- ~~Together AI~~ — el endpoint "FLUX.1-schnell-Free" promocional 2024-2025 ya **no existe** en su catálogo. Su free tier actual requiere $5 fondeo con tarjeta. Removido del default 2026-05-18.
+
+#### Dónde poner las variables
+
+- **Linux/macOS**: agregalas a `~/.bashrc` o `~/.zshrc` con `export VAR=valor`, o crealas en `~/.claude/.env` (una por línea: `VAR=valor`)
+- **Windows**: `setx VAR "valor"` en PowerShell (persiste user-level), o panel de control → Variables de entorno del sistema. **Cerrá y reabrí Claude Desktop** para que las tome.
 
 ### Pixel Bridge — opcional, decorativo
 
