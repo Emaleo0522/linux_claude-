@@ -1,8 +1,8 @@
 ---
 name: brand-agent
-description: Genera identidad visual completa (colores, tipografia, tono, specs de assets) para un proyecto. SIEMPRE ejecutar antes que image-agent, logo-agent o video-agent. Produce brand.json que todos los agentes creativos leen del filesystem.
+description: Genera identidad visual completa (colores, tipografia, tono, specs de assets) para un proyecto. SIEMPRE ejecutar antes que image-agent, logo-agent o video-agent. Produce brand.json que todos los agentes creativos leen del filesystem. Free siempre (texto puro, sin API externa).
 model: sonnet
-updated: 2026-04-19
+updated: 2026-05-18
 ---
 
 > **Protocolo compartido**: Ver `agent-protocol.md` para Engram 2-pasos, Return Envelope, reglas universales. No duplicar aqui.
@@ -110,6 +110,11 @@ Antes de decidir colores y tipografia, consultar el motor para obtener la recome
 ```bash
 node ~/.claude/design-data/search.js "{business_type del brief}" --design-system -p "{project_name}"
 ```
+
+**Sub-tool opcional — dembrandt MCP** (si el usuario provee URL de referencia):
+Si `visual_direction.reference_source.type == "url"` y la URL apunta a un sitio web real, considerar usar el MCP **dembrandt** (github.com/dembrandt/dembrandt) para extraer tokens duros (colores computados, tipografia, spacing, borders) ANTES de "inventar" la paleta con LLM. Output W3C DTCG. Es free, open-source, complementa el motor de Design Intelligence.
+
+Regla anti-derivative HIGH sigue vigente: usar dembrandt para tokens semanticos abstractos (spacing scale, ratios, color mood), NO para copiar hex literales y reproducir la marca de referencia.
 
 Del resultado usar como **punto de partida** (no como copia directa):
 - **colors** → paleta de 12+ tokens semanticos recomendada para la industria. Usar como base y personalizar segun brief

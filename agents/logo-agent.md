@@ -1,8 +1,8 @@
 ---
 name: logo-agent
-description: Genera logos vectoriales (SVG) para proyectos web. Proceso en 2 pasos: genera imagen con FLUX.1 y convierte a SVG con vtracer. Produce 4 variantes. Requiere brand.json de brand-agent. Ejecutar en paralelo con image-agent.
+description: Genera logos vectoriales (SVG) para proyectos web. Pipeline free por defecto (HuggingFace FLUX.1-schnell + vtracer/Inkscape). Recraft V4 Vector opt-in si el usuario tiene Vercel AI Gateway key. Produce 4 variantes. Requiere brand.json de brand-agent. Ejecutar en paralelo con image-agent.
 model: sonnet
-updated: 2026-03-29
+updated: 2026-05-18
 ---
 
 > **Protocolo compartido**: Ver `agent-protocol.md` para Engram 2-pasos, Return Envelope, reglas universales. No duplicar aqui.
@@ -33,12 +33,17 @@ Read, Write, Bash (`curl`, `mkdir`, `which`, `vtracer`, `inkscape`, `file`, `wc 
 ```json
 {
   "project_dir": "ruta absoluta al proyecto",
-  "backend": "gemini | huggingface",
+  "backend": "auto | huggingface | together | recraft | gemini",
   "logo_concept": "descripcion opcional del concepto — si vacio, usar brand.json"
 }
 ```
 
-`backend`: elegido por el usuario en Fase 2B del orquestador. Determina el endpoint de generacion de imagen base.
+`backend` (free-first por defecto):
+- `auto` (recomendado): cadena free HF -> Together -> Pollinations -> vtracer/Inkscape para vectorizar
+- `huggingface`: forzar FLUX.1-schnell via HF
+- `together`: forzar FLUX.1-schnell via Together AI (free 3 meses)
+- `recraft`: opt-in, **SVG nativo sin paso de vectorizacion** ($0.08/img, $5 free credits/mes via Vercel AI Gateway). Requiere `RECRAFT_API_KEY` o `VERCEL_AI_GATEWAY_KEY`
+- `gemini`: opt-in, requiere billing
 
 ---
 
@@ -56,11 +61,13 @@ fi
 # brand.json
 ls $ASSET_BASE/brand/brand.json || exit FAIL
 
-# Verificar key del backend elegido
-# Si backend=gemini: echo $GEMINI_API_KEY | wc -c
-# Si backend=huggingface: echo $HF_TOKEN | wc -c
+# Verificar keys disponibles (free-first)
+echo $HF_TOKEN | wc -c              # Free, primario
+echo $TOGETHER_API_KEY | wc -c      # Free 3 meses, secundario
+echo $RECRAFT_API_KEY | wc -c       # Opt-in, $5 free/mes via Vercel AI Gateway
+echo $GEMINI_API_KEY | wc -c        # Opt-in, requiere billing
 
-# Verificar herramienta de vectorizacion disponible
+# Verificar herramienta de vectorizacion disponible (no aplica si backend=recraft, SVG nativo)
 which vtracer && echo "vtracer:OK" || which inkscape && echo "inkscape:OK" || echo "vectorizer:NONE"
 
 # Crear directorio
@@ -103,11 +110,23 @@ gradients, shadows, text, letters, words, typography
 Si se va a vectorizar con vtracer -> fondo blanco (contraste limpio para tracing).
 Si se necesita PNG con transparencia directa -> fondo verde (green screen pipeline, ver Paso 4B).
 
-### Paso 4 — Generar imagen base
+### Paso 4 — Generar imagen base (o SVG nativo si Recraft)
 
-**Usa el backend elegido por el usuario** (pasado como `backend` en el input):
-- Si `backend: "gemini"` -> Gemini (`gemini-2.5-flash-image` o `imagen-4-fast`), fallback HuggingFace si `HF_TOKEN` existe
-- Si `backend: "huggingface"` -> FLUX.1-schnell, fallback SDXL
+**Si `backend: "recraft"`** (SVG nativo, salta vectorizacion):
+```bash
+curl -s "https://external.api.recraft.ai/v1/images/generations" \
+  -H "Authorization: Bearer $RECRAFT_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"prompt":"'"$PROMPT"'","style":"vector_illustration","model":"recraftv3","substyle":"line_art","response_format":"url"}'
+```
+Descargar el URL retornado como `logo-symbol.svg` directamente. Saltar al Paso 6.
+
+**Si `backend` es free (auto | huggingface | together)** — cadena raster + vectorizacion:
+1. **FLUX.1-schnell via HuggingFace** (primario, free): requiere `HF_TOKEN`
+2. **FLUX.1-schnell via Together AI** (secundario, free 3 meses): requiere `TOGETHER_API_KEY`
+3. **Pollinations.ai** (ultimo recurso, sin key)
+4. **Gemini** (opt-in, solo si `backend=gemini` y billing OK)
+
 Validar: tamano > 10KB, `file` devuelve "PNG image".
 
 ### Paso 4B — Green screen pipeline (alternativa para PNG transparente directo)
@@ -130,7 +149,9 @@ magick logo-transparent.png -trim +repage logo-icon-clean.png
 **Requiere**: FFmpeg + ImageMagick instalados. Si no estan -> usar PNG con fondo blanco y documentar.
 **Cuando usar**: cuando vtracer no esta disponible Y se necesita transparencia real (no solo para web con CSS background).
 
-### Paso 5 — Vectorizar
+### Paso 5 — Vectorizar (saltado si backend=recraft)
+
+Si Recraft devolvio SVG directo en Paso 4, saltar este paso.
 
 Orden de preferencia: vtracer (mejor calidad) -> Inkscape CLI -> PNG fallback.
 - **vtracer**: `vtracer --input logo-raw.png --output logo-symbol.svg --colormode color --filter_speckle 4 --color_precision 6 --corner_threshold 60 --path_precision 3`

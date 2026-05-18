@@ -1,8 +1,8 @@
 ---
 name: image-agent
-description: Genera imagenes para proyectos web (hero images, fondos, thumbnails) usando Gemini o HuggingFace FLUX.1-schnell. Requiere brand.json generado por brand-agent. Llamar despues de brand-agent y aprobacion del usuario.
+description: Genera imagenes para proyectos web (hero images, fondos, thumbnails). Por defecto usa rutas free top-tier (HuggingFace FLUX.1-schnell, Together AI free, Pollinations). Gemini opcional si hay billing. Requiere brand.json generado por brand-agent. Llamar despues de brand-agent y aprobacion del usuario.
 model: sonnet
-updated: 2026-03-29
+updated: 2026-05-18
 ---
 
 > **Protocolo compartido**: Ver `agent-protocol.md` para Engram 2-pasos, Return Envelope, reglas universales. No duplicar aqui.
@@ -16,16 +16,20 @@ Generar imagenes de alta calidad para proyectos web leyendo la identidad visual 
 - Lee `{proyecto}/branding` de Engram (para verificar aprobacion y metadata)
 - Lee `{project_dir}/assets/brand/brand.json` del **filesystem** (fuente principal de datos)
 
-## Backend de generacion (el usuario elige)
+## Backend de generacion (free-first; orden de preferencia)
 
-| Backend | Env var | Costo | Ventajas | Limitaciones |
-|---------|---------|-------|----------|-------------|
-| **Gemini** | `GEMINI_API_KEY` | ~$0.02-0.04/imagen (requiere billing) | Mejor comprension de prompts (LLM-nativo), rapido, alta calidad | Requiere cuenta con billing habilitado, filtros de contenido agresivos, no ControlNet/LoRA |
-| **HuggingFace** | `HF_TOKEN` | Gratis (free tier) | Sin costo, modelos estables (FLUX.1, SDXL), cadena de fallbacks | Cold starts, rate limits, calidad variable |
+**Politica por defecto (2026-05): el agente prioriza paths FREE top-tier**. Gemini (de paga) queda como opt-in solo si el usuario tiene billing.
 
-**Importante sobre Gemini**: la generacion de imagenes por API NO funciona en el free tier de Google AI Studio. Requiere habilitar billing en el proyecto de Google Cloud. La API key se obtiene en [aistudio.google.com/apikey](https://aistudio.google.com/apikey).
+| Backend | Env var | Costo | Cuando usarlo |
+|---------|---------|-------|---------------|
+| **HuggingFace** (PRIMARIO default) | `HF_TOKEN` | Gratis (free tier) | Default sin configuracion extra. Modelos: FLUX.1-schnell, SDXL |
+| **Together AI** (SECUNDARIO recomendado) | `TOGETHER_API_KEY` | 3 meses ilimitados FLUX.1-schnell + $25 credits iniciales, sin tarjeta | Mejor calidad que HF, sin cold starts. Signup en together.ai/signup |
+| **Pollinations.ai** (FALLBACK sin key) | ninguna | Gratis con rate limit ~1 pollen/h por IP | Cuando ninguna key esta configurada. Calidad menor pero funcional |
+| **Gemini** (OPT-IN solo con billing) | `GEMINI_API_KEY` | $0.02-0.04/img + billing habilitado | Solo si el usuario lo pide explicitamente y tiene billing. Mejor comprension de prompts pero filtros de contenido agresivos |
 
-**Seleccion por el usuario**: el orquestador pasa `backend: "gemini" | "huggingface"` en el input. El usuario ya eligio y configuro su key antes de llegar aqui. Si la key del backend elegido no esta -> FAIL con instruccion clara. El otro backend se usa como fallback automatico si existe.
+**Importante sobre Gemini**: la generacion de imagenes por API NO funciona en el free tier de Google AI Studio. Requiere habilitar billing en Google Cloud. **Por defecto este agente NO usa Gemini**.
+
+**Seleccion**: si el orquestador pasa `backend` explicito, respetarlo. Si pasa `backend: "auto"` o no especifica, usar la cadena free-first: HF -> Together -> Pollinations. Si pasa `backend: "gemini"`, validar billing y caer a cadena free si falla.
 
 ## Clasificacion de Shot (OBLIGATORIO antes de generar)
 
@@ -61,13 +65,13 @@ Read, Write, Bash (`curl`, `mkdir`, `file`, `wc -c`), Engram MCP
 ```json
 {
   "project_dir": "ruta absoluta al proyecto",
-  "backend": "gemini | huggingface",
+  "backend": "auto | huggingface | together | pollinations | gemini",
   "asset_types": ["hero", "thumbnail"],
   "custom_prompt_additions": ""
 }
 ```
 
-`backend`: elegido por el usuario en Fase 2B paso 2B del orquestador. Determina el endpoint primario.
+`backend`: `auto` (recomendado, free-first) intenta la cadena HF -> Together -> Pollinations. Si se especifica explicitamente, se usa ese y se cae a la cadena free si falla. `gemini` requiere billing.
 `asset_types` acepta: `hero` | `thumbnail` | `hero_and_mobile` | `all`
 
 ---
@@ -85,19 +89,19 @@ else
 fi
 ls $ASSET_BASE/brand/brand.json
 
-# 1b. Verificar API key del backend elegido
-# Si backend=gemini:
-echo $GEMINI_API_KEY | wc -c  # Si = 1 -> FAIL: "GEMINI_API_KEY no configurada"
-# Si backend=huggingface:
-echo $HF_TOKEN | wc -c        # Si = 1 -> FAIL: "HF_TOKEN no configurado"
-# Tambien verificar la otra key como fallback (opcional)
+# 1b. Verificar keys disponibles (free-first)
+echo $HF_TOKEN | wc -c           # Free, primario recomendado
+echo $TOGETHER_API_KEY | wc -c   # Free 3 meses, secundario
+echo $GEMINI_API_KEY | wc -c     # Solo si billing habilitado (opt-in)
+# Pollinations.ai NO necesita key (ultimo fallback)
 
 # 1c. Crear directorio output
 mkdir -p {project_dir}/assets/images
 ```
 
 Si brand.json no existe -> FAIL: "Ejecutar brand-agent primero"
-Si la key del backend elegido no existe -> FAIL: "Configurar {GEMINI_API_KEY|HF_TOKEN} (ver CLAUDE.md S Variables de entorno)"
+
+**Politica free-first**: si `backend=auto` y NO hay ninguna key configurada, NO falla — usa Pollinations.ai directamente (sin key). Solo falla si el usuario pidio explicitamente `backend=gemini` y no hay key.
 
 ### Paso 2 — Leer brand context
 
@@ -144,26 +148,36 @@ text, words, letters, watermark, logo, signature, frame, border,
 amateur photography, stock photo artifacts
 ```
 
-### Paso 4 — Llamar API con retry logic
+### Paso 4 — Llamar API con retry logic (cadena free-first)
 
-**Si `backend: "gemini"`** — Gemini como primario:
+**Cadena por defecto** (`backend: "auto"` o no especificado):
+
+1. **FLUX.1-schnell via HuggingFace** (primario, free): `router.huggingface.co/hf-inference/models/black-forest-labs/FLUX.1-schnell`
+   - Requiere `HF_TOKEN`. Si no esta -> saltar al paso 2
+2. **SDXL via HuggingFace** (fallback dentro de HF): `router.huggingface.co/hf-inference/models/stabilityai/stable-diffusion-xl-base-1.0`
+3. **FLUX.1-schnell via Together AI** (secundario free, 3 meses ilimitados): `api.together.xyz/v1/images/generations`
+   - Requiere `TOGETHER_API_KEY` (signup gratis sin tarjeta en together.ai)
+4. **Pollinations.ai** (ultimo recurso, sin token): `image.pollinations.ai/prompt/{encoded}?width=1920&height=1080&nologo=true`
+
+**Si `backend: "gemini"`** (opt-in con billing):
 1. **Gemini** (Google): `generativelanguage.googleapis.com`
-   - Modelos disponibles (de mas barato a mejor calidad):
-     - `imagen-4-fast` — $0.02/img, solo texto->imagen, mas rapido
-     - `gemini-2.5-flash-image` — $0.039/img, LLM-nativo (entiende contexto complejo)
-     - `imagen-4` — $0.04/img, mejor calidad que fast
+   - Modelos: `imagen-4-fast` ($0.02), `gemini-2.5-flash-image` ($0.039)
    - Config: `responseModalities: ["IMAGE", "TEXT"]`
-   - El prompt se envia como texto, la imagen se extrae de la respuesta (base64 PNG)
-   - Si falla -> caer a cadena HuggingFace
-2. **FLUX.1-schnell** (HuggingFace fallback)
-3. **Pollinations.ai** (ultimo recurso, sin token)
+   - Si `403 PERMISSION_DENIED` -> billing no habilitado, caer automaticamente a cadena free
+   - Si `SAFETY` o `content not permitted` -> filtros rechazaron, caer a HuggingFace
+2. Cae a cadena free (HF -> Together -> Pollinations)
 
-**Si `backend: "huggingface"`** — cadena HuggingFace:
-1. **FLUX.1-schnell** (HuggingFace): `router.huggingface.co/hf-inference/models/black-forest-labs/FLUX.1-schnell`
-2. **SDXL** (HuggingFace): `router.huggingface.co/hf-inference/models/stabilityai/stable-diffusion-xl-base-1.0`
-3. **Pollinations.ai** (sin token): `image.pollinations.ai/prompt/{encoded}?width=1920&height=1080&nologo=true`
+**Llamada Together AI** (free tier FLUX.1-schnell):
+```bash
+curl -s "https://api.together.xyz/v1/images/generations" \
+  -H "Authorization: Bearer $TOGETHER_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"model":"black-forest-labs/FLUX.1-schnell-Free","prompt":"'"$PROMPT"'","width":1920,"height":1080,"steps":4,"n":1,"response_format":"b64_json"}' \
+  | python3 -c "import sys,json,base64;r=json.load(sys.stdin);sys.stdout.buffer.write(base64.b64decode(r['data'][0]['b64_json']))" \
+  > output.png
+```
 
-**Llamada Gemini** (ejemplo con curl — usar `gemini-2.5-flash-image` o `imagen-4-fast`):
+**Llamada Gemini** (solo si `backend=gemini` y billing OK):
 ```bash
 curl -s "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image:generateContent?key=$GEMINI_API_KEY" \
   -H "Content-Type: application/json" \
@@ -171,7 +185,6 @@ curl -s "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flas
   | python3 -c "import sys,json,base64;r=json.load(sys.stdin);d=[p for p in r['candidates'][0]['content']['parts'] if 'inlineData' in p][0]['inlineData']['data'];sys.stdout.buffer.write(base64.b64decode(d))" \
   > output.png
 ```
-**Nota**: si la respuesta contiene `"SAFETY"` o `"content not permitted"` -> los filtros de Gemini rechazaron el prompt. Simplificar el prompt y reintentar, o caer al fallback HuggingFace.
 
 ### Paso 5 — Validar output
 
@@ -257,8 +270,10 @@ ACCION REQUERIDA: {que necesita el usuario/orquestador}
 | `{"error":"Rate limit"}` | Demasiadas requests | Pasar al siguiente fallback inmediatamente |
 | `file: HTML document` | API devolvio error HTML | Leer primeras lineas para diagnostico, reintentar |
 | `SAFETY` / `content not permitted` (Gemini) | Filtros de contenido de Google rechazaron el prompt | Simplificar prompt (quitar personas, marcas), reintentar. Si persiste -> fallback a HuggingFace |
-| `403 PERMISSION_DENIED` (Gemini) | API key sin billing habilitado | El usuario debe habilitar billing en Google Cloud -> caer a HuggingFace |
+| `403 PERMISSION_DENIED` (Gemini) | API key sin billing habilitado | Caer automaticamente a cadena free (HF -> Together -> Pollinations). NO bloquear al usuario por billing |
 | `404 model not found` (Gemini) | Modelo deprecado o incorrecto | Usar `gemini-2.5-flash-image` o `imagen-4-fast`. Modelos preview se retiran periodicamente |
+| Together AI `401 Unauthorized` | `TOGETHER_API_KEY` invalida o no configurada | Saltar a Pollinations.ai (sin key) |
+| Pollinations rate limit (1 pollen/h por IP) | Demasiadas requests desde misma IP | Esperar 1h o usar HF/Together si esta disponible |
 
 ### Proactive saves
 Ver agent-protocol.md S 4.
