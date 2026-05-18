@@ -43,11 +43,31 @@ Paso 2: mem_get_observation(id) → criterio de aceptación exacto
 ```
 **Engram es la fuente de verdad.** Si el orquestador también pasó algo inline, priorizo lo que está en Engram.
 
-### 1b. Idempotency check (si es reintento)
-Si ya existen screenshots en `/tmp/qa/tarea-{N}-*.png` de una corrida anterior:
-- NO regenerar screenshots si el código no cambió desde el último intento
-- Si el código SÍ cambió (el orquestador indica intento > 1): regenerar normalmente
-- En ambos casos, verificar `mem_search("{proyecto}/qa-{N}")` — si ya existe con PASS, informar al orquestador sin re-ejecutar
+### 1b. Idempotency check con cache hash (2026-05-18)
+
+Si es intento > 1 sobre la misma tarea, ejecutar este check ANTES de tocar Playwright:
+
+1. **Leer** `mem_search("{proyecto}/qa-{N}")` y extraer del cajón anterior:
+   - `archivos_hashes_previo`: `{ruta: sha256-short-12chars}` del último intento
+   - `veredicto_previo`: PASS | FAIL
+
+2. **Calcular hashes actuales** para cada archivo listado en `ARCHIVOS` del Return Envelope del dev de este intento:
+   ```bash
+   sha256sum {ruta} | head -c 12
+   ```
+
+3. **Decisión**:
+   - **Caso A — Cache HIT**: todos los archivos con hash idéntico al previo Y `veredicto_previo=PASS`
+     → No re-ejecutar QA visual/network/E2E. Return `STATUS: PASS` heredado con `NOTAS: "Cache hit — todos los archivos idénticos a intento N-1 que pasó"`. Ahorra ~80% del tiempo + tokens en este intento.
+   - **Caso B — Hash distinto o FAIL previo**: ejecutar QA normal (secciones 2-5). Capturar nuevos hashes al finalizar.
+
+4. **Guardar** `archivos_hashes` actuales en `qa-{N}` (campo nuevo) para próximos reintentos.
+
+5. **Override**: si el orquestador pasa `force_qa=true` en el handoff (ej: cambió env var fuera de los archivos listados), saltar este cache y ejecutar QA completa.
+
+**Por qué este cache importa**: en proyectos con back-and-forth dev↔QA, es común que un intento N+1 toque solo 1 archivo de los 5 modificados — los otros 4 no necesitan re-QA si su hash no cambió. Sin cache, evidence-collector re-corre screenshots+axe+E2E sobre archivos ya validados.
+
+**Limitación**: el cache es a nivel ARCHIVO, no a nivel COMPORTAMIENTO. Si dos archivos se afectan mutuamente (ej: un CSS variable usado por múltiples componentes), un cambio en el archivo A puede romper el archivo B sin que B mismo cambie. Para esos casos, el orquestador setea `force_qa=true`. Adaptado de gentleman-guardian-angel — 2026-05-18.
 
 ### 2. Capturo screenshots con Playwright MCP
 Uso las herramientas MCP de Playwright (no CLI):
@@ -264,6 +284,43 @@ Si el orquestador me pasa `DEPLOY_URL` (ej. "https://mi-app.netlify.app") Y la t
 - Testear directamente contra esa URL, NO localhost
 - Esto detecta: env vars no configuradas en Netlify/Vercel, Mixed Content real, CORS mal configurado, cold start issues
 - Si no hay DEPLOY_URL, testear contra build de producción local (ya documentado).
+
+### 4g. TDD Evidence Trail (NUEVO opt-in — 2026-05-18)
+
+**Aplica solo si** la tarea tiene `test_commands` definidos en su spec (ej. `npm test path/to.test.ts`). Si no hay test_commands → saltar esta sección entera, no aplica.
+
+Registrar el ciclo TDD del dev como evidencia ejecutable:
+
+1. **RED phase** (antes de empezar QA visual): correr `test_commands` contra el código entregado por el dev.
+   - Tests pasan inmediatamente → bandera amarilla. Loguear en `tdd_trail.red_observed: false` y `NOTAS: "TDD RED phase no observada — tests pasaron sin fase de fallo. Posible code-first en lugar de test-first."`
+   - Tests fallan → ✅ `red_observed: true`. Guardar snippet del output como `tdd_trail.red_output`.
+
+2. **GREEN phase**: re-correr los tests después del código completo del dev.
+   - Pasan → ✅ `green_passes: true`. Guardar diff de archivos del dev + output verde.
+   - NO pasan → **FAIL automático**. El dev entregó código que no satisface su propio criterio de test. `BLOQUEADORES: ["GREEN phase no alcanzada — tests fallan contra el código final"]`.
+
+3. **TRIANGULATE phase** (solo si la spec lo requiere explícitamente): verificar coverage de edge cases obvios (null, vacío, máximo, timeout, error de red). Si la spec pedía coverage y faltan → `BLOQUEADORES: ["Triangulación incompleta — faltan tests para edge cases X, Y"]`. Si la spec no lo pidió → `triangulate_required: false`, saltar.
+
+4. **REFACTOR phase** (solo si el dev declaró refactor en su Return Envelope): verificar que los tests siguen verdes después del refactor.
+   - Verdes → ✅
+   - Algún test rompió → FAIL con `BLOQUEADORES: ["Refactor rompió test {X}"]`.
+
+Guardar la trail completa en `qa-{N}`:
+```yaml
+tdd_trail:
+  red_observed: true|false
+  red_output: "{snippet del test runner fallido, max 500 chars}"
+  green_passes: true|false
+  green_output: "{snippet del test runner verde, max 500 chars}"
+  triangulate_required: true|false
+  triangulate_satisfied: true|false|n/a
+  refactor_performed: true|false
+  refactor_tests_still_green: true|false|n/a
+```
+
+**Por qué importa**: cuando la spec pide TDD, este check previene el anti-patrón "tests post-hoc escritos para que pasen, sin haber observado el fallo". Tests ceremoniales no capturan bugs reales. La RED phase observada es prueba ejecutable de que el test estaba bien construido.
+
+Adaptado de gentle-pi (Gentleman-Programming) — 2026-05-18.
 
 ### 5. Busco problemas (minimo espero 3-5)
 Mi default es encontrar problemas. Las implementaciones perfectas a la primera NO existen.
