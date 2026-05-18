@@ -1,5 +1,24 @@
 # Upgrade Log — Context Management + Best Practices
 
+## Engram silent-fail cloud fix — 2026-05-18 ✅
+
+### Summary
+Diagnosticado bug crítico: `mem_save` retornaba OK al cliente pero el cloud rechazaba con HTTP 500 silencioso cuando la observation no tenía `title` o `content`. Validado empíricamente: 3 obs guardadas el 2026-05-15 en `saldoar` (#2711, #2712, #2715) + 1 en `dashboard-pm` (#2716) quedaron locked en local, invisibles cross-PC. Aplicado fix manual via `mem_update` + `engram cloud upgrade repair --apply` + `engram sync --cloud`. Agregado protocolo de 3 capas + patch al hook para que no vuelva a pasar.
+
+### Cambios
+- **CLAUDE.md + templates/global-claude.md** — nueva sección "Protocolo de save robusto — anti silent-fail cloud (2026-05-18)" con 3 capas (pre-save validation, post-save verify, cloud sync gate) + Capa 1b whitelist gate (chequeo previo solo si project es desconocido) + anti-patrones explícitos.
+- **hooks/engram-cloud-sync-on-stop.sh** — pre-flight `engram cloud upgrade doctor` antes del sync + auto `repair --apply` si está repairable + skip sync si está blocked + regex de detección de errores extendido (`status 500`, `title is required`, `content is required`, `transport_failed`, `upgrade_blocked`, `upgrade_repairable`). Antes solo capturaba 403/forbidden.
+
+### Validación
+Aplicado el propio protocolo nuevo al guardar obs #2723 (`engram/save-validation-protocol`) y #2724 (`saldoar/flujo-reembolso-lecciones-diagrama`). Cloud doctor `ready` + sync exitoso en ambos casos.
+
+### Anti-patrones documentados (para no repetir)
+- `mem_save(content=..., type="decision")` sin `title=` → cloud rechaza 500
+- `mem_save(title="", ...)` con title vacío string → cloud rechaza 500
+- Asumir que `mem_save` exitoso = "está en el cloud". Solo significa local SQLite.
+
+---
+
 ## Audit Completo 10 Fases — 2026-04-22 ✅
 
 ### Summary

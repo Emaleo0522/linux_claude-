@@ -89,12 +89,26 @@ while IFS= read -r line; do
   # Enroll (idempotente, positional arg). engram cloud enroll <project>
   ENROLL_OUT=$(engram cloud enroll "$PROJECT" 2>&1)
 
+  # Pre-flight doctor: detecta obs con title/content vacios ANTES de intentar push
+  # Si esta blocked/repairable, aplicar repair automatico antes del sync.
+  # Validado 2026-05-18: el cloud rechaza con HTTP 500 si una obs no tiene title.
+  DOCTOR_OUT=$(engram cloud upgrade doctor --project "$PROJECT" 2>&1)
+  if echo "$DOCTOR_OUT" | grep -q "class: repairable"; then
+    log warn "repairable issues detected on $PROJECT; applying auto-repair"
+    engram cloud upgrade repair --project "$PROJECT" --apply > /dev/null 2>&1
+  elif echo "$DOCTOR_OUT" | grep -q "class: blocked"; then
+    REASON=$(echo "$DOCTOR_OUT" | grep -E "^message:" | head -1)
+    log error "MANUAL ACTION REQUIRED on $PROJECT: $REASON (skip sync; observations missing title/content need mem_update)"
+    FAILED=$((FAILED+1))
+    continue
+  fi
+
   # Sync to cloud (--project con SPACE, no =). engram sync --cloud --project X
   SYNC_OUT=$(engram sync --cloud --project "$PROJECT" 2>&1)
 
-  # Detectar error real (cloud whitelist 403, sintaxis, etc.)
-  if echo "$SYNC_OUT" | grep -qiE "^engram:|^error|^failed|panic:|fatal:|status 403|forbidden"; then
-    log error "sync failed for $PROJECT: $(echo "$SYNC_OUT" | grep -iE "^engram:|^error|^failed|status|forbidden" | head -1)"
+  # Detectar error real. Extendido 2026-05-18: incluye status 500, title required, content required, transport_failed
+  if echo "$SYNC_OUT" | grep -qiE "^engram:|^error|^failed|panic:|fatal:|status 403|status 500|forbidden|transport_failed|title is required|content is required|upgrade_blocked|upgrade_repairable"; then
+    log error "sync failed for $PROJECT: $(echo "$SYNC_OUT" | grep -iE "^engram:|^error|^failed|status|forbidden|transport_failed|required" | head -1)"
     FAILED=$((FAILED+1))
   else
     SYNCED=$((SYNCED+1))

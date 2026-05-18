@@ -205,6 +205,46 @@ Si el MCP plugin retorna `ambiguous_project` y el proyecto NO aparece en `engram
 
 Validado 2026-05-16 con vibefx (no en cloud whitelist, no detectado por MCP cwd-scan): SSH agregando vibefx a `ENGRAM_CLOUD_ALLOWED_PROJECTS` + `engram save --project vibefx` via CLI = full operability en una sesión (obs #3128, #3129, #3130).
 
+### Protocolo de save robusto — anti silent-fail cloud (2026-05-18)
+
+Validado empíricamente: `mem_save` puede retornar OK al cliente y aun así NUNCA llegar al cloud si la observation viola constraints del cloud server (HTTP 500 silencioso). Las obs quedan local-only e invisibles cross-PC hasta que se reparen manualmente.
+
+**Capa 1 — Pre-save (obligatorio antes de TODO `mem_save`)**:
+1. `title` **NUNCA es opcional**. Si dudo, formato: `{tema-corto} — {fecha YYYY-MM-DD}`. Mínimo 8 chars, máximo 80.
+2. `content` mínimo 20 chars con info real. NO guardar placeholders ("WIP", "TBD", "(empty)").
+3. `topic_key` con namespace `{proyecto}/{slug}` o `{family}/{slug}`.
+4. `project=` explícito (whitelist del cloud) — NUNCA dejar auto-detect del cwd.
+5. `scope="personal"` para cross-PC (regla validada 2026-05-15).
+
+**Capa 1b — Whitelist gate (solo si el project es desconocido)**:
+- Si el `project=` que pensás usar no está entre los buckets ya enrolled, correr `engram projects list | grep '^  <nombre>'` para verificar. Sin enroll, el cloud rechaza con HTTP 403.
+- Si confirma 403/desconocido: **NO inventar** un bucket. Preguntar al usuario: (a) usar uno existente que aplique, o (b) autorizar agregar el nuevo a la whitelist (requiere SSH al server + edit `/opt/engram-cloud/.env` + `docker compose up -d cloud` + backup `.env.bak.YYYYMMDD-pre-{razon}`).
+- **NUNCA hacer SSH + restart sin confirmación explícita del usuario** — toca infra del server.
+
+**Capa 2 — Post-save verify (1 search barato, obligatorio)**:
+Después de cada `mem_save` exitoso:
+```
+verify = mem_search(topic_key_exacto, project=mismo_project, limit=1)
+if verify retorna empty → loguear y avisar al usuario
+```
+Confirmar al usuario: *"Guardado #ID title='X' project=Y topic_key=Z"*. Sin la confirmación, no asumir que se guardó.
+
+**Capa 3 — Cloud sync gate (antes de cerrar sesión / cada N saves)**:
+Si guardaste memoria en esta sesión, antes de "dar por terminado":
+```bash
+engram cloud upgrade doctor --project <proyecto>
+```
+- `status=ready` → OK
+- `status=blocked, class=repairable` → `engram cloud upgrade repair --project X --apply` + `engram sync --cloud --project X`
+- `status=blocked, class=blocked` → identificar la obs problemática (`title required` o `content required`), `mem_update` con título/content válido, repetir doctor
+
+**Anti-patrones detectados (no repetir)**:
+- ❌ `mem_save(content=..., type="decision")` sin `title=` → cloud rechaza 500
+- ❌ `mem_save(title="", ...)` con title vacío string → cloud rechaza 500
+- ❌ Pensar que `mem_save` exitoso = "está en el cloud". Solo significa "está en SQLite local".
+
+**Hook `engram-cloud-sync-on-stop.sh` (patched 2026-05-18)**: ahora corre `engram cloud upgrade doctor` pre-flight y aplica `repair --apply` automáticamente si hay observations reparables antes del push. Regex de detección de errores extendido para incluir `status 500`, `title is required`, `content is required`, `transport_failed`, `upgrade_blocked`, `upgrade_repairable` (antes solo capturaba 403/forbidden).
+
 ### Lectura Engram — bloque canonico (referencia para todos los agentes)
 ```
 # Leer de Engram (2 pasos OBLIGATORIOS — nunca usar preview truncada)
