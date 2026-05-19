@@ -1,5 +1,77 @@
 # Upgrade Log — Context Management + Best Practices
 
+## Gentleman Audit Adaptation — M1+M2+M2.5+M3 — 2026-05-18/19 ✅
+
+### Summary
+
+Comparación claude-vibecoding vs 4 repos de Gentleman-Programming (gentle-ai, gentle-pi, gentleman-guardian-angel, Gentleman-Skills). 4 patrones adaptados al sistema sin alterar la identidad propia (visual-first, end-to-end delivery con assets + deploy). Coordinación cross-PC vía Engram cloud + nuevo Mailbox Protocol opt-in.
+
+### Cambios por milestone
+
+**M1 — Skill index + Stop Rules + Path B** (`33b0441`, `7feab04`)
+- `agents/AGENTS.md` nuevo: índice central de las 15 referencias técnicas con triggers de carga (adaptado de gentle-ai).
+- `CLAUDE.md`: sección Delegation Stop Rules con umbrales cuantificados (5+ files = delegate, 20+ tool calls = pause).
+- `agents/agent-protocol.md`: Path B bootstrap CLI para proyectos no enrolled en Engram DB.
+- `design-data/style-presets.csv` + `search.js` + `ux-guidelines.csv`: sync drift local→repo.
+
+**M2 — Wire AGENTS.md + Stop Rules al pipeline** (`32e334b`)
+- `agents/orquestador.md`: nuevo Paso 0b en Fase 1 (lee AGENTS.md, decide `references_loaded`).
+- `agents/orquestador.md`: Auto-escalación en Identidad y Regla de Oro (aplica Stop Rules en Fase 3).
+- `agents/orquestador.md`: campo `references_loaded` en DAG State schema.
+- `agents/agent-protocol.md`: rules #8 (Stop Rules) + #9 (consume references_loaded).
+
+**M2.5 — Engram cloud robusto + Mailbox + SSH tightening** (`8d42afa`, `146e931`, `b47100c`, `1bc0e97`)
+- Protocolo save robusto 3 capas + Capa 1b whitelist gate (pc004).
+- Hook `engram-cloud-sync-on-stop.sh`: pre-flight doctor + auto-repair + regex extendido + filtro defensivo `relation/upsert`.
+- Cross-Claude Mailbox Protocol OPT-IN: bucket `cross-claude-mailbox`, schemas query/reply, checks auto-resueltos, edits requieren user approval. NO ejecuta auto-check cada turn (ahorra ~3-5k tokens/día).
+- Regla SSH endurecida: "explícita" requiere referencia literal a la acción, no "OK dale" genérico (post-incidente real con pc004 sobre activación del bucket).
+- Política free-first sumada al CLAUDE.md raíz para parity cross-PC.
+
+**M3 — TDD trail + Cache hash** (`40d9881`)
+- `agents/evidence-collector.md` sección 4g NUEVA (opt-in cuando hay `test_commands`): RED → GREEN → TRIANGULATE → REFACTOR como evidencia ejecutable (gentle-pi). Previene anti-patrón "tests post-hoc ceremoniales".
+- `agents/evidence-collector.md` sección 1b extendida: cache hash sha256-short por archivo en reintentos, ahorra ~80% tokens/tiempo si hashes idénticos + veredicto previo PASS (guardian-angel).
+
+**README sync** (`7b1ebfc`)
+- Conteo 40→41, AGENTS.md en tabla docs, Stop Rules + Mailbox opt-in + 11 capas QA documentadas.
+
+### Mejoras descartadas conscientemente
+
+- **SDD profiles por fase** — nuestro routing Opus/Sonnet en frontmatter es más simple y validado.
+- **Multi-target adapters multi-IDE** — somos Claude-only por diseño.
+- **Skills Angular/Java/Spring/Elixir/Electron** — cargables on-demand si hace falta, no entran al default.
+- **Item #5 LLM-as-judge semántico** — exploratorio, valor incierto, pausado.
+- **Item #7 Provider-agnostic QA con Ollama** — requiere ollama en VPS, tarea separada.
+
+### Verificación
+
+- 0 dead paths confirmados via grep (AGENTS.md consumido en 9 lugares en orquestador.md, Stop Rules en 3 archivos coherentes, `references_loaded` flows end-to-end).
+- 0 duplicaciones (Paso 0b del orquestador ≠ Paso 0b-bis interno de ui-designer — distintos scopes).
+- Cross-PC: casa + pc004 + repo sincronizados (pc004 a 2 commits post-pull pendiente).
+- Engram cierre: obs #3154 `claude-vibecoding/gentleman-audit-2026-05-18/cerrado`.
+- README al día con todos los cambios.
+
+### Commits incluidos en este upgrade
+
+- `33b0441` design-data drift fix
+- `7feab04` AGENTS.md skill index + Stop Rules + Path B (M1)
+- `1bc0e97` free-first policy as default backend strategy
+- `8d42afa` protocolo save robusto + hook anti silent-fail (pc004)
+- `146e931` bucket whitelist + relation/upsert + mailbox protocol (pc004)
+- `32e334b` wire AGENTS.md + Stop Rules to pipeline (M2)
+- `b47100c` mailbox to opt-in + tighten SSH authorization
+- `40d9881` TDD evidence trail + cache hash en QA (M3)
+- `7b1ebfc` README sync con cambios M1+M2+M2.5+M3
+- (este commit) UPGRADE_LOG entry
+
+### Aprendizajes destacados
+
+1. Crear archivos nuevos ≠ integrarlos. Un AGENTS.md sin consumer es dead weight. Verification grep pre-commit es esencial.
+2. Coordinación cross-PC con peer Claude: aprobar lo concreto, no lo abstracto. Verificar diff del commit, no solo el reporte resumen del peer.
+3. Mailbox auto-check cada turn = ~3-5k tokens/día de ruido. Opt-in es la opción correcta para features de baja frecuencia.
+4. SSH al server productivo requiere autorización LITERAL del usuario. Un "OK dale" a una pregunta genérica no cuenta.
+
+---
+
 ## Free-first creative pipeline + Cloudflare Workers AI — 2026-05-18 noche ✅
 
 ### Summary
