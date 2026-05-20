@@ -470,24 +470,43 @@ En esos casos, cargar el reference y seguir el flujo completo: heurística clari
 
 Antes de decidir stack o delegar a project-manager-senior, leer `~/.claude/agents/AGENTS.md` y evaluar qué referencias técnicas aplican según el `{proyecto}/intent` capturado en Paso 0:
 
-| Trigger del intent | Referencia a cargar (slug) |
-|---|---|
-| `deploy_target ∈ {vps, oracle-cloud, hetzner, aws-ec2, self-hosted}` | `linux-hardening` |
-| `stack.backend = "PocketBase"` | `pocketbase` |
-| `stack.frontend includes "React 19" OR "Next.js 15-16"` | `react-patterns` |
-| `dials_suggested.motion_intensity ≥ 7 OR animation_tier = 3` | `better-gsap` |
-| Pinning multi-sección / horizontal scroll / parallax avanzado | `scroll-storytelling` |
-| Audio reactivo / Tone.js / Web Audio API | `reactive-audio` |
-| p5.js, GLSL shaders, generative art | `creative-coding` |
-| Lottie, Rive, cursor effects, micro-interactions vectoriales | `advanced-effects` |
-| `mood_preset = "nothing"` o usuario pidió Nothing aesthetic | `nothing-design` |
-| `auth_required = true` AND sin auth provider existente | `better-auth` |
-| Backend usa Redis (caching, pub/sub, HyperLogLog) | `redis-patterns` |
-| Deploy/operate VPS (sin Vercel/Netlify) | `devops-vps` |
+| Trigger del intent | Referencia a cargar (slug) | Context7 query inicial sugerida |
+|---|---|---|
+| `deploy_target ∈ {vps, oracle-cloud, hetzner, aws-ec2, self-hosted}` | `linux-hardening` | — (no aplica, hardening es manual) |
+| `stack.backend = "PocketBase"` | `pocketbase` | `pocketbase / topic=sdk` |
+| `stack.frontend includes "React 19" OR "Next.js 15-16"` | `react-patterns` | `nextjs / topic=app-router-16` o `react / topic=server-components` |
+| `stack.css = "Tailwind 4"` | — | `tailwindcss / topic=v4-utilities` |
+| `dials_suggested.motion_intensity ≥ 7 OR animation_tier = 3` | `better-gsap` | `gsap / topic=scroll-trigger` (si version > 3.13) |
+| Pinning multi-sección / horizontal scroll / parallax avanzado | `scroll-storytelling` | `gsap / topic=scroll-trigger` + `lenis / topic=setup` |
+| Audio reactivo / Tone.js / Web Audio API | `reactive-audio` | `tone / topic=transport` |
+| p5.js, GLSL shaders, generative art | `creative-coding` | `p5 / topic=instance-mode` |
+| Lottie, Rive, cursor effects, micro-interactions vectoriales | `advanced-effects` | `lottie-react / topic=hooks` o `rive-react / topic=state-machines` |
+| `mood_preset = "nothing"` o usuario pidió Nothing aesthetic | `nothing-design` | — (style guide propio, no docs externas) |
+| `auth_required = true` AND sin auth provider existente | `better-auth` | `better-auth / topic=plugins` |
+| Backend usa Redis (caching, pub/sub, HyperLogLog) | `redis-patterns` | `ioredis / topic=cluster` |
+| Deploy/operate VPS (sin Vercel/Netlify) | `devops-vps` | — (operación manual) |
+| `stack.mobile = "Expo SDK 52+"` | — | `expo / topic=sdk-52` |
+| `stack.mobile = "React Native"` (sin Expo) | — | `react-native / topic=new-architecture` |
+
+**Stacks no-JS — Context7 reemplaza la ref técnica que no existe**:
+
+| Trigger del intent | Ref estática | Context7 query inicial (OBLIGATORIA) |
+|---|---|---|
+| `stack.backend = "FastAPI"` | — (no existe ref) | `fastapi / topic=async-routes` |
+| `stack.backend = "Django"` | — (no existe ref) | `django / topic=models` o `django-rest-framework / topic=serializers` según tarea |
+| `stack.backend = "Flask"` | — (no existe ref) | `flask / topic=blueprints` |
+| `stack.mobile = "Flutter"` | — (no existe ref) | `flutter / topic=widgets-current` + `flutter / topic={paquete específico}` |
+| `stack.backend = "Hono"` (versión reciente) | — (Hono ultra-flexible) | `hono / topic=routing` o `hono / topic=middleware` |
+| `stack.backend = "Encore"` | — (no existe ref) | `encore / topic=services` |
+| `stack.backend ∈ {Go/Gin, Rust/Axum, Phoenix, Rails}` | — (no existe ref) | `{nombre-stack} / topic=getting-started` + query específica de la tarea |
 
 **Output**: agregar `references_loaded: [slug1, slug2, ...]` al DAG State en `{proyecto}/estado`. Cada subagente downstream lee este campo de su contexto y carga las referencias listadas — no consulta AGENTS.md por su cuenta.
 
-**Por qué centralizar acá**: AGENTS.md es el ÚNICO punto de decisión sobre qué referencias cargar. Sin esto, la lógica queda dispersa en cada agente. Token cost: ~700 tokens cuando se carga AGENTS.md (1 sola vez en Fase 1), después solo se pasa la lista `references_loaded` (negligible).
+**Output adicional para Context7**: agregar `context7_hints: ["query1", "query2", ...]` al DAG State. Los hints se pasan en cada handoff a dev agents (ver Fase 3 paso 3 — handoff template). Cada agente decide si las consulta antes de escribir código según la regla #10 del `agent-protocol.md`.
+
+**Por qué centralizar acá**: AGENTS.md es el ÚNICO punto de decisión sobre qué referencias técnicas cargar. Sin esto, la lógica queda dispersa en cada agente. Token cost: ~700 tokens cuando se carga AGENTS.md (1 sola vez en Fase 1), después solo se pasa la lista `references_loaded` (negligible). Context7 hints son negligibles en el DAG State (solo strings de query).
+
+**Cuándo NO incluir Context7 hints**: si el stack es ultra-estable (React básico sin features modernas, lodash, axios) y la tarea es trivial → `context7_hints: []`. El agente sigue la regla #10 y salta Context7.
 
 `agent-protocol.md`, `pipeline-reference.md` e `intent-clarifier-reference.md` son universales (siempre cargados por quien los necesite); NO se evalúan acá.
 
@@ -497,19 +516,31 @@ Antes de decidir stack o delegar a project-manager-senior, leer `~/.claude/agent
 4. Con `{proyecto}/intent` guardado, continuar con **decidir stack y estructura**:
 
    **Decisión de stack** (el orquestador decide, NO el PM):
-   - Si el usuario especificó stack → usar ese
-   - Si no → aplicar tabla resumen:
 
-     | Tipo proyecto | Stack base | Estructura |
-     |--------------|-----------|------------|
-     | Landing/portfolio/web estática | Vite + React + Tailwind (Astro si content-heavy) | Single-repo |
-     | Frontend + backend separados | Next.js/SvelteKit + Hono + Drizzle + tRPC | Monorepo |
-     | MVP/prototipo rápido | rapid-prototyper elige (ver su matriz) | Single-repo |
-     | App móvil (iOS/Android) | React Native + Expo SDK 52+ + Expo Router | Single-repo |
-     | Juego de navegador | Phaser.js/PixiJS + Vite + TypeScript | Single-repo |
-     | API pura | Hono + Drizzle + PostgreSQL + Zod | Single-repo |
+   **Orden de precedencia** (de mayor a menor prioridad):
+   1. **Si el usuario especificó stack** → usar ese, sin importar el default. **Override absoluto** (ej: Reyesoft Vue 3 + PrimeVue, ComPatas Flutter + Firebase — validados en producción).
+   2. **Si el usuario NO especificó stack pero el tipo tiene >1 alternativa válida común** → hacer **1 sola pregunta enfocada** antes de aplicar default (ver tabla abajo, columna "preguntar si dudás"). Excepción: si el brief es trivial o de baja inversión (ej: "landing rápida para mostrar X", "MVP en un día"), aplicar el default sin preguntar.
+   3. **Si el usuario no especificó y el caso es claro** → aplicar default sugerido de la tabla.
 
-     Addons: +Socket.IO/PartyKit (real-time) | +BullMQ/Inngest (background jobs)
+     | Tipo proyecto | Default sugerido | Alternativas válidas (preguntar si dudás) | Estructura |
+     |--------------|------------------|--------------------------------------------|------------|
+     | Landing/portfolio/web estática | **Astro** (content-heavy) o Vite + React + Tailwind | Next.js SSG, Nuxt, SvelteKit, 11ty, Hugo | Single-repo |
+     | Frontend + backend separados | Next.js + Hono + Drizzle + tRPC | Nuxt+Nitro, SvelteKit+Adapter Node, Remix, T3 stack, Vue+Express+Prisma | Monorepo |
+     | MVP/prototipo rápido | rapid-prototyper elige (matriz Stack A/B/C: Next.js / SvelteKit / Hono+React) | — | Single-repo |
+     | App móvil (iOS/Android) | React Native + Expo SDK 52+ + Expo Router | **Flutter + Firebase** (validado en ComPatas — mejor perf nativa), Capacitor (web→nativo), Tauri Mobile (Rust) | Single-repo |
+     | Juego de navegador | Phaser.js (2D) / PixiJS + Vite + TypeScript | Three.js/Babylon (3D), Kaboom.js (productivo prototipos), Excalibur.js, Construct (no-code) | Single-repo |
+     | API pura | Hono + Drizzle + PostgreSQL + Zod | **FastAPI + Python** (mejor para AI/data/ML), Fastify + Prisma (más maduro), NestJS (enterprise), Encore (type-safe RPC nativo) | Single-repo |
+     | Backend + ORM (cualquier tipo) | Drizzle (default) | Prisma (más ecosystem), Kysely (query builder type-safe), Postgres puro + Zod | — |
+
+     Addons: +Socket.IO/PartyKit/Liveblocks/Yjs (real-time, CRDTs) | +BullMQ/Inngest (background jobs) | +Sanity/Contentful (headless CMS para content sites)
+
+     **Cuándo PREGUNTAR antes de aplicar default** (ejemplos de pregunta de 1 línea):
+     - App móvil: *"¿React Native + Expo (default, ecosystem JS mayor) o Flutter + Firebase (mejor perf, validado en ComPatas)?"*
+     - API con AI/data/ML: *"¿Node/Hono (default, mismo stack que frontend) o FastAPI + Python (mejor para AI/data)?"*
+     - Web con mucho contenido: *"¿Astro (default content-heavy, 0 JS) o Next.js SSG (default app-like)?"*
+     - Juego 3D: *"¿Three.js, Babylon.js o quedamos en Phaser 2D?"*
+
+     **Nota honesta sobre sesgo IA**: Los defaults priorizan ecosystem JS/TS donde Claude tiene mayor confiabilidad (más volumen de training). Stacks alternativos (**Python/FastAPI**, **Dart/Flutter**, **Go**, **Rust**, **Phoenix/Elixir**, **Rails**) son técnicamente válidos y se usan en proyectos reales del usuario — pueden requerir más iteraciones, validación manual del usuario, o fallback a documentación oficial cuando el agente no esté seguro. Si el usuario insiste en un stack no-JS, **respetar y proceder** con los agentes que mejor lo soporten (backend-architect, mobile-developer) y declarar transparentemente las limitaciones encontradas en el camino.
 
    **Decisión de design system** (el orquestador decide junto con stack):
    - Si el usuario dice "estilo Nothing", "Nothing design", "Nothing phone style", "nada design" → `design_system: "nothing-full"`
@@ -878,11 +909,39 @@ Actualiza DAG State. Informa al usuario: "Arquitectura lista. N tareas listas pa
 
 ---
 
-### FASE 2B — Assets Visuales (solo si el proyecto tiene landing page, logo, o imágenes de marca)
+### FASE 2B — Assets Visuales (activación condicional según tipo de proyecto)
 
 Ejecutar en paralelo a Fase 2 o antes de Fase 3, según cuándo se necesiten los assets.
 
-**¿Cuándo activar?** Si el proyecto incluye landing page, hero section, logo, o video de fondo.
+**¿Cuándo activar?** Lógica de 3 niveles basada en `intent.project_type`:
+
+**Nivel 1 — Carga automática (siempre 2B, scope completo)**:
+- `intent.project_type ∈ {landing, portfolio, marketing}` → 2B completa (brand + logo + hero + opcional video)
+- El usuario pide explícitamente "logo", "imágenes", "branding", "hero", "video de fondo" → 2B completa
+
+**Nivel 2 — Pregunta obligatoria (carga 2B según respuesta)**:
+- `intent.project_type = "app móvil"` → SIEMPRE preguntar antes de saltar:
+  *"Las apps móviles necesitan al menos íconos + splash screen para publicar en stores. ¿Qué scope querés?*
+  *(a) Identidad completa: brand + logo + íconos + splash*
+  *(b) Solo assets mínimos: íconos + splash (sin brand identity completo)*
+  *(c) App interna sin assets visuales (no se publica en stores)"*
+  - Respuesta (a) → 2B completa
+  - Respuesta (b) → 2B con `asset_scope: ["icon", "splash"]` (skip brand identity y hero)
+  - Respuesta (c) → saltar 2B
+- `intent.project_type = "juego"` → SIEMPRE preguntar antes de saltar:
+  *"¿Qué tipo de assets visuales necesita este juego?*
+  *(a) Sprites/personajes + fondos + UI (identidad visual completa)*
+  *(b) Solo UI básica (sprites generados procedurally / placeholders)*
+  *(c) Juego puramente algorítmico sin assets visuales"*
+  - Respuesta (a) → 2B completa con scope adaptado
+  - Respuesta (b) → 2B con scope mínimo
+  - Respuesta (c) → saltar 2B
+
+**Nivel 3 — Saltar 2B automáticamente (proyecto NO requiere assets)**:
+- `intent.project_type ∈ {API pura, backend solo, dashboard interno corporativo}` → saltar 2B sin preguntar
+- Excepción: si el user pide explícitamente assets ("logo para mi API"), volver a Nivel 1
+
+**Por qué preguntar para app móvil/juego**: ambos casos tienen sub-tipos donde 2B puede ser overkill (app interna, juego algorítmico) o crítica (app pública, juego con arte). Decidir solo por heurística del brief = riesgo de app sin íconos publicables o juego con sprites placeholder en producción. Mejor 1 pregunta de 3 opciones que asumir mal.
 
 **Orden obligatorio — NO saltear pasos:**
 
@@ -1036,7 +1095,32 @@ Para **cada tarea** de la lista, en orden:
    NOTHING_SCOPE: {lista de secciones} (solo si partial — el agente aplica Nothing SOLO a estas secciones)
    COMPONENT_SOURCE: {21st.dev | codepen | custom} (si 21st.dev → frontend-developer consulta Context7 MCP para componentes animados/visuales)
    VISUAL_DIRECTION: {resumen 1 línea de las elecciones clave — ej: "inmersivo + aurora bg + nav blur + animación inmersiva + dark"}
+   CONTEXT7_HINTS: {lista de queries Context7 sugeridas según stack — ver tabla abajo. Vacío [] si stack es ultra-estable o tarea trivial}
    ```
+
+   **Construcción de `CONTEXT7_HINTS`** (el orquestador deriva de DAG State stack + tarea):
+
+   | Stack/feature en DAG State | Hint sugerido en handoff |
+   |---|---|
+   | `stack.frontend` incluye Next.js 15-16 + tarea toca routing/server | `nextjs / topic=app-router-16` |
+   | `stack.frontend` incluye Next.js 15-16 + tarea toca data fetching | `nextjs / topic=server-actions` |
+   | `stack.css` = Tailwind 4 | `tailwindcss / topic=v4-utilities` |
+   | `stack.mobile` = Expo SDK 52+ | `expo / topic=sdk-52` |
+   | `stack.mobile` = Flutter | `flutter / topic=widgets-current` + `flutter / topic={paquete usado}` |
+   | `stack.backend` = Hono | `hono / topic=routing` (saltable si tarea trivial) |
+   | `stack.backend` = FastAPI | `fastapi / topic=async-routes` |
+   | `stack.backend` = Django | `django / topic=models` o `django / topic=DRF` según tarea |
+   | `stack.orm` = Drizzle 2.x | `drizzle / topic=queries` |
+   | `stack.orm` = Prisma 5.x | `prisma / topic=schema` |
+   | `auth_required = true` + `auth = Better Auth` | `better-auth / topic=plugins` |
+   | `stack.frontend` = Vue 3 + Nuxt | `nuxt / topic=app-config` |
+   | `stack.frontend` = SvelteKit | `sveltekit / topic=load-functions` |
+
+   **Reglas de construcción**:
+   - Máximo 2-3 hints por handoff (más es ruido, el agente decide cuáles consultar primero)
+   - Si stack ultra-estable y tarea trivial → `CONTEXT7_HINTS: []` (regla #10 del agent-protocol permite saltar)
+   - Si stack no-JS sin ref técnica estática (FastAPI, Django, Flutter, Phoenix, Rails) → SIEMPRE incluir al menos 1 hint (Context7 reemplaza la ref que no existe)
+   - Hints son SUGERENCIAS — el agente puede agregar consultas adicionales si la tarea lo requiere
 
    **Puerto**: el agente dev DEBE reportar el puerto donde corre el servidor (ej: `Servidor necesario: sí (puerto 3000)`). El orquestador pasa este puerto a evidence-collector en el paso 5.
 

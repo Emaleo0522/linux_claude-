@@ -191,6 +191,24 @@ No esperes al final de la tarea. Guarda al momento.
 7. **No duplicar lo que ya está en Engram** → pasar topic_key, no contenido
 8. **Respetar Delegation Stop Rules** → si llegás a 5+ Read sobre archivos distintos en la misma tarea, tocaste 2+ archivos no-triviales, o acumulás 20+ tool calls sin completar tu tarea, escalar al orquestador con `BLOQUEADORES: Stop Rule {N} disparada` en lugar de seguir solo. Detalle: CLAUDE.md global § "Delegation Stop Rules".
 9. **Aplicar `references_loaded` del DAG State** → si el orquestador te pasó este campo en la delegación (ej: `references_loaded: ["better-auth", "linux-hardening"]`), leer cada `~/.claude/agents/{slug}-reference.md` y aplicar sus reglas durante la tarea. Si NO te lo pasó pero tu tarea sugiere que aplica (ej: deploy a VPS), consultarlo via `mem_search("{proyecto}/estado")` y leer el DAG State una sola vez. El orquestador es el único punto de decisión sobre qué refs cargar (Fase 1 Paso 0b).
+10. **Anti-código viejo — consultar Context7 antes de escribir código de librería específica** → cuando vas a generar código que usa un framework o librería específicos (Next.js, Tailwind, Expo, Flutter, FastAPI, Django, Drizzle, Better Auth, etc.) Y la tarea involucra features recientes o versiones modernas (Next.js 16 app router/server actions, Tailwind 4 utilities, Expo SDK 52+, React 19 server components, Drizzle 2.x, FastAPI async, Flutter 3.x widgets, Better Auth v1.x), **consultar Context7 ANTES de escribir**:
+    ```
+    Paso 1: context7.resolve-library-id(library_name)  → obtener library_id
+    Paso 2: context7.query-docs(library_id, topic: "feature específica")  → recibir docs CURRENT
+    Paso 3: Generar código aplicando esos patterns (NO desde training data, que tiene cutoff y puede mezclar versiones)
+    ```
+    **Cuándo consultar (trigger)**:
+    - Si el handoff del orquestador incluye `context7_hints: [...]` → consultar exactamente esas queries primero (1 sola consulta por hint)
+    - Si la tarea menciona una versión específica del stack (ej: "Next.js 16", "Tailwind 4", "Expo SDK 52") y la diferencia con versiones previas matters
+    - Si trabajás con stack no-JS sin ref técnica estática (FastAPI, Django, Flutter, Phoenix, Rails, Go, Rust) — Context7 reemplaza la ref que no existe
+    - Si el agente detecta que el patrón que va a escribir tiene >1 versión válida coexistiendo (Next.js Pages Router vs App Router, NextAuth vs Better Auth, Drizzle vs Prisma)
+    
+    **Cuándo SALTAR Context7** (evitar overhead innecesario):
+    - Librería ultra-estable sin breaking changes recientes (lodash, axios básico, react básico sin server features)
+    - Tarea trivial (typo fix, refactor mecánico, cambio de copy)
+    - Context7 timeout o no disponible → fallback a training data + declarar limitación en NOTAS del Return Envelope
+    
+    **Costo**: ~200-500 tokens por consulta Context7. Beneficio: evita 1.000-5.000 tokens de iteraciones por código viejo + bugs por API mismatch. Trade-off claramente positivo en código no-trivial.
 
 ---
 

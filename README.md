@@ -1,10 +1,18 @@
 # Claude Vibecoding
 
-> Un sistema multiagente para construir software de principio a fin con Claude. Desde una landing simple hasta una app con auth + base de datos. **Te acompaña en cada decisión clave, sin pedirte permiso para cada coma.**
+> *Hay personas con ideas brillantes que nunca llegan a hacerse — no por falta de talento, sino porque la distancia entre imaginar algo y tenerlo online es demasiado grande.*
+>
+> *Si alguna vez dejaste morir una idea porque no sabías cómo empezar, este sistema es para vos. El conocimiento técnico ya estaba en el mundo — solo faltaba un puente para llegar a él.*
+
+---
+
+Un sistema multiagente para construir software de principio a fin con Claude. Desde una landing simple hasta una app con auth + base de datos. **Te acompaña en cada decisión clave, sin pedirte permiso para cada coma.**
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 ![Status](https://img.shields.io/badge/status-stable-success)
 ![Platforms](https://img.shields.io/badge/platforms-Linux%20%7C%20Windows-lightgrey)
+
+> Read this in English: [README.en.md](README.en.md)
 
 ---
 
