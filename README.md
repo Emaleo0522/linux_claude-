@@ -240,10 +240,6 @@ Con solo `HF_TOKEN` el sistema funciona. Si agregás Cloudflare, multiplicás la
 | `REPLICATE_API_TOKEN` | Replicate | $0.03-0.10/video | Solo para video real (LTX-Video 2.3). Sin esta variable, `video-agent` retorna CSS fallback animado como output válido ([replicate.com/account/api-tokens](https://replicate.com/account/api-tokens)) |
 | `RECRAFT_API_KEY` | Recraft V4 Vector | $0.08/img + $5 free/mes via Vercel AI Gateway | Logos SVG **nativos** (sin pérdida raster→vector). Solo si querés logos vectoriales premium |
 
-#### Backends descartados
-
-- ~~Together AI~~ — el endpoint "FLUX.1-schnell-Free" promocional 2024-2025 ya **no existe** en su catálogo. Su free tier actual requiere $5 fondeo con tarjeta. Removido del default 2026-05-18.
-
 #### Dónde poner las variables
 
 - **Linux/macOS**: agregalas a `~/.bashrc` o `~/.zshrc` con `export VAR=valor`, o crealas en `~/.claude/.env` (una por línea: `VAR=valor`)
@@ -264,7 +260,7 @@ Una oficina pixel art donde los agentes caminan a sus escritorios cuando se les 
 | **Modificación** | Cambios sobre un proyecto ya completado por el pipeline | Detectado automáticamente cuando decís *"retomar [proyecto] — [cambio]"* |
 | **Diagnóstico** | Auditar código existente sin tocarlo (due diligence, audits de proyectos ajenos) | Decí: *"modo diagnóstico"*, *"audita este código"*, *"evalúa sin tocar"* |
 
-En **modo normal**, Claude responde como siempre pero tiene acceso a los hooks, AUTO_AUDIT y memoria. En **modo orquestador**, adopta el rol de coordinador y delega a los 24 subagentes. En **modo modificación**, corre un mini-pipeline (Paso 0 de auditoría → planificación ligera → dev+QA solo de los agentes afectados). En **modo diagnóstico** es read-only por doctrina: solo lee y devuelve un reporte estructurado con hallazgos por severidad — útil para auditar proyectos que no fueron generados por este sistema (ya validado en auditorías a WebCodexAtlas y Claude-Atlas).
+En **modo normal**, Claude responde como siempre pero tiene acceso a los hooks, AUTO_AUDIT y memoria. En **modo orquestador**, adopta el rol de coordinador y delega a los 24 subagentes. En **modo modificación**, corre un mini-pipeline (Paso 0 de auditoría → planificación ligera → dev+QA solo de los agentes afectados). En **modo diagnóstico** es read-only por doctrina: solo lee y devuelve un reporte estructurado con hallazgos por severidad — útil para auditar proyectos que no fueron generados por este sistema (due diligence, code review de repos ajenos).
 
 ---
 
